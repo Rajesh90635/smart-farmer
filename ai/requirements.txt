@@ -1,0 +1,14 @@
+# Smart Farmer AI Service — dependencies
+# Foundation phase only: no vision/speech/LLM model libraries are pinned
+# yet (PyTorch, OpenCV, Hugging Face, faster-whisper, etc.) - those are
+# added when each model is actually implemented, per the "no unnecessary
+# packages" rule. This phase only needs a running FastAPI service with
+# health/abstraction endpoints.
+
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+pytest==8.3.3
+httpx==0.27.2

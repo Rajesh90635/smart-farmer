@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: smart_farmer_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Run migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:ci_password@localhost:5432/smart_farmer_test
+          JWT_SIGNING_KEY: ci-only-signing-key
+        run: alembic upgrade head
+      - name: Run backend tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:ci_password@localhost:5432/smart_farmer_test
+          JWT_SIGNING_KEY: ci-only-signing-key
+          ENVIRONMENT: testing
+        run: pytest tests/ -v
+
+  ai-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install AI service dependencies
+        working-directory: ai
+        run: pip install -r requirements.txt
+      - name: Run AI service tests
+        working-directory: ai
+        run: pytest tests/ -v

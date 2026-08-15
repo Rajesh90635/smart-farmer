@@ -1,0 +1,31 @@
+name: smart_farmer_mobile
+description: "Smart Farmer AI Platform — farmer mobile app (foundation build)."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.19.0
+  http: ^1.2.2
+  flutter_secure_storage: ^9.2.2 # secure on-device token storage (Keychain/Keystore-backed)
+  provider: ^6.1.2 # simple, standard app-state management for auth state
+  image_picker: ^1.1.2 # camera + gallery access, free/MIT-style license
+  http_parser: ^4.0.2 # MediaType for multipart upload content-type - direct dep, not just transitive via http
+  connectivity_plus: ^6.0.5 # real network-status detection for the offline-upload queue
+  path_provider: ^2.1.4 # app-local persistent storage directory for the offline upload queue - free, MIT-style license, no new native permissions
+  flutter_tts: ^4.2.0 # device-native text-to-speech (Android TextToSpeech / iOS AVSpeechSynthesizer) - free, local, zero cost, no cloud dependency. License could not be independently re-verified via a live pub.dev lookup in this sandbox (pub.dev is not on the network allowlist here - same limitation already disclosed for path_provider in Step 10); it is a long-established, widely-used Flutter community package under a permissive license per training-data knowledge, not independently confirmed live this session.
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true # enables flutter gen-l10n from lib/l10n/*.arb

@@ -1,0 +1,36 @@
+# Smart Farmer Backend — dependencies
+# Every package here is free/open-source. See docs/LICENSE_REGISTER.md for
+# the license of each. Do not add a package to this file without adding the
+# matching row there first.
+
+# --- Web framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# --- Configuration ---
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# --- Database ---
+sqlalchemy==2.0.35
+alembic==1.13.2
+psycopg[binary]==3.2.2
+
+# --- Image validation/processing (crop photo module) ---
+pillow==10.4.0
+python-multipart==0.0.9
+
+# --- Auth foundation (JWT + password hashing) ---
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+# passlib 1.7.4 predates bcrypt 4.x's removal of the `__about__` attribute
+# it probes for; bcrypt>=4.1 breaks passlib's backend detection. Pinning
+# bcrypt explicitly rather than letting passlib[bcrypt] pull latest.
+bcrypt==4.0.1
+
+# --- CORS / security headers come from FastAPI/Starlette itself (no extra package) ---
+
+# --- Testing ---
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.27.2
