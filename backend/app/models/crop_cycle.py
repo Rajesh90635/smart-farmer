@@ -99,6 +99,13 @@ class CropCycle(Base):
     )
 
     seed_variety: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    # Additive, Phase 1 (CropVariety). Nullable and independent of
+    # seed_variety - the free-text field is NOT replaced, renamed, or
+    # deprecated by this column. A crop cycle can have neither, either, or
+    # both populated; nothing in this codebase requires variety_id.
+    variety_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("crop_varieties.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     # --- Future AI integration hooks (Requirement 28). Not written or read
     # by any code in this phase. ---
@@ -114,3 +121,4 @@ class CropCycle(Base):
 
     plot: Mapped["Plot"] = relationship(back_populates="crop_cycles")
     crop: Mapped["CropMaster"] = relationship(back_populates="crop_cycles")
+    variety: Mapped["CropVariety | None"] = relationship()

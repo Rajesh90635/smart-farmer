@@ -22,6 +22,10 @@ class CropCycleCreateRequest(BaseModel):
     sowing_date: date
     expected_harvest_date: date | None = None
     seed_variety: str | None = Field(default=None, max_length=150)
+    # Additive (Phase 1) - optional FK to a structured CropVariety.
+    # Independent of seed_variety: a request can set neither, either, or
+    # both. Omitting it entirely preserves pre-Phase-1 behavior exactly.
+    variety_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> "CropCycleCreateRequest":
@@ -52,6 +56,7 @@ class CropCycleResponse(BaseModel):
     actual_harvest_date: date | None
     cultivation_status: CultivationStatus
     seed_variety: str | None
+    variety_id: uuid.UUID | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

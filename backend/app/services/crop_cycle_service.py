@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core import error_codes
 from app.core.errors import AppError
 from app.models.crop_cycle import ALLOWED_TRANSITIONS, CropCycle, CultivationStatus
-from app.repositories import crop_cycle_repository, crop_master_repository, plot_repository
+from app.repositories import crop_cycle_repository, crop_master_repository, crop_variety_repository, plot_repository
 from app.schemas.crop import (
     CropCycleCloseRequest,
     CropCycleCreateRequest,
@@ -32,6 +32,17 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
     if crop is None:
         raise AppError(error_codes.VALIDATION_ERROR, "Selected crop does not exist or is not available.", 422)
 
+    if payload.variety_id is not None:
+        # A variety_id that resolves but belongs to a DIFFERENT crop must
+        # be rejected here, not just relied upon at the DB FK level -
+        # the FK only guarantees the row exists somewhere, not that it's
+        # the right crop's variety.
+        variety = crop_variety_repository.get_for_crop(db, payload.variety_id, payload.crop_id)
+        if variety is None:
+            raise AppError(
+                error_codes.VALIDATION_ERROR, "Selected variety does not belong to the selected crop.", 422
+            )
+
     crop_cycle = CropCycle(
         plot_id=plot_id,
         crop_id=payload.crop_id,
@@ -39,6 +50,7 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
         sowing_date=payload.sowing_date,
         expected_harvest_date=payload.expected_harvest_date,
         seed_variety=payload.seed_variety,
+        variety_id=payload.variety_id,
         cultivation_status=CultivationStatus.PLANNED,
     )
     crop_cycle_repository.create(db, crop_cycle)

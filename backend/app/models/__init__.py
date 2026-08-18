@@ -22,6 +22,7 @@ from app.models.crop_health_case import CropHealthCase  # noqa: F401
 from app.models.crop_master import CropMaster  # noqa: F401
 from app.models.crop_photo import CropPhoto  # noqa: F401
 from app.models.crop_photo_session import CropPhotoSession  # noqa: F401
+from app.models.crop_variety import CropVariety  # noqa: F401
 from app.models.crop_stage_definition import CropStageDefinition  # noqa: F401
 from app.models.dealer_business_profile import DealerBusinessProfile  # noqa: F401
 from app.models.dealer_price_history import DealerPriceHistory  # noqa: F401
