@@ -1,11 +1,13 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
 from app.models.crop_cycle import ALLOWED_TRANSITIONS, CropCycle, CultivationStatus
-from app.repositories import crop_cycle_repository, crop_master_repository, crop_variety_repository, plot_repository
+from app.models.crop_cycle_stage_history import CropCycleStageHistory
+from app.repositories import crop_cycle_repository, crop_cycle_stage_history_repository, crop_master_repository, crop_variety_repository, plot_repository
 from app.schemas.crop import (
     CropCycleCloseRequest,
     CropCycleCreateRequest,
@@ -13,6 +15,7 @@ from app.schemas.crop import (
     CropCycleResponse,
     CropCycleUpdateRequest,
 )
+from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse, CropCycleStageHistoryResponse
 from app.services.audit_logger import AuditLogger
 
 _DEFAULT_PAGE_SIZE = 50
@@ -23,6 +26,18 @@ def _get_owned_plot_or_404(db: Session, farmer_id: str, plot_id: uuid.UUID):
     if plot is None:
         raise AppError(error_codes.NOT_FOUND, "Plot not found.", 404)
     return plot
+
+
+def _record_stage_history(db: Session, crop_cycle_id: uuid.UUID, status: CultivationStatus) -> None:
+    """Phase 2 infrastructure only - records that a transition actually
+    happened, when. Never called for an unchanged status (callers check
+    that before calling this), never called speculatively."""
+    entry = CropCycleStageHistory(
+        crop_cycle_id=crop_cycle_id,
+        status=status,
+        entered_at=datetime.now(timezone.utc),
+    )
+    crop_cycle_stage_history_repository.create(db, entry)
 
 
 def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: CropCycleCreateRequest) -> CropCycleResponse:
@@ -112,6 +127,7 @@ def update_my_crop_cycle(
         "CROP_CYCLE_UPDATED", actor_id=farmer_id, actor_role="farmer", entity="crop_cycle", entity_id=str(crop_cycle.id)
     )
     if status_changed:
+        _record_stage_history(db, crop_cycle.id, crop_cycle.cultivation_status)
         audit.log(
             "CROP_CYCLE_STATUS_CHANGED",
             actor_id=farmer_id,
@@ -144,6 +160,7 @@ def close_my_crop_cycle(
     audit.log(
         "CROP_CYCLE_CLOSED", actor_id=farmer_id, actor_role="farmer", entity="crop_cycle", entity_id=str(crop_cycle.id)
     )
+    _record_stage_history(db, crop_cycle.id, crop_cycle.cultivation_status)
     audit.log(
         "CROP_CYCLE_STATUS_CHANGED",
         actor_id=farmer_id,
@@ -165,3 +182,14 @@ def _validate_transition(current: CultivationStatus, target: CultivationStatus) 
             f"Cannot change status from '{current.value}' to '{target.value}'.",
             409,
         )
+
+
+def get_stage_history_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> CropCycleStageHistoryListResponse:
+    crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, uuid.UUID(farmer_id))
+    if crop_cycle is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
+
+    items = crop_cycle_stage_history_repository.list_for_crop_cycle(db, crop_cycle_id)
+    return CropCycleStageHistoryListResponse(
+        items=[CropCycleStageHistoryResponse.model_validate(i) for i in items], total=len(items)
+    )

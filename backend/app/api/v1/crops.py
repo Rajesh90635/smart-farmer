@@ -20,6 +20,7 @@ from app.schemas.crop import (
     CropCycleUpdateRequest,
     CropMasterResponse,
 )
+from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse
 from app.services import crop_cycle_service
 
 router = APIRouter(tags=["crops"])
@@ -84,3 +85,14 @@ def close_crop_cycle(
     db: Session = Depends(get_db),
 ) -> CropCycleResponse:
     return crop_cycle_service.close_my_crop_cycle(db, current_user.user_id, crop_cycle_id, payload)
+
+
+@router.get("/crops/{crop_cycle_id}/stage-history", response_model=CropCycleStageHistoryListResponse)
+def get_crop_cycle_stage_history(
+    crop_cycle_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> CropCycleStageHistoryListResponse:
+    """Read-only. Phase 2 infrastructure - no plan-generation here, just
+    the actual recorded transition history for this crop cycle."""
+    return crop_cycle_service.get_stage_history_for_crop_cycle(db, current_user.user_id, crop_cycle_id)

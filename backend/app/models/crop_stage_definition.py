@@ -29,6 +29,16 @@ class CropStageDefinition(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     sequence_order: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Phase 2 infrastructure only - deliberately nullable and unpopulated
+    # by default. No crop timing dataset exists in this repository (see
+    # app/models/task.py's docstring on the same point), so seeding these
+    # with a guessed number would be exactly the kind of unauthoritative
+    # invention this project consistently avoids. sequence_order above is
+    # unaffected and keeps its existing ordinal-only meaning - these two
+    # columns add optional day-offset timing ON TOP of it, they don't
+    # replace it.
+    typical_days_from_sowing_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    typical_days_from_sowing_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
