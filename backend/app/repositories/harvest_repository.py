@@ -12,8 +12,30 @@ def create_harvest(db: Session, harvest: HarvestRecord) -> HarvestRecord:
     return harvest
 
 
-def get_harvest_by_crop_cycle(db: Session, crop_cycle_id: uuid.UUID) -> HarvestRecord | None:
-    return db.execute(select(HarvestRecord).where(HarvestRecord.crop_cycle_id == crop_cycle_id)).scalar_one_or_none()
+def get_most_recent_harvest_by_crop_cycle(db: Session, crop_cycle_id: uuid.UUID) -> HarvestRecord | None:
+    """Used only by the pre-existing get-or-create flow, which must stay
+    idempotent for single-harvest crops. Deliberately does NOT use
+    scalar_one_or_none() - once a crop cycle has multiple harvests (Phase
+    0), more than one row can match, and scalar_one_or_none() would raise
+    MultipleResultsFound instead of returning a sane result. Order by
+    created_at so behavior for existing single-harvest cycles is
+    unchanged (there's only one row, so "most recent" == "the" row)."""
+    return db.execute(
+        select(HarvestRecord)
+        .where(HarvestRecord.crop_cycle_id == crop_cycle_id)
+        .order_by(HarvestRecord.created_at.desc())
+        .limit(1)
+    ).scalars().first()
+
+
+def list_harvests_by_crop_cycle(db: Session, crop_cycle_id: uuid.UUID) -> list[HarvestRecord]:
+    """The actual multi-harvest read path (Phase 0) - returns every
+    harvest for a cycle, oldest first, for crops picked repeatedly."""
+    return list(
+        db.execute(
+            select(HarvestRecord).where(HarvestRecord.crop_cycle_id == crop_cycle_id).order_by(HarvestRecord.created_at.asc())
+        ).scalars().all()
+    )
 
 
 def get_harvest_owned(db: Session, harvest_id: uuid.UUID, farmer_id: uuid.UUID) -> HarvestRecord | None:

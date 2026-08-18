@@ -28,8 +28,34 @@ def get_or_create_harvest(
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
 ) -> HarvestResponse:
-    """'Smart listing' pre-fill - reuses the existing crop cycle's data."""
+    """'Smart listing' pre-fill - reuses the existing crop cycle's data.
+    Idempotent: for a crop with only one harvest, calling this repeatedly
+    always returns the same record. For crops with multiple harvests
+    (Phase 0), use POST .../new-harvest to add another one instead."""
     return harvest_service.get_or_create_harvest_for_crop_cycle(db, current_user.user_id, crop_cycle_id)
+
+
+@router.post("/from-crop-cycle/{crop_cycle_id}/new-harvest", response_model=HarvestResponse, status_code=201)
+def create_new_harvest(
+    crop_cycle_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> HarvestResponse:
+    """Phase 0: always creates a NEW harvest record for this crop cycle,
+    never returns an existing one. For crops picked repeatedly (tomato,
+    chilli, okra, brinjal, beans, cucumber) - call this again after each
+    picking to record the next harvest."""
+    return harvest_service.create_new_harvest_for_crop_cycle(db, current_user.user_id, crop_cycle_id)
+
+
+@router.get("/from-crop-cycle/{crop_cycle_id}", response_model=HarvestListResponse)
+def list_harvests_for_crop_cycle(
+    crop_cycle_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> HarvestListResponse:
+    """All harvests recorded for this crop cycle, oldest first."""
+    return harvest_service.list_harvests_for_crop_cycle(db, current_user.user_id, crop_cycle_id)
 
 
 @router.get("", response_model=HarvestListResponse)

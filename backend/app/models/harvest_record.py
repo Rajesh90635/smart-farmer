@@ -1,9 +1,13 @@
 """
-HarvestRecord: one per crop cycle's harvest. AI (Prompt 6 crop-stage
-intelligence) may SUGGEST that a crop is approaching harvest, but no code
-path in this phase automatically sets status past PLANNED/APPROACHING
-without an explicit farmer action - enforced by the service layer, not
-just documented intent.
+HarvestRecord: one row per harvest EVENT for a crop cycle, not one row per
+crop cycle. A crop cycle supports multiple HarvestRecords (Phase 0 fix -
+see migration "remove unique constraint on harvest_records
+crop_cycle_id") because many real crops (tomato, chilli, okra, brinjal,
+beans, cucumber) are picked repeatedly over the season, not harvested
+once. AI (Prompt 6 crop-stage intelligence) may SUGGEST that a crop is
+approaching harvest, but no code path in this phase automatically sets
+status past PLANNED/APPROACHING without an explicit farmer action -
+enforced by the service layer, not just documented intent.
 """
 import enum
 import uuid
@@ -36,7 +40,7 @@ class HarvestRecord(Base):
     farmer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     farm_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("farms.id", ondelete="CASCADE"), nullable=False)
     plot_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("plots.id", ondelete="CASCADE"), nullable=False)
-    crop_cycle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("crop_cycles.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    crop_cycle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("crop_cycles.id", ondelete="CASCADE"), nullable=False, index=True)
     crop_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("crop_master.id", ondelete="RESTRICT"), nullable=False)
 
     expected_harvest_date: Mapped[date | None] = mapped_column(Date, nullable=True)

@@ -27,12 +27,17 @@ from app.services.audit_logger import AuditLogger
 
 
 def get_or_create_harvest_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> HarvestResponse:
+    """Unchanged behavior for single-harvest crops: idempotent, always
+    returns the same harvest on repeated calls (see
+    test_calling_get_or_create_twice_returns_same_harvest). For crops with
+    multiple harvests, use create_new_harvest_for_crop_cycle to add
+    harvest #2, #3, etc. instead of calling this again."""
     farmer_uuid = uuid.UUID(farmer_id)
     crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, farmer_uuid)
     if crop_cycle is None:
         raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
 
-    existing = harvest_repository.get_harvest_by_crop_cycle(db, crop_cycle_id)
+    existing = harvest_repository.get_most_recent_harvest_by_crop_cycle(db, crop_cycle_id)
     if existing is not None:
         return HarvestResponse.model_validate(existing)
 
@@ -50,6 +55,43 @@ def get_or_create_harvest_for_crop_cycle(db: Session, farmer_id: str, crop_cycle
     db.commit()
     db.refresh(harvest)
     return HarvestResponse.model_validate(harvest)
+
+
+def create_new_harvest_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> HarvestResponse:
+    """Phase 0: explicitly adds another HarvestRecord to a crop cycle that
+    already has one - for crops picked repeatedly (tomato, chilli, okra,
+    brinjal, beans, cucumber). Unlike get_or_create, this ALWAYS inserts a
+    new row; it never returns an existing one. Each harvest is
+    independent - creating harvest #2 never modifies harvest #1."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, farmer_uuid)
+    if crop_cycle is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
+
+    harvest = HarvestRecord(
+        farmer_id=farmer_uuid,
+        farm_id=crop_cycle.plot.farm_id,
+        plot_id=crop_cycle.plot_id,
+        crop_cycle_id=crop_cycle.id,
+        crop_id=crop_cycle.crop_id,
+        expected_harvest_date=crop_cycle.expected_harvest_date,
+        status=HarvestStatus.PLANNED,
+    )
+    harvest_repository.create_harvest(db, harvest)
+    AuditLogger(db).log("HARVEST_RECORD_CREATED", actor_id=farmer_id, actor_role="farmer", entity="harvest_record", entity_id=str(harvest.id))
+    db.commit()
+    db.refresh(harvest)
+    return HarvestResponse.model_validate(harvest)
+
+
+def list_harvests_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> HarvestListResponse:
+    farmer_uuid = uuid.UUID(farmer_id)
+    crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, farmer_uuid)
+    if crop_cycle is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
+
+    items = harvest_repository.list_harvests_by_crop_cycle(db, crop_cycle_id)
+    return HarvestListResponse(items=[HarvestResponse.model_validate(h) for h in items], total=len(items))
 
 
 def mark_approaching(db: Session, farmer_id: str, harvest_id: uuid.UUID) -> HarvestResponse:
