@@ -30,7 +30,32 @@ class AppTheme {
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      textTheme: base.textTheme.apply(fontSizeFactor: 1.1),
+      textTheme: _scaleTextTheme(base.textTheme, 1.1),
+    );
+  }
+
+  static TextTheme _scaleTextTheme(TextTheme theme, double factor) {
+    TextStyle? scale(TextStyle? style) {
+      if (style == null || style.fontSize == null) return style;
+      return style.copyWith(fontSize: style.fontSize! * factor);
+    }
+
+    return TextTheme(
+      displayLarge: scale(theme.displayLarge),
+      displayMedium: scale(theme.displayMedium),
+      displaySmall: scale(theme.displaySmall),
+      headlineLarge: scale(theme.headlineLarge),
+      headlineMedium: scale(theme.headlineMedium),
+      headlineSmall: scale(theme.headlineSmall),
+      titleLarge: scale(theme.titleLarge),
+      titleMedium: scale(theme.titleMedium),
+      titleSmall: scale(theme.titleSmall),
+      bodyLarge: scale(theme.bodyLarge),
+      bodyMedium: scale(theme.bodyMedium),
+      bodySmall: scale(theme.bodySmall),
+      labelLarge: scale(theme.labelLarge),
+      labelMedium: scale(theme.labelMedium),
+      labelSmall: scale(theme.labelSmall),
     );
   }
 }
