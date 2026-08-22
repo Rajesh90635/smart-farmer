@@ -35,9 +35,17 @@ class Intent(str, enum.Enum):
     EXPERT_CASE = "expert_case"
     GENERAL_AGRICULTURE = "general_agriculture"
     HELP = "help"
+    # Added Phase 36 (Context-Aware AI Crop Assistant) - the original
+    # farmer-wide assistant (Prompt 11) had no treatment or financial
+    # concepts, since Phases 29-34 didn't exist yet. Extending the SAME
+    # enum/router rather than building a competing one.
+    TREATMENT_STATUS = "treatment_status"
+    FINANCIAL_STATUS = "financial_status"
 
 
 _INTENT_KEYWORDS: list[tuple[Intent, list[str]]] = [
+    (Intent.TREATMENT_STATUS, ["treatment", "did it help", "did the spray work", "follow-up", "follow up"]),
+    (Intent.FINANCIAL_STATUS, ["how much have i spent", "spent on this crop", "my expenses", "over budget", "under budget", "cost so far", "am i making a profit", "expected profit"]),
     (Intent.DISEASE_STATUS, ["disease", "spots", "spot on", "sick crop", "what is wrong", "what's wrong", "infection", "fungal", "pest on my"]),
     (Intent.HARVEST_READINESS, ["ready to harvest", "when should i harvest", "harvest time", "harvest ready", "is my crop ready"]),
     (Intent.HARVEST_STATUS, ["harvest status", "my harvest", "how much have i harvested"]),

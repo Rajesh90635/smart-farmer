@@ -50,6 +50,21 @@ def list_for_plot(db: Session, plot_id: uuid.UUID, *, limit: int, offset: int) -
     return list(items), total
 
 
+def list_all_for_farmer(db: Session, farmer_id: uuid.UUID) -> list[CropCycle]:
+    """Added Phase 39 (Personalization) - no existing function listed
+    ALL of a farmer's crop cycles across every plot/farm; only
+    plot-scoped or nearing-harvest-filtered variants existed. Joins
+    through the real, existing Plot -> Farm chain (unchanged), never a
+    new relationship."""
+    return list(
+        db.execute(
+            select(CropCycle).join(Plot, CropCycle.plot_id == Plot.id).join(Farm, Plot.farm_id == Farm.id).where(Farm.farmer_id == farmer_id)
+        )
+        .scalars()
+        .all()
+    )
+
+
 def count_active_for_farmer(db: Session, farmer_id: uuid.UUID) -> int:
     return db.execute(
         select(func.count())

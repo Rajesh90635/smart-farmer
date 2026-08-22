@@ -32,6 +32,21 @@ def list_cases_for_farmer(db: Session, farmer_id: uuid.UUID, *, limit: int, offs
     return list(items), total
 
 
+def list_cases_for_crop_cycle(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) -> list[CropHealthCase]:
+    """Added Phase 33 (Crop Risk Score) - ownership enforced directly
+    (farmer_id on the case row itself), same pattern as every other
+    crop-cycle-scoped query in this project."""
+    return list(
+        db.execute(
+            select(CropHealthCase)
+            .where(CropHealthCase.crop_cycle_id == crop_cycle_id, CropHealthCase.farmer_id == farmer_id)
+            .order_by(CropHealthCase.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+
 def list_cases_assigned_to_professional(db: Session, professional_id: uuid.UUID, *, limit: int, offset: int) -> tuple[list[CropHealthCase], int]:
     base = (
         select(CropHealthCase)

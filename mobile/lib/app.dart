@@ -14,8 +14,18 @@ import 'features/farm/farm_repository.dart';
 import 'features/farm/plot_repository.dart';
 import 'features/crop_photo/crop_photo_repository.dart';
 import 'features/daily_briefing/daily_briefing_repository.dart';
+import 'features/crop_assistant/crop_assistant_repository.dart';
+import 'features/crop_financial/crop_financial_repository.dart';
+import 'features/crop_performance/crop_performance_repository.dart';
+import 'features/personalization/personalization_repository.dart';
+import 'features/crop_risk/crop_risk_repository.dart';
 import 'features/expert_case/case_repository.dart';
+import 'features/health_timeline/health_timeline_repository.dart';
+import 'features/invoice/invoice_repository.dart';
+import 'features/ledger/ledger_repository.dart';
 import 'features/task/task_repository.dart';
+import 'features/treatment/treatment_repository.dart';
+import 'features/weather_action/weather_action_repository.dart';
 import 'features/crop_photo/network_status_checker.dart';
 import 'features/crop_photo/pending_upload_queue.dart';
 import 'l10n/app_localizations.dart';
@@ -47,6 +57,16 @@ class SmartFarmerApp extends StatelessWidget {
         Provider<CropPhotoRepository>(create: (_) => CropPhotoRepository(apiClient: apiClient)),
         Provider<CaseRepository>(create: (_) => CaseRepository(apiClient: apiClient)),
         Provider<TaskRepository>(create: (_) => TaskRepository(apiClient: apiClient)),
+        Provider<TreatmentRepository>(create: (_) => TreatmentRepository(apiClient: apiClient)),
+        Provider<HealthTimelineRepository>(create: (_) => HealthTimelineRepository(apiClient: apiClient)),
+        Provider<CropAssistantRepository>(create: (_) => CropAssistantRepository(apiClient: apiClient)),
+        Provider<WeatherActionRepository>(create: (_) => WeatherActionRepository(apiClient: apiClient)),
+        Provider<LedgerRepository>(create: (_) => LedgerRepository(apiClient: apiClient)),
+        Provider<InvoiceRepository>(create: (_) => InvoiceRepository(apiClient: apiClient)),
+        Provider<CropFinancialRepository>(create: (_) => CropFinancialRepository(apiClient: apiClient)),
+        Provider<CropPerformanceRepository>(create: (_) => CropPerformanceRepository(apiClient: apiClient)),
+        Provider<PersonalizationRepository>(create: (_) => PersonalizationRepository(apiClient: apiClient)),
+        Provider<CropRiskRepository>(create: (_) => CropRiskRepository(apiClient: apiClient)),
         Provider<DailyBriefingRepository>(create: (_) => DailyBriefingRepository(apiClient: apiClient)),
         Provider<VoiceService>(create: (_) => FlutterTtsVoiceService()),
         Provider<NetworkStatusChecker>(create: (_) => NetworkStatusChecker()),

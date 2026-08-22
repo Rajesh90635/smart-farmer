@@ -67,3 +67,53 @@ def create_feedback(db: Session, feedback: SaleFeedback) -> SaleFeedback:
 
 def get_feedback(db: Session, sale_id: uuid.UUID, given_by_role: str) -> SaleFeedback | None:
     return db.execute(select(SaleFeedback).where(SaleFeedback.sale_order_id == sale_id, SaleFeedback.given_by_role == given_by_role)).scalar_one_or_none()
+
+
+def list_completed_sales_for_crop_cycle(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) -> list[SaleOrder]:
+    """Added for Phase 29's ledger sale-import - traces a crop cycle's
+    completed sales via the real existing chain: SaleOrder ->
+    HarvestListing -> HarvestRecord.crop_cycle_id. Only SaleOrderStatus.COMPLETED
+    sales are ever imported - a farmer's ledger should reflect money
+    actually received, not a sale still in progress."""
+    from app.models.harvest_listing import HarvestListing
+    from app.models.harvest_record import HarvestRecord
+    from app.models.sale_order import SaleOrderStatus
+
+    return list(
+        db.execute(
+            select(SaleOrder)
+            .join(HarvestListing, SaleOrder.harvest_listing_id == HarvestListing.id)
+            .join(HarvestRecord, HarvestListing.harvest_record_id == HarvestRecord.id)
+            .where(HarvestRecord.crop_cycle_id == crop_cycle_id, SaleOrder.farmer_id == farmer_id, SaleOrder.status == SaleOrderStatus.COMPLETED)
+        )
+        .scalars()
+        .all()
+    )
+
+
+def list_committed_but_not_completed_sales_for_crop_cycle(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) -> list[SaleOrder]:
+    """Added Phase 32 (Dynamic Profit Forecast) - a sale that has been
+    ACCEPTED (a real, agreed transaction with a real net_value) but has
+    not yet reached COMPLETED is not in the ledger yet (Phase 29 only
+    imports completed sales), but it is still a genuine, non-fabricated
+    revenue commitment - not a guess. Excludes CANCELLED (never
+    happened) and COMPLETED (already counted as actual revenue via the
+    ledger) to avoid double-counting."""
+    from app.models.harvest_listing import HarvestListing
+    from app.models.harvest_record import HarvestRecord
+    from app.models.sale_order import SaleOrderStatus
+
+    return list(
+        db.execute(
+            select(SaleOrder)
+            .join(HarvestListing, SaleOrder.harvest_listing_id == HarvestListing.id)
+            .join(HarvestRecord, HarvestListing.harvest_record_id == HarvestRecord.id)
+            .where(
+                HarvestRecord.crop_cycle_id == crop_cycle_id,
+                SaleOrder.farmer_id == farmer_id,
+                SaleOrder.status.not_in([SaleOrderStatus.COMPLETED, SaleOrderStatus.CANCELLED]),
+            )
+        )
+        .scalars()
+        .all()
+    )

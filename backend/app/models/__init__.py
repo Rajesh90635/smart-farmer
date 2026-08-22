@@ -7,6 +7,7 @@ Alembic, a common and easy-to-miss mistake (see docs/DATABASE.md).
 from app.models.assistant_conversation import AssistantConversation, AssistantMessage  # noqa: F401
 from app.models.assistant_feedback import AssistantFeedback, AssistantPreference  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.advisory_feedback import AdvisoryFeedback  # noqa: F401
 from app.models.ai_analysis import AIAnalysis  # noqa: F401
 from app.models.ai_analysis_session import AIAnalysisSession  # noqa: F401
 from app.models.ai_crop_stage_result import AICropStageResult  # noqa: F401
@@ -33,7 +34,10 @@ from app.models.disease_class import DiseaseClass  # noqa: F401
 from app.models.farm import Farm  # noqa: F401
 from app.models.farmer_profile import FarmerProfile  # noqa: F401
 from app.models.harvest_listing import HarvestListing  # noqa: F401
+from app.models.crop_cost_estimate import CropCostEstimate  # noqa: F401
 from app.models.harvest_record import HarvestRecord  # noqa: F401
+from app.models.invoice import Invoice  # noqa: F401
+from app.models.ledger_entry import LedgerEntry  # noqa: F401
 from app.models.knowledge_entry import AIEvaluationRecord, KnowledgeEntry  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.models.notification_preference import NotificationPreference  # noqa: F401
@@ -52,6 +56,8 @@ from app.models.role import Role, UserRole  # noqa: F401
 from app.models.sale_dispute import DemandSignal, QualityDispute, SaleDispute, SaleFeedback  # noqa: F401
 from app.models.sale_order import SaleOrder  # noqa: F401
 from app.models.task import Task  # noqa: F401
+from app.models.treatment_follow_up import TreatmentFollowUp  # noqa: F401
+from app.models.treatment_record import TreatmentRecord  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.verification_record import VerificationRecord  # noqa: F401
 from app.models.weather_snapshot import WeatherSnapshot  # noqa: F401

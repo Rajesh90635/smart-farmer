@@ -18,6 +18,12 @@ psycopg[binary]==3.2.2
 
 # --- Image validation/processing (crop photo module) ---
 pillow==10.4.0
+pytesseract==0.3.13
+# pytesseract wraps the system tesseract-ocr binary (Apache 2.0, free,
+# fully local/offline) - Phase 30 Invoice OCR. Requires the tesseract-ocr
+# system package to be installed separately (apt install tesseract-ocr
+# tesseract-ocr-eng on Debian/Ubuntu) - this Python wrapper alone does
+# nothing without it.
 python-multipart==0.0.9
 
 # --- Auth foundation (JWT + password hashing) ---

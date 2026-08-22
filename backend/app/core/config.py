@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     photo_quality_max_mean_brightness: float = 230.0  # above this: "too bright"
     photo_quality_min_blur_variance: float = 15.0     # below this: "too blurry"
 
+    # --- OCR (Phase 30) - PLACEHOLDERS, same honesty convention as the
+    # AI confidence gate (Prompt 6) and image quality thresholds above:
+    # real Tesseract mean per-word confidence scores, thresholds not yet
+    # validated against a large real-world invoice/receipt sample. ---
+    ocr_high_confidence_mean_word_score: float = 75.0
+    ocr_medium_confidence_mean_word_score: float = 45.0
+
     # --- AI confidence thresholds (PLACEHOLDERS - no evaluation dataset
     # exists yet; see docs/AI_EVALUATION.md before treating these as safe) ---
     ai_confidence_high_threshold: float = 0.85

@@ -52,6 +52,30 @@ def generate_response(intent: Intent, tool_result: dict, language_code: str) -> 
             return get_message("assistant_no_data_harvest", language_code), None, sources
         return get_message("assistant_harvest_status", language_code, status=tool_result["status"]), ConfidenceLevel.HIGH_CONFIDENCE, sources
 
+    if intent == Intent.TREATMENT_STATUS:
+        if not tool_result.get("available"):
+            return get_message("assistant_no_data_treatment", language_code), None, sources
+        if not tool_result.get("has_follow_up"):
+            text = get_message("assistant_treatment_no_follow_up", language_code, application_date=tool_result["application_date"])
+            return text, ConfidenceLevel.HIGH_CONFIDENCE, sources
+        # effectiveness_summary is reused VERBATIM from Phase 34's own
+        # deterministic result - never recomputed or reworded here.
+        text = get_message(
+            "assistant_treatment_effectiveness", language_code,
+            application_date=tool_result["application_date"], effectiveness_summary=tool_result["effectiveness_summary"],
+        )
+        confidence = ConfidenceLevel.HIGH_CONFIDENCE if tool_result["effectiveness_result"] != "insufficient_evidence" else ConfidenceLevel.LOW_CONFIDENCE
+        return text, confidence, sources
+
+    if intent == Intent.FINANCIAL_STATUS:
+        if not tool_result.get("available"):
+            return get_message("assistant_no_data_financial", language_code), None, sources
+        text = get_message(
+            "assistant_financial_summary", language_code,
+            actual_cost=tool_result["actual_cost"], estimate_note=tool_result["estimate_note"],
+        )
+        return text, ConfidenceLevel.HIGH_CONFIDENCE, sources
+
     if intent == Intent.BUYER_OFFER:
         if not tool_result.get("available"):
             return get_message("assistant_no_data_offers", language_code), None, sources

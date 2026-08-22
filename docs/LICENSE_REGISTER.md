@@ -16,6 +16,8 @@ the development rules.
 | alembic | 1.13.2 | MIT | PyPI | DB migrations | Yes |
 | psycopg[binary] | 3.2.2 | LGPL-3.0 | PyPI | PostgreSQL driver | Yes (LGPL permits linking/use; verify if statically bundling for distribution) |
 | pillow | 10.4.0 | HPND (permissive, MIT/BSD-style) | PyPI | Image validation, quality heuristics, processing | Yes |
+| pytesseract | 0.3.13 | Apache 2.0 | PyPI | Python wrapper for Tesseract OCR - Phase 30 invoice text extraction | Yes |
+| tesseract-ocr (system package, not a Python dependency) | 5.3.4 (as installed) | Apache 2.0 | Ubuntu/Debian apt repository | The actual OCR engine pytesseract wraps - free, fully local/offline, no cloud service, no API key | Yes |
 | python-multipart | 0.0.9 | Apache-2.0 | PyPI | multipart/form-data parsing for photo upload | Yes |
 | python-jose[cryptography] | 3.3.0 | MIT | PyPI | JWT encode/decode | Yes |
 | passlib | 1.7.4 | BSD-3-Clause | PyPI | Password hashing framework | Yes |

@@ -2,8 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../crop_assistant/crop_assistant_screen.dart';
+import '../crop_financial/crop_financial_summary_screen.dart';
+import '../crop_financial/profit_forecast_screen.dart';
+import '../crop_performance/crop_comparison_screen.dart';
+import '../crop_performance/input_roi_screen.dart';
+import '../crop_performance/irrigation_intelligence_screen.dart';
+import '../crop_performance/performance_score_screen.dart';
 import '../crop_photo/crop_photo_list_screen.dart';
+import '../crop_risk/risk_score_screen.dart';
+import '../health_timeline/health_timeline_screen.dart';
+import '../ledger/ledger_screen.dart';
+import '../personalization/advisory_feedback_screen.dart';
+import '../personalization/learning_summary_screen.dart';
+import '../personalization/personalization_profile_screen.dart';
 import '../task/task_list_screen.dart';
+import '../treatment/treatment_list_screen.dart';
+import '../weather_action/weather_action_screen.dart';
 import 'crop_repository.dart';
 import 'farm_models.dart';
 
@@ -113,6 +128,110 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       appBar: AppBar(
         title: Text(_cycle?.crop.name ?? 'Crop'),
         actions: [
+          if (_cycle != null)
+            PopupMenuButton<String>(
+              tooltip: 'Crop Insights',
+              icon: const Icon(Icons.insights_outlined),
+              onSelected: (value) {
+                final cycleId = _cycle!.id;
+                switch (value) {
+                  case 'performance':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PerformanceScoreScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'comparison':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CropComparisonScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'input_roi':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => InputRoiScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'irrigation':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => IrrigationIntelligenceScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'personalization':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonalizationProfileScreen()));
+                    break;
+                  case 'learning_summary':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => LearningSummaryScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'feedback':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AdvisoryFeedbackScreen(cropCycleId: cycleId)));
+                    break;
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'performance', child: Text('Performance Score')),
+                PopupMenuItem(value: 'comparison', child: Text('Compare Crops')),
+                PopupMenuItem(value: 'input_roi', child: Text('Input Spend Breakdown')),
+                PopupMenuItem(value: 'irrigation', child: Text('Irrigation Intelligence')),
+                PopupMenuItem(value: 'personalization', child: Text('Your Personalization Profile')),
+                PopupMenuItem(value: 'learning_summary', child: Text('Learning Summary')),
+                PopupMenuItem(value: 'feedback', child: Text('Give Feedback')),
+              ],
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.cloudy_snowing),
+              tooltip: 'Weather Action Advisor',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => WeatherActionScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.chat_outlined),
+              tooltip: 'AI Crop Assistant',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => CropAssistantScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'Health Timeline',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => HealthTimelineScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.medical_services_outlined),
+              tooltip: 'Treatments',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => TreatmentListScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.health_and_safety_outlined),
+              tooltip: 'Crop Risk',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => RiskScoreScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.trending_up),
+              tooltip: 'Profit Forecast',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ProfitForecastScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.assessment_outlined),
+              tooltip: 'Financial Summary',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => CropFinancialSummaryScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              tooltip: 'Financial Ledger',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => LedgerScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.checklist),
