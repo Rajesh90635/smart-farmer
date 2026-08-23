@@ -1,0 +1,15 @@
+"""
+Stable, farmer-facing-safe error codes. The Flutter client maps these to
+human-friendly, localized messages (never shows raw backend text) - see
+docs/API_CONVENTIONS.md for the response shape these appear in.
+"""
+INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
+ACCOUNT_DISABLED = "ACCOUNT_DISABLED"
+VALIDATION_ERROR = "VALIDATION_ERROR"
+UNAUTHORIZED = "UNAUTHORIZED"
+FORBIDDEN = "FORBIDDEN"
+SESSION_EXPIRED = "SESSION_EXPIRED"
+INVALID_TOKEN = "INVALID_TOKEN"
+DUPLICATE_ACCOUNT = "DUPLICATE_ACCOUNT"
+NOT_FOUND = "NOT_FOUND"
+RATE_LIMITED = "RATE_LIMITED"

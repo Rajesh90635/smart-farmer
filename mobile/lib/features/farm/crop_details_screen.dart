@@ -1,0 +1,310 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/friendly_error.dart';
+import '../crop_assistant/crop_assistant_screen.dart';
+import '../crop_financial/crop_financial_summary_screen.dart';
+import '../crop_financial/profit_forecast_screen.dart';
+import '../crop_performance/crop_comparison_screen.dart';
+import '../crop_performance/input_roi_screen.dart';
+import '../crop_performance/irrigation_intelligence_screen.dart';
+import '../crop_performance/performance_score_screen.dart';
+import '../crop_photo/crop_photo_list_screen.dart';
+import '../crop_risk/risk_score_screen.dart';
+import '../health_timeline/health_timeline_screen.dart';
+import '../ledger/ledger_screen.dart';
+import '../personalization/advisory_feedback_screen.dart';
+import '../personalization/learning_summary_screen.dart';
+import '../personalization/personalization_profile_screen.dart';
+import '../task/task_list_screen.dart';
+import '../treatment/treatment_list_screen.dart';
+import '../weather_action/weather_action_screen.dart';
+import 'crop_repository.dart';
+import 'farm_models.dart';
+
+/// Crop Details: shows the cultivation status and lets the farmer advance
+/// it one step at a time (never an arbitrary jump - only the single "next"
+/// status per cultivationStatusOrder is offered as a button), plus a
+/// separate Cancel action and a Close/Harvest action once
+/// ready_for_harvest is reached. The backend is still the actual
+/// enforcement point - this UI just avoids offering an invalid choice in
+/// the first place.
+class CropDetailsScreen extends StatefulWidget {
+  final String cropCycleId;
+  const CropDetailsScreen({super.key, required this.cropCycleId});
+
+  @override
+  State<CropDetailsScreen> createState() => _CropDetailsScreenState();
+}
+
+class _CropDetailsScreenState extends State<CropDetailsScreen> {
+  CropCycle? _cycle;
+  bool _loading = true;
+  bool _updating = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final cycle = await context.read<CropRepository>().getCropCycle(widget.cropCycleId);
+      setState(() {
+        _cycle = cycle;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = FriendlyError.from(e);
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _advanceStatus(String newStatus) async {
+    setState(() => _updating = true);
+    try {
+      final updated = await context.read<CropRepository>().updateCropCycleStatus(widget.cropCycleId, newStatus);
+      setState(() => _cycle = updated);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  Future<void> _closeHarvest() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+    );
+    if (picked == null) return;
+
+    final isoDate =
+        '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+
+    setState(() => _updating = true);
+    try {
+      final updated = await context.read<CropRepository>().closeCropCycle(widget.cropCycleId, isoDate);
+      setState(() => _cycle = updated);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Crop marked as harvested.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  Future<void> _cancelCropCycle() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancel this crop?'),
+        content: const Text('This marks the crop cycle as cancelled. This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+        ],
+      ),
+    );
+    if (confirmed == true) _advanceStatus('cancelled');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_cycle?.crop.name ?? 'Crop'),
+        actions: [
+          if (_cycle != null)
+            PopupMenuButton<String>(
+              tooltip: 'Crop Insights',
+              icon: const Icon(Icons.insights_outlined),
+              onSelected: (value) {
+                final cycleId = _cycle!.id;
+                switch (value) {
+                  case 'performance':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PerformanceScoreScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'comparison':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CropComparisonScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'input_roi':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => InputRoiScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'irrigation':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => IrrigationIntelligenceScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'personalization':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PersonalizationProfileScreen()));
+                    break;
+                  case 'learning_summary':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => LearningSummaryScreen(cropCycleId: cycleId)));
+                    break;
+                  case 'feedback':
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AdvisoryFeedbackScreen(cropCycleId: cycleId)));
+                    break;
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'performance', child: Text('Performance Score')),
+                PopupMenuItem(value: 'comparison', child: Text('Compare Crops')),
+                PopupMenuItem(value: 'input_roi', child: Text('Input Spend Breakdown')),
+                PopupMenuItem(value: 'irrigation', child: Text('Irrigation Intelligence')),
+                PopupMenuItem(value: 'personalization', child: Text('Your Personalization Profile')),
+                PopupMenuItem(value: 'learning_summary', child: Text('Learning Summary')),
+                PopupMenuItem(value: 'feedback', child: Text('Give Feedback')),
+              ],
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.cloudy_snowing),
+              tooltip: 'Weather Action Advisor',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => WeatherActionScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.chat_outlined),
+              tooltip: 'AI Crop Assistant',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => CropAssistantScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'Health Timeline',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => HealthTimelineScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.medical_services_outlined),
+              tooltip: 'Treatments',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => TreatmentListScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.health_and_safety_outlined),
+              tooltip: 'Crop Risk',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => RiskScoreScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.trending_up),
+              tooltip: 'Profit Forecast',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ProfitForecastScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.assessment_outlined),
+              tooltip: 'Financial Summary',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => CropFinancialSummaryScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              tooltip: 'Financial Ledger',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => LedgerScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.checklist),
+              tooltip: 'Tasks',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => TaskListScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.camera_alt),
+              tooltip: 'Check Crop',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => CropPhotoListScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+        ],
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+        ),
+      );
+    }
+
+    final cycle = _cycle!;
+    final next = nextStatusAfter(cycle.cultivationStatus);
+    final isTerminal = cycle.cultivationStatus == 'harvested' || cycle.cultivationStatus == 'cancelled';
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Center(
+          child: Chip(
+            label: Text(cycle.cultivationStatus.replaceAll('_', ' ').toUpperCase()),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ListTile(title: const Text('Sowing date'), subtitle: Text(cycle.sowingDate)),
+        if (cycle.expectedHarvestDate != null)
+          ListTile(title: const Text('Expected harvest'), subtitle: Text(cycle.expectedHarvestDate!)),
+        if (cycle.actualHarvestDate != null)
+          ListTile(title: const Text('Harvested on'), subtitle: Text(cycle.actualHarvestDate!)),
+        if (cycle.season != null) ListTile(title: const Text('Season'), subtitle: Text(cycle.season!)),
+        if (cycle.seedVariety != null) ListTile(title: const Text('Seed variety'), subtitle: Text(cycle.seedVariety!)),
+        const SizedBox(height: 32),
+        if (_updating)
+          const Center(child: CircularProgressIndicator())
+        else if (!isTerminal) ...[
+          if (cycle.cultivationStatus == 'ready_for_harvest')
+            ElevatedButton.icon(
+              onPressed: _closeHarvest,
+              icon: const Icon(Icons.agriculture),
+              label: const Text('Mark as harvested'),
+            )
+          else if (next != null)
+            ElevatedButton(
+              onPressed: () => _advanceStatus(next),
+              child: Text('Advance to ${next.replaceAll('_', ' ')}'),
+            ),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: _cancelCropCycle, child: const Text('Cancel this crop')),
+        ],
+      ],
+    );
+  }
+}
