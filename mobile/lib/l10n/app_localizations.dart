@@ -106,6 +106,126 @@ abstract class AppLocalizations {
   /// **'Welcome to Smart Farmer'**
   String get welcomeTitle;
 
+  /// No description provided for @welcomeTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your farm, understood.'**
+  String get welcomeTagline;
+
+  /// No description provided for @getStartedButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get getStartedButton;
+
+  /// No description provided for @alreadyHaveAccountButton.
+  ///
+  /// In en, this message translates to:
+  /// **'I already have an account'**
+  String get alreadyHaveAccountButton;
+
+  /// No description provided for @loginScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get loginScreenTitle;
+
+  /// No description provided for @phoneNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get phoneNumberLabel;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @passwordRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your password.'**
+  String get passwordRequiredError;
+
+  /// No description provided for @loginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get loginButton;
+
+  /// No description provided for @newHereCreateAccountButton.
+  ///
+  /// In en, this message translates to:
+  /// **'New here? Create an account'**
+  String get newHereCreateAccountButton;
+
+  /// No description provided for @loginFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Login failed.'**
+  String get loginFailedMessage;
+
+  /// No description provided for @createAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account'**
+  String get createAccountTitle;
+
+  /// No description provided for @yourNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get yourNameLabel;
+
+  /// No description provided for @registerContinueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get registerContinueButton;
+
+  /// No description provided for @alreadyHaveAccountLoginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Log in'**
+  String get alreadyHaveAccountLoginButton;
+
+  /// No description provided for @registrationFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration failed.'**
+  String get registrationFailedMessage;
+
+  /// No description provided for @consentScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Before you continue'**
+  String get consentScreenTitle;
+
+  /// No description provided for @agreeTermsOfServiceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I agree to the Terms of Service'**
+  String get agreeTermsOfServiceLabel;
+
+  /// No description provided for @agreePrivacyPolicyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I agree to the Privacy Policy'**
+  String get agreePrivacyPolicyLabel;
+
+  /// No description provided for @consentContinueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get consentContinueButton;
+
+  /// No description provided for @chooseYourLanguageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your language'**
+  String get chooseYourLanguageTitle;
+
   /// No description provided for @navHome.
   ///
   /// In en, this message translates to:
@@ -1053,6 +1173,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'INSUFFICIENT EVIDENCE'**
   String get effectivenessInsufficientEvidenceLabel;
+
+  /// No description provided for @harvestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvests'**
+  String get harvestsTitle;
+
+  /// No description provided for @recordHarvestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Record Harvest'**
+  String get recordHarvestButton;
+
+  /// No description provided for @startAdditionalHarvestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Additional Harvest'**
+  String get startAdditionalHarvestButton;
+
+  /// No description provided for @noHarvestsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No harvests recorded yet for this crop.'**
+  String get noHarvestsYet;
+
+  /// No description provided for @harvestStatusPlannedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Planned'**
+  String get harvestStatusPlannedLabel;
+
+  /// No description provided for @harvestStatusApproachingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Approaching'**
+  String get harvestStatusApproachingLabel;
+
+  /// No description provided for @harvestStatusReadyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get harvestStatusReadyLabel;
+
+  /// No description provided for @harvestStatusHarvestedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvested'**
+  String get harvestStatusHarvestedLabel;
+
+  /// No description provided for @harvestStatusListedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed'**
+  String get harvestStatusListedLabel;
+
+  /// No description provided for @harvestStatusPartiallySoldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Partially Sold'**
+  String get harvestStatusPartiallySoldLabel;
+
+  /// No description provided for @harvestStatusSoldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get harvestStatusSoldLabel;
+
+  /// No description provided for @harvestStatusCancelledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get harvestStatusCancelledLabel;
+
+  /// No description provided for @markApproachingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Approaching'**
+  String get markApproachingButton;
+
+  /// No description provided for @confirmReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Harvest Ready'**
+  String get confirmReadyTitle;
+
+  /// No description provided for @actualHarvestDateOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual harvest date (optional)'**
+  String get actualHarvestDateOptionalLabel;
+
+  /// No description provided for @estimatedQuantityOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated quantity (optional)'**
+  String get estimatedQuantityOptionalLabel;
+
+  /// No description provided for @confirmReadyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Ready'**
+  String get confirmReadyButton;
+
+  /// No description provided for @createListingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Harvest Listing'**
+  String get createListingTitle;
+
+  /// No description provided for @quantityAvailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity available'**
+  String get quantityAvailableLabel;
+
+  /// No description provided for @harvestUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get harvestUnitLabel;
+
+  /// No description provided for @qualityGradeOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality grade (optional)'**
+  String get qualityGradeOptionalLabel;
+
+  /// No description provided for @deliveryOptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery option'**
+  String get deliveryOptionLabel;
+
+  /// No description provided for @deliveryOptionBuyerCollectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Buyer collection'**
+  String get deliveryOptionBuyerCollectionLabel;
+
+  /// No description provided for @deliveryOptionFarmerDeliveryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Farmer delivery'**
+  String get deliveryOptionFarmerDeliveryLabel;
+
+  /// No description provided for @deliveryOptionThirdPartyLogisticsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Third-party logistics'**
+  String get deliveryOptionThirdPartyLogisticsLabel;
+
+  /// No description provided for @preferredPriceOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred price (optional)'**
+  String get preferredPriceOptionalLabel;
+
+  /// No description provided for @serviceAreaStateOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'State (optional)'**
+  String get serviceAreaStateOptionalLabel;
+
+  /// No description provided for @serviceAreaDistrictOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'District (optional)'**
+  String get serviceAreaDistrictOptionalLabel;
+
+  /// No description provided for @listingNotesOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get listingNotesOptionalLabel;
+
+  /// No description provided for @createListingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Listing'**
+  String get createListingButton;
+
+  /// No description provided for @duplicateListingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Listing Already Exists'**
+  String get duplicateListingTitle;
+
+  /// No description provided for @duplicateListingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an active listing for this harvest.'**
+  String get duplicateListingMessage;
+
+  /// No description provided for @createAnotherListingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Another Anyway'**
+  String get createAnotherListingButton;
+
+  /// No description provided for @listingCreatedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing created.'**
+  String get listingCreatedMessage;
+
+  /// No description provided for @harvestHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvest History'**
+  String get harvestHistoryTitle;
+
+  /// No description provided for @myHarvestsTabLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvests'**
+  String get myHarvestsTabLabel;
+
+  /// No description provided for @myListingsTabLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings'**
+  String get myListingsTabLabel;
+
+  /// No description provided for @noHarvestHistoryYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No harvests recorded yet.'**
+  String get noHarvestHistoryYet;
+
+  /// No description provided for @noListingsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No listings yet.'**
+  String get noListingsYet;
+
+  /// No description provided for @viewHarvestHistoryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvest History'**
+  String get viewHarvestHistoryButton;
+
+  /// No description provided for @listingActiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get listingActiveLabel;
+
+  /// No description provided for @listingInactiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get listingInactiveLabel;
 
   /// No description provided for @healthTimelineTitle.
   ///

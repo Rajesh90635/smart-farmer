@@ -15,6 +15,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get welcomeTitle => 'Welcome to Smart Farmer';
 
   @override
+  String get welcomeTagline => 'Your farm, understood.';
+
+  @override
+  String get getStartedButton => 'Get started';
+
+  @override
+  String get alreadyHaveAccountButton => 'I already have an account';
+
+  @override
+  String get loginScreenTitle => 'Log in';
+
+  @override
+  String get phoneNumberLabel => 'Phone number';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get passwordRequiredError => 'Please enter your password.';
+
+  @override
+  String get loginButton => 'Log in';
+
+  @override
+  String get newHereCreateAccountButton => 'New here? Create an account';
+
+  @override
+  String get loginFailedMessage => 'Login failed.';
+
+  @override
+  String get createAccountTitle => 'Create your account';
+
+  @override
+  String get yourNameLabel => 'Your name';
+
+  @override
+  String get registerContinueButton => 'Continue';
+
+  @override
+  String get alreadyHaveAccountLoginButton => 'Already have an account? Log in';
+
+  @override
+  String get registrationFailedMessage => 'Registration failed.';
+
+  @override
+  String get consentScreenTitle => 'Before you continue';
+
+  @override
+  String get agreeTermsOfServiceLabel => 'I agree to the Terms of Service';
+
+  @override
+  String get agreePrivacyPolicyLabel => 'I agree to the Privacy Policy';
+
+  @override
+  String get consentContinueButton => 'Continue';
+
+  @override
+  String get chooseYourLanguageTitle => 'Choose your language';
+
+  @override
   String get navHome => 'Home';
 
   @override
@@ -507,6 +567,133 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get effectivenessInsufficientEvidenceLabel => 'INSUFFICIENT EVIDENCE';
+
+  @override
+  String get harvestsTitle => 'Harvests';
+
+  @override
+  String get recordHarvestButton => 'Record Harvest';
+
+  @override
+  String get startAdditionalHarvestButton => 'Start Additional Harvest';
+
+  @override
+  String get noHarvestsYet => 'No harvests recorded yet for this crop.';
+
+  @override
+  String get harvestStatusPlannedLabel => 'Planned';
+
+  @override
+  String get harvestStatusApproachingLabel => 'Approaching';
+
+  @override
+  String get harvestStatusReadyLabel => 'Ready';
+
+  @override
+  String get harvestStatusHarvestedLabel => 'Harvested';
+
+  @override
+  String get harvestStatusListedLabel => 'Listed';
+
+  @override
+  String get harvestStatusPartiallySoldLabel => 'Partially Sold';
+
+  @override
+  String get harvestStatusSoldLabel => 'Sold';
+
+  @override
+  String get harvestStatusCancelledLabel => 'Cancelled';
+
+  @override
+  String get markApproachingButton => 'Mark Approaching';
+
+  @override
+  String get confirmReadyTitle => 'Confirm Harvest Ready';
+
+  @override
+  String get actualHarvestDateOptionalLabel => 'Actual harvest date (optional)';
+
+  @override
+  String get estimatedQuantityOptionalLabel => 'Estimated quantity (optional)';
+
+  @override
+  String get confirmReadyButton => 'Confirm Ready';
+
+  @override
+  String get createListingTitle => 'Create Harvest Listing';
+
+  @override
+  String get quantityAvailableLabel => 'Quantity available';
+
+  @override
+  String get harvestUnitLabel => 'Unit';
+
+  @override
+  String get qualityGradeOptionalLabel => 'Quality grade (optional)';
+
+  @override
+  String get deliveryOptionLabel => 'Delivery option';
+
+  @override
+  String get deliveryOptionBuyerCollectionLabel => 'Buyer collection';
+
+  @override
+  String get deliveryOptionFarmerDeliveryLabel => 'Farmer delivery';
+
+  @override
+  String get deliveryOptionThirdPartyLogisticsLabel => 'Third-party logistics';
+
+  @override
+  String get preferredPriceOptionalLabel => 'Preferred price (optional)';
+
+  @override
+  String get serviceAreaStateOptionalLabel => 'State (optional)';
+
+  @override
+  String get serviceAreaDistrictOptionalLabel => 'District (optional)';
+
+  @override
+  String get listingNotesOptionalLabel => 'Notes (optional)';
+
+  @override
+  String get createListingButton => 'Create Listing';
+
+  @override
+  String get duplicateListingTitle => 'Active Listing Already Exists';
+
+  @override
+  String get duplicateListingMessage =>
+      'You already have an active listing for this harvest.';
+
+  @override
+  String get createAnotherListingButton => 'Create Another Anyway';
+
+  @override
+  String get listingCreatedMessage => 'Listing created.';
+
+  @override
+  String get harvestHistoryTitle => 'Harvest History';
+
+  @override
+  String get myHarvestsTabLabel => 'Harvests';
+
+  @override
+  String get myListingsTabLabel => 'Listings';
+
+  @override
+  String get noHarvestHistoryYet => 'No harvests recorded yet.';
+
+  @override
+  String get noListingsYet => 'No listings yet.';
+
+  @override
+  String get viewHarvestHistoryButton => 'Harvest History';
+
+  @override
+  String get listingActiveLabel => 'Active';
+
+  @override
+  String get listingInactiveLabel => 'Inactive';
 
   @override
   String get healthTimelineTitle => 'Health Timeline';

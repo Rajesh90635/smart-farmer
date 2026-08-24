@@ -11,6 +11,7 @@ import '../crop_performance/irrigation_intelligence_screen.dart';
 import '../crop_performance/performance_score_screen.dart';
 import '../crop_photo/crop_photo_list_screen.dart';
 import '../crop_risk/risk_score_screen.dart';
+import '../harvest/harvest_list_screen.dart';
 import '../health_timeline/health_timeline_screen.dart';
 import '../ledger/ledger_screen.dart';
 import '../personalization/advisory_feedback_screen.dart';
@@ -246,6 +247,14 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
               tooltip: 'Check Crop',
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => CropPhotoListScreen(cropCycleId: _cycle!.id)),
+              ),
+            ),
+          if (_cycle != null)
+            IconButton(
+              icon: const Icon(Icons.agriculture),
+              tooltip: 'Harvest',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => HarvestListScreen(cropCycleId: _cycle!.id)),
               ),
             ),
         ],

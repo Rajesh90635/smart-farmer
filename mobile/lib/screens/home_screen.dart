@@ -5,6 +5,8 @@ import '../core/friendly_error.dart';
 import '../features/auth/farmer_repository.dart';
 import '../features/daily_briefing/daily_briefing_screen.dart';
 import '../features/farm/my_farms_screen.dart';
+import '../features/harvest/harvest_history_screen.dart';
+import '../l10n/app_localizations.dart';
 
 /// Farmer Home: a simple farm/plot/crop summary only. No disease, weather,
 /// or market data - those modules don't exist yet (see PROJECT_STATUS.md).
@@ -56,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context)!;
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return ListView(
@@ -89,6 +92,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 12),
         _SummaryCard(label: 'Active crops', value: dashboard.activeCropCycleCount, wide: true),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const HarvestHistoryScreen()),
+          ),
+          icon: const Icon(Icons.agriculture),
+          label: Text(l10n.viewHarvestHistoryButton),
+        ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: () => Navigator.of(context).push(

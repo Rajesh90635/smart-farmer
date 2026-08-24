@@ -24,6 +24,7 @@ import 'features/expert_case/case_repository.dart';
 import 'features/health_timeline/health_timeline_repository.dart';
 import 'features/invoice/invoice_repository.dart';
 import 'features/ledger/ledger_repository.dart';
+import 'features/harvest/harvest_repository.dart';
 import 'features/task/task_repository.dart';
 import 'features/treatment/treatment_repository.dart';
 import 'features/weather_action/weather_action_repository.dart';
@@ -58,6 +59,7 @@ class SmartFarmerApp extends StatelessWidget {
         Provider<CropRepository>(create: (_) => CropRepository(apiClient: apiClient)),
         Provider<CropPhotoRepository>(create: (_) => CropPhotoRepository(apiClient: apiClient)),
         Provider<CaseRepository>(create: (_) => CaseRepository(apiClient: apiClient)),
+        Provider<HarvestRepository>(create: (_) => HarvestRepository(apiClient: apiClient)),
         Provider<TaskRepository>(create: (_) => TaskRepository(apiClient: apiClient)),
         Provider<TreatmentRepository>(create: (_) => TreatmentRepository(apiClient: apiClient)),
         Provider<HealthTimelineRepository>(create: (_) => HealthTimelineRepository(apiClient: apiClient)),
