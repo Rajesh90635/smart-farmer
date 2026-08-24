@@ -696,6 +696,231 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingInactiveLabel => 'Inactive';
 
   @override
+  String get marketTitle => 'Market';
+
+  @override
+  String get viewOffersButton => 'View Offers';
+
+  @override
+  String get mySalesButton => 'My Sales';
+
+  @override
+  String get offersTitle => 'Offers';
+
+  @override
+  String get noOffersYet => 'No offers yet for this listing.';
+
+  @override
+  String get offerStatusActiveLabel => 'Active';
+
+  @override
+  String get offerStatusExpiredLabel => 'Expired';
+
+  @override
+  String get offerStatusAcceptedLabel => 'Accepted';
+
+  @override
+  String get offerStatusRejectedLabel => 'Rejected';
+
+  @override
+  String get offerStatusCancelledLabel => 'Cancelled';
+
+  @override
+  String get offerStatusCompletedLabel => 'Completed';
+
+  @override
+  String get counterOfferButton => 'Counter Offer';
+
+  @override
+  String get acceptOfferButton => 'Accept Offer';
+
+  @override
+  String get rejectOfferButton => 'Reject Offer';
+
+  @override
+  String get counterOfferTitle => 'Send Counter Offer';
+
+  @override
+  String get pricePerUnitLabel => 'Price per unit';
+
+  @override
+  String get offerQuantityLabel => 'Quantity';
+
+  @override
+  String get counterMessageOptionalLabel => 'Message (optional)';
+
+  @override
+  String get sendCounterButton => 'Send Counter';
+
+  @override
+  String get offerAcceptedMessage => 'Offer accepted. Sale created.';
+
+  @override
+  String get offerRejectedMessage => 'Offer rejected.';
+
+  @override
+  String get counterSentMessage => 'Counter offer sent.';
+
+  @override
+  String get salesTitle => 'My Sales';
+
+  @override
+  String get noSalesYet => 'No sales yet.';
+
+  @override
+  String get saleDetailTitle => 'Sale Details';
+
+  @override
+  String get saleStatusPendingLabel => 'Pending';
+
+  @override
+  String get saleStatusAcceptedLabel => 'Accepted';
+
+  @override
+  String get saleStatusPreparingLabel => 'Preparing';
+
+  @override
+  String get saleStatusReadyForCollectionLabel => 'Ready for Collection';
+
+  @override
+  String get saleStatusCollectedLabel => 'Collected';
+
+  @override
+  String get saleStatusInTransitLabel => 'In Transit';
+
+  @override
+  String get saleStatusDeliveredLabel => 'Delivered';
+
+  @override
+  String get saleStatusPaymentPendingLabel => 'Payment Pending';
+
+  @override
+  String get saleStatusPaidLabel => 'Paid';
+
+  @override
+  String get saleStatusCancelledLabel => 'Cancelled';
+
+  @override
+  String get saleStatusDisputedLabel => 'Disputed';
+
+  @override
+  String get saleStatusCompletedLabel => 'Completed';
+
+  @override
+  String get grossValueLabel => 'Gross Value';
+
+  @override
+  String get chargesLabel => 'Charges';
+
+  @override
+  String get netValueLabel => 'Net Value';
+
+  @override
+  String get acceptSaleButton => 'Accept Sale';
+
+  @override
+  String get advanceSaleButton => 'Move to';
+
+  @override
+  String get cancelSaleButton => 'Cancel Sale';
+
+  @override
+  String get cancelSaleTitle => 'Cancel Sale';
+
+  @override
+  String get cancellationReasonLabel => 'Reason';
+
+  @override
+  String get fileDisputeButton => 'File Dispute';
+
+  @override
+  String get fileDisputeTitle => 'File a Dispute';
+
+  @override
+  String get disputeReasonLabel => 'Reason';
+
+  @override
+  String get disputeDescriptionOptionalLabel => 'Description (optional)';
+
+  @override
+  String get submitDisputeButton => 'Submit Dispute';
+
+  @override
+  String get leaveFeedbackButton => 'Leave Feedback';
+
+  @override
+  String get leaveFeedbackTitle => 'Leave Feedback';
+
+  @override
+  String get feedbackRatingOptionalLabel => 'Rating 1-5 (optional)';
+
+  @override
+  String get feedbackTextOptionalLabel => 'Comments (optional)';
+
+  @override
+  String get submitFeedbackButton => 'Submit Feedback';
+
+  @override
+  String get saleAcceptedMessage => 'Sale accepted.';
+
+  @override
+  String get saleAdvancedMessage => 'Sale updated.';
+
+  @override
+  String get saleCancelledMessage => 'Sale cancelled.';
+
+  @override
+  String get disputeFiledMessage => 'Dispute filed.';
+
+  @override
+  String get feedbackSubmittedMessage => 'Feedback submitted.';
+
+  @override
+  String get cancellationReasonPriceDisputeLabel => 'Price dispute';
+
+  @override
+  String get cancellationReasonQuantityChangeLabel => 'Quantity change';
+
+  @override
+  String get cancellationReasonBuyerCancelledLabel => 'Buyer cancelled';
+
+  @override
+  String get cancellationReasonFarmerCancelledLabel => 'I want to cancel';
+
+  @override
+  String get cancellationReasonLogisticsFailureLabel => 'Logistics failure';
+
+  @override
+  String get cancellationReasonWeatherLabel => 'Weather';
+
+  @override
+  String get disputeReasonWrongQuantityLabel => 'Wrong quantity';
+
+  @override
+  String get disputeReasonQualityDisagreementLabel => 'Quality disagreement';
+
+  @override
+  String get disputeReasonPriceDisagreementLabel => 'Price disagreement';
+
+  @override
+  String get disputeReasonPaymentIssueLabel => 'Payment issue';
+
+  @override
+  String get disputeReasonDeliveryIssueLabel => 'Delivery issue';
+
+  @override
+  String get disputeReasonBuyerCancellationLabel => 'Buyer cancellation';
+
+  @override
+  String get disputeReasonFarmerCancellationLabel => 'Farmer cancellation';
+
+  @override
+  String get disputeReasonDamagedCropLabel => 'Damaged crop';
+
+  @override
+  String get otherReasonLabel => 'Other';
+
+  @override
   String get healthTimelineTitle => 'Health Timeline';
 
   @override

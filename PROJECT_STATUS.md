@@ -861,3 +861,21 @@ Confirmed `PendingUploadQueue`/`SyncCoordinator` (Step 10) still exist unmodifie
 **Disclosed scope limits**: no pagination UI for harvest/listing history (fetches up to 100 records); no crop-name enrichment on the history list (backend only returns `crop_id`); the buyer-facing `list_marketplace_listings` service function has no route in `harvests.py` and was correctly left untouched (out of scope for a farmer-facing screen).
 
 **Not yet done** (next candidates per the audit): Market/Buyer Discovery Flutter UI, or fixing the genuine Sale Dispute resolution backend gap.
+
+---
+
+## Market / Buyer Discovery Flutter Screens (Farmer-Side Offer & Sale Management)
+
+**A real architectural finding, surfaced before any code was written and confirmed with the user**: in `marketplace.py`, only the **buyer** role can browse/discover listings (`GET /listings` is buyer-role-gated) - a farmer can never "discover" anything in this backend. The farmer side is purely reactive: view offers already made on their own harvest listings, negotiate, and manage the resulting sale through an 11-state lifecycle (`pending`→...→`completed`). This app has never had any non-farmer persona UI (same boundary already drawn for Expert/Field Agent - no buyer registration/login/browsing screens exist). **User confirmed**: build the farmer-side reactive flow only, not a buyer persona - a much larger, precedent-breaking expansion this app's architecture doesn't support today.
+
+**Implementation** (new `mobile/lib/features/market/`): `market_models.dart`/`market_repository.dart` built strictly against the verbatim confirmed 24-endpoint `marketplace.py` contract (all Decimal fields kept as strings, matching `HarvestRecord`'s own convention - never `double.parse`d). `MarketScreen` **replaces** the `market_screen.dart` placeholder (moved from `lib/screens/` to `lib/features/market/`, `main_navigation_shell.dart`'s import repointed, same tab position, no new route) - lists the farmer's own listings (reusing `HarvestRepository.listMyListings()`, no duplicate fetch). `OffersScreen` (counter/accept/reject, status-gated to `active` offers only). `SalesScreen` + `SaleDetailScreen` (status-appropriate actions computed directly from the backend's own `ALLOWED_SALE_ORDER_TRANSITIONS` map, never invented) with reason-picker sheets for cancellation (7 real reasons) and dispute (9 real reasons) filing, plus feedback submission.
+
+**A deliberate safety boundary, disclosed in code**: the generic `/advance` endpoint would technically let a farmer self-declare `payment_pending`, but that step is meant to be the buyer's own delivery confirmation (`POST /purchases/{id}/confirm-delivery`, buyer-only) - giving a farmer a button to self-declare a delivery the buyer never confirmed would be a real integrity gap, so farmer-side "Advance" actions stop at `delivered` even though the raw endpoint doesn't forbid going further.
+
+**Disclosed backend gaps worked around, not papered over**: no endpoint lists counter-offer history for an offer (only the just-made counter's own response) - the UI shows the offer's current state and lets the farmer act, without a negotiation history view. No aggregate "all offers across all my listings" endpoint - offers are reached per-listing from the Market screen. `SaleOrderResponse` has no farmer/buyer display name, only UUIDs - none fabricated.
+
+**Tests**: 7 new model tests (`market_models_test.dart`), covering all 6 real `OfferStatus` and all 11 real `SaleOrderStatus` values, matching the established model-only test convention for this class of feature.
+
+**Verification**: `flutter analyze` - 29 issues; the 3 new items are the same pre-existing `DropdownButtonFormField` deprecation already present in 6+ other screens (3 dropdowns: cancellation reason, dispute reason, feedback rating). `flutter test` - **204/204 passed** (197 baseline + 7 new), zero regressions. No backend change. No live click-through - would require a real farmer account with a listing that has real buyer offers on it.
+
+**Not yet done**: the buyer-side persona (registration, login, browsing, making offers) remains entirely unbuilt, by explicit decision - this is the correct next fork if that scope is ever wanted, not an oversight.

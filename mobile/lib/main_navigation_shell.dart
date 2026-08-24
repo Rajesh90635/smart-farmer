@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'screens/assistant_screen.dart';
 import 'screens/camera_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/market_screen.dart';
 import 'features/farm/my_farms_screen.dart';
+import 'features/market/market_screen.dart';
 import 'screens/profile_screen.dart';
 
 /// The 6-tab navigation shell (Home / Camera / My Farm / Market /
 /// Assistant / Profile) per the simplified navigation principle in the
-/// approved UX spec. "My Farm" now opens the real Farm/Plot/Crop flow
-/// (MyFarmsScreen); the other tabs remain placeholders - see
-/// PROJECT_STATUS.md for implementation order.
+/// approved UX spec. "My Farm" opens the real Farm/Plot/Crop flow
+/// (MyFarmsScreen); "Market" opens the real farmer-side offer/sale
+/// management flow (MarketScreen); Camera and Assistant remain
+/// placeholders - see PROJECT_STATUS.md for implementation order.
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({super.key});
 

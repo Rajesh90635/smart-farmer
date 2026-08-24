@@ -1426,6 +1426,456 @@ abstract class AppLocalizations {
   /// **'Inactive'**
   String get listingInactiveLabel;
 
+  /// No description provided for @marketTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Market'**
+  String get marketTitle;
+
+  /// No description provided for @viewOffersButton.
+  ///
+  /// In en, this message translates to:
+  /// **'View Offers'**
+  String get viewOffersButton;
+
+  /// No description provided for @mySalesButton.
+  ///
+  /// In en, this message translates to:
+  /// **'My Sales'**
+  String get mySalesButton;
+
+  /// No description provided for @offersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers'**
+  String get offersTitle;
+
+  /// No description provided for @noOffersYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No offers yet for this listing.'**
+  String get noOffersYet;
+
+  /// No description provided for @offerStatusActiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get offerStatusActiveLabel;
+
+  /// No description provided for @offerStatusExpiredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get offerStatusExpiredLabel;
+
+  /// No description provided for @offerStatusAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get offerStatusAcceptedLabel;
+
+  /// No description provided for @offerStatusRejectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get offerStatusRejectedLabel;
+
+  /// No description provided for @offerStatusCancelledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get offerStatusCancelledLabel;
+
+  /// No description provided for @offerStatusCompletedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get offerStatusCompletedLabel;
+
+  /// No description provided for @counterOfferButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter Offer'**
+  String get counterOfferButton;
+
+  /// No description provided for @acceptOfferButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Offer'**
+  String get acceptOfferButton;
+
+  /// No description provided for @rejectOfferButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject Offer'**
+  String get rejectOfferButton;
+
+  /// No description provided for @counterOfferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Counter Offer'**
+  String get counterOfferTitle;
+
+  /// No description provided for @pricePerUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per unit'**
+  String get pricePerUnitLabel;
+
+  /// No description provided for @offerQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get offerQuantityLabel;
+
+  /// No description provided for @counterMessageOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (optional)'**
+  String get counterMessageOptionalLabel;
+
+  /// No description provided for @sendCounterButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Counter'**
+  String get sendCounterButton;
+
+  /// No description provided for @offerAcceptedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer accepted. Sale created.'**
+  String get offerAcceptedMessage;
+
+  /// No description provided for @offerRejectedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer rejected.'**
+  String get offerRejectedMessage;
+
+  /// No description provided for @counterSentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter offer sent.'**
+  String get counterSentMessage;
+
+  /// No description provided for @salesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Sales'**
+  String get salesTitle;
+
+  /// No description provided for @noSalesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales yet.'**
+  String get noSalesYet;
+
+  /// No description provided for @saleDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale Details'**
+  String get saleDetailTitle;
+
+  /// No description provided for @saleStatusPendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get saleStatusPendingLabel;
+
+  /// No description provided for @saleStatusAcceptedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get saleStatusAcceptedLabel;
+
+  /// No description provided for @saleStatusPreparingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing'**
+  String get saleStatusPreparingLabel;
+
+  /// No description provided for @saleStatusReadyForCollectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for Collection'**
+  String get saleStatusReadyForCollectionLabel;
+
+  /// No description provided for @saleStatusCollectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get saleStatusCollectedLabel;
+
+  /// No description provided for @saleStatusInTransitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'In Transit'**
+  String get saleStatusInTransitLabel;
+
+  /// No description provided for @saleStatusDeliveredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get saleStatusDeliveredLabel;
+
+  /// No description provided for @saleStatusPaymentPendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Pending'**
+  String get saleStatusPaymentPendingLabel;
+
+  /// No description provided for @saleStatusPaidLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get saleStatusPaidLabel;
+
+  /// No description provided for @saleStatusCancelledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get saleStatusCancelledLabel;
+
+  /// No description provided for @saleStatusDisputedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Disputed'**
+  String get saleStatusDisputedLabel;
+
+  /// No description provided for @saleStatusCompletedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get saleStatusCompletedLabel;
+
+  /// No description provided for @grossValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross Value'**
+  String get grossValueLabel;
+
+  /// No description provided for @chargesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Charges'**
+  String get chargesLabel;
+
+  /// No description provided for @netValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Net Value'**
+  String get netValueLabel;
+
+  /// No description provided for @acceptSaleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Sale'**
+  String get acceptSaleButton;
+
+  /// No description provided for @advanceSaleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to'**
+  String get advanceSaleButton;
+
+  /// No description provided for @cancelSaleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Sale'**
+  String get cancelSaleButton;
+
+  /// No description provided for @cancelSaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Sale'**
+  String get cancelSaleTitle;
+
+  /// No description provided for @cancellationReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get cancellationReasonLabel;
+
+  /// No description provided for @fileDisputeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'File Dispute'**
+  String get fileDisputeButton;
+
+  /// No description provided for @fileDisputeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'File a Dispute'**
+  String get fileDisputeTitle;
+
+  /// No description provided for @disputeReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get disputeReasonLabel;
+
+  /// No description provided for @disputeDescriptionOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get disputeDescriptionOptionalLabel;
+
+  /// No description provided for @submitDisputeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Dispute'**
+  String get submitDisputeButton;
+
+  /// No description provided for @leaveFeedbackButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Feedback'**
+  String get leaveFeedbackButton;
+
+  /// No description provided for @leaveFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Feedback'**
+  String get leaveFeedbackTitle;
+
+  /// No description provided for @feedbackRatingOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating 1-5 (optional)'**
+  String get feedbackRatingOptionalLabel;
+
+  /// No description provided for @feedbackTextOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments (optional)'**
+  String get feedbackTextOptionalLabel;
+
+  /// No description provided for @submitFeedbackButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Feedback'**
+  String get submitFeedbackButton;
+
+  /// No description provided for @saleAcceptedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale accepted.'**
+  String get saleAcceptedMessage;
+
+  /// No description provided for @saleAdvancedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale updated.'**
+  String get saleAdvancedMessage;
+
+  /// No description provided for @saleCancelledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale cancelled.'**
+  String get saleCancelledMessage;
+
+  /// No description provided for @disputeFiledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute filed.'**
+  String get disputeFiledMessage;
+
+  /// No description provided for @feedbackSubmittedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback submitted.'**
+  String get feedbackSubmittedMessage;
+
+  /// No description provided for @cancellationReasonPriceDisputeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price dispute'**
+  String get cancellationReasonPriceDisputeLabel;
+
+  /// No description provided for @cancellationReasonQuantityChangeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity change'**
+  String get cancellationReasonQuantityChangeLabel;
+
+  /// No description provided for @cancellationReasonBuyerCancelledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Buyer cancelled'**
+  String get cancellationReasonBuyerCancelledLabel;
+
+  /// No description provided for @cancellationReasonFarmerCancelledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I want to cancel'**
+  String get cancellationReasonFarmerCancelledLabel;
+
+  /// No description provided for @cancellationReasonLogisticsFailureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Logistics failure'**
+  String get cancellationReasonLogisticsFailureLabel;
+
+  /// No description provided for @cancellationReasonWeatherLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather'**
+  String get cancellationReasonWeatherLabel;
+
+  /// No description provided for @disputeReasonWrongQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong quantity'**
+  String get disputeReasonWrongQuantityLabel;
+
+  /// No description provided for @disputeReasonQualityDisagreementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality disagreement'**
+  String get disputeReasonQualityDisagreementLabel;
+
+  /// No description provided for @disputeReasonPriceDisagreementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price disagreement'**
+  String get disputeReasonPriceDisagreementLabel;
+
+  /// No description provided for @disputeReasonPaymentIssueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment issue'**
+  String get disputeReasonPaymentIssueLabel;
+
+  /// No description provided for @disputeReasonDeliveryIssueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery issue'**
+  String get disputeReasonDeliveryIssueLabel;
+
+  /// No description provided for @disputeReasonBuyerCancellationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Buyer cancellation'**
+  String get disputeReasonBuyerCancellationLabel;
+
+  /// No description provided for @disputeReasonFarmerCancellationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Farmer cancellation'**
+  String get disputeReasonFarmerCancellationLabel;
+
+  /// No description provided for @disputeReasonDamagedCropLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Damaged crop'**
+  String get disputeReasonDamagedCropLabel;
+
+  /// No description provided for @otherReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get otherReasonLabel;
+
   /// No description provided for @healthTimelineTitle.
   ///
   /// In en, this message translates to:
