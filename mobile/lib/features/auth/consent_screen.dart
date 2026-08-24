@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'auth_repository.dart';
 
 /// Collects the two consents required at registration (see
@@ -23,8 +24,10 @@ class _ConsentScreenState extends State<ConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Before you continue')),
+      appBar: AppBar(title: Text(l10n.consentScreenTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -34,13 +37,13 @@ class _ConsentScreenState extends State<ConsentScreen> {
               CheckboxListTile(
                 value: _acceptedTerms,
                 onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
-                title: const Text('I agree to the Terms of Service'),
+                title: Text(l10n.agreeTermsOfServiceLabel),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               CheckboxListTile(
                 value: _acceptedPrivacy,
                 onChanged: (v) => setState(() => _acceptedPrivacy = v ?? false),
-                title: const Text('I agree to the Privacy Policy'),
+                title: Text(l10n.agreePrivacyPolicyLabel),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               const Spacer(),
@@ -51,7 +54,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                           ConsentInput('privacy_policy', _consentVersion),
                         ])
                     : null,
-                child: const Text('Continue'),
+                child: Text(l10n.consentContinueButton),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'auth_repository.dart';
 import 'auth_state.dart';
 import 'consent_screen.dart';
@@ -56,22 +57,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     if (success) {
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.lastErrorMessage ?? 'Registration failed.')),
+        SnackBar(content: Text(authState.lastErrorMessage ?? l10n.registrationFailedMessage)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authState = context.watch<AuthState>();
     final isBusy = authState.status == AuthStatus.authenticating;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create your account')),
+      appBar: AppBar(title: Text(l10n.createAccountTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -82,14 +85,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Your name'),
+                  decoration: InputDecoration(labelText: l10n.yourNameLabel),
                   textInputAction: TextInputAction.next,
                   validator: Validators.fullName,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(labelText: 'Phone number'),
+                  decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   validator: Validators.phoneNumber,
@@ -98,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: l10n.passwordLabel,
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -111,11 +114,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (isBusy)
                   const Center(child: CircularProgressIndicator())
                 else
-                  ElevatedButton(onPressed: _continue, child: const Text('Continue')),
+                  ElevatedButton(onPressed: _continue, child: Text(l10n.registerContinueButton)),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
-                  child: const Text('Already have an account? Log in'),
+                  child: Text(l10n.alreadyHaveAccountLoginButton),
                 ),
               ],
             ),

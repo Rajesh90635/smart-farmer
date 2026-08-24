@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../features/auth/auth_state.dart';
 import '../features/auth/validators.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,22 +35,24 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     if (success) {
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.lastErrorMessage ?? 'Login failed.')),
+        SnackBar(content: Text(authState.lastErrorMessage ?? l10n.loginFailedMessage)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authState = context.watch<AuthState>();
     final isBusy = authState.status == AuthStatus.authenticating;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Log in')),
+      appBar: AppBar(title: Text(l10n.loginScreenTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -60,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(labelText: 'Phone number'),
+                  decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   validator: Validators.phoneNumber,
@@ -69,24 +72,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: l10n.passwordLabel,
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   obscureText: _obscurePassword,
-                  validator: (v) => (v == null || v.isEmpty) ? 'Please enter your password.' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? l10n.passwordRequiredError : null,
                 ),
                 const SizedBox(height: 32),
                 if (isBusy)
                   const Center(child: CircularProgressIndicator())
                 else
-                  ElevatedButton(onPressed: _submit, child: const Text('Log in')),
+                  ElevatedButton(onPressed: _submit, child: Text(l10n.loginButton)),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.of(context).pushReplacementNamed('/register'),
-                  child: const Text('New here? Create an account'),
+                  child: Text(l10n.newHereCreateAccountButton),
                 ),
               ],
             ),
