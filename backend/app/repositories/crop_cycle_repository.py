@@ -55,11 +55,20 @@ def list_all_for_farmer(db: Session, farmer_id: uuid.UUID) -> list[CropCycle]:
     ALL of a farmer's crop cycles across every plot/farm; only
     plot-scoped or nearing-harvest-filtered variants existed. Joins
     through the real, existing Plot -> Farm chain (unchanged), never a
-    new relationship."""
+    new relationship. `.crop` is eager-loaded so this is also safe to
+    serialize directly as CropCycleResponse (needed by the farmer-wide
+    GET /crops listing added for the Camera tab's crop picker) without
+    an extra query per row."""
     return list(
         db.execute(
-            select(CropCycle).join(Plot, CropCycle.plot_id == Plot.id).join(Farm, Plot.farm_id == Farm.id).where(Farm.farmer_id == farmer_id)
+            select(CropCycle)
+            .join(Plot, CropCycle.plot_id == Plot.id)
+            .join(Farm, Plot.farm_id == Farm.id)
+            .where(Farm.farmer_id == farmer_id)
+            .options(joinedload(CropCycle.crop))
+            .order_by(CropCycle.sowing_date.desc())
         )
+        .unique()
         .scalars()
         .all()
     )

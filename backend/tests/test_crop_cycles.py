@@ -44,6 +44,41 @@ def test_list_crop_cycles_for_plot(client, registered_farmer, sample_crop_id):
     assert response.json()["total"] == 1
 
 
+def test_list_my_crop_cycles_spans_every_farm_and_plot(client, registered_farmer, sample_crop_id):
+    """The farmer-wide picker endpoint (added for the Camera tab) - unlike
+    /plots/{plot_id}/crops, this must return crop cycles across multiple
+    plots without being told which plot to look in."""
+    _, tokens = registered_farmer
+    plot_a = _create_plot(client, tokens)
+    plot_b = _create_plot(client, tokens)
+    cycle_a = client.post(
+        f"/api/v1/plots/{plot_a['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    cycle_b = client.post(
+        f"/api/v1/plots/{plot_b['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+
+    response = client.get("/api/v1/crops", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 2
+    ids = [c["id"] for c in body["items"]]
+    assert cycle_a["id"] in ids
+    assert cycle_b["id"] in ids
+    assert body["items"][0]["crop"]["name"] == "Tomato"
+
+
+def test_list_my_crop_cycles_never_leaks_another_farmers(client, registered_farmer, another_farmer, sample_crop_id):
+    _, tokens_a = registered_farmer
+    plot = _create_plot(client, tokens_a)
+    client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens_a))
+
+    _, tokens_b = another_farmer
+    response = client.get("/api/v1/crops", headers=auth_headers(tokens_b))
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "total": 0}
+
+
 def test_plot_can_have_sequential_crop_cycles_preserving_history(client, registered_farmer, sample_crop_id, db_session):
     from sqlalchemy import select
 

@@ -58,6 +58,17 @@ def list_crop_cycles(
     return crop_cycle_service.list_crop_cycles_for_plot(db, current_user.user_id, plot_id, limit=limit, offset=offset)
 
 
+@router.get("/crops", response_model=CropCycleListResponse)
+def list_my_crop_cycles(
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> CropCycleListResponse:
+    """Farmer-wide, across every farm/plot - for pickers that have no
+    plot/crop context of their own (e.g. the Camera tab's "which crop am
+    I checking" step)."""
+    return crop_cycle_service.list_my_crop_cycles(db, current_user.user_id)
+
+
 @router.get("/crops/{crop_cycle_id}", response_model=CropCycleResponse)
 def get_crop_cycle(
     crop_cycle_id: uuid.UUID,

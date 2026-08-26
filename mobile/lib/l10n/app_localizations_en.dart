@@ -1078,4 +1078,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantFeedbackThanksMessage => 'Thanks for the feedback.';
+
+  @override
+  String get cameraTabTitle => 'Check a Crop';
+
+  @override
+  String get cameraTabPickCropHint => 'Which crop do you want to check?';
+
+  @override
+  String get cameraTabNoCropsYet =>
+      'You don\'t have any crops yet. Add a farm and crop first from the My Farm tab.';
+
+  @override
+  String get cameraTabSownOnLabel => 'Sown';
 }

@@ -88,6 +88,18 @@ def list_crop_cycles_for_plot(
     return CropCycleListResponse(items=[CropCycleResponse.model_validate(c) for c in cycles], total=total)
 
 
+def list_my_crop_cycles(db: Session, farmer_id: str) -> CropCycleListResponse:
+    """Farmer-wide crop cycle list across every farm/plot, not scoped to
+    any single plot - reuses the existing list_all_for_farmer query
+    (Phase 39), previously only used internally for personalization
+    scoring. Needed by any farmer-wide picker (the Camera tab's "which
+    crop am I checking" step) that has no plot/crop context of its own
+    to scope a request to. Not paginated - matches the same unpaginated
+    convention list_all_for_farmer's existing caller already relies on."""
+    cycles = crop_cycle_repository.list_all_for_farmer(db, uuid.UUID(farmer_id))
+    return CropCycleListResponse(items=[CropCycleResponse.model_validate(c) for c in cycles], total=len(cycles))
+
+
 def get_my_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> CropCycleResponse:
     crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, uuid.UUID(farmer_id))
     if crop_cycle is None:

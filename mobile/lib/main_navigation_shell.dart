@@ -12,8 +12,9 @@ import 'screens/profile_screen.dart';
 /// approved UX spec. "My Farm" opens the real Farm/Plot/Crop flow
 /// (MyFarmsScreen); "Market" opens the real farmer-side offer/sale
 /// management flow (MarketScreen); "Assistant" opens the real,
-/// persisted AI Assistant chat (AssistantScreen). Camera remains a
-/// placeholder - see PROJECT_STATUS.md for implementation order.
+/// persisted AI Assistant chat (AssistantScreen); "Camera" opens a
+/// crop picker that hands off to the existing crop-photo capture flow
+/// (CameraScreen) - all six tabs are now real, no placeholders remain.
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({super.key});
 

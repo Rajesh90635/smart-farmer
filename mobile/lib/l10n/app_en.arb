@@ -354,5 +354,9 @@
   "assistantSendButtonTooltip": "Send",
   "assistantMarkHelpfulTooltip": "Helpful",
   "assistantMarkNotHelpfulTooltip": "Not helpful",
-  "assistantFeedbackThanksMessage": "Thanks for the feedback."
+  "assistantFeedbackThanksMessage": "Thanks for the feedback.",
+  "cameraTabTitle": "Check a Crop",
+  "cameraTabPickCropHint": "Which crop do you want to check?",
+  "cameraTabNoCropsYet": "You don't have any crops yet. Add a farm and crop first from the My Farm tab.",
+  "cameraTabSownOnLabel": "Sown"
 }

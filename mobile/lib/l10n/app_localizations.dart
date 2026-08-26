@@ -2181,6 +2181,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thanks for the feedback.'**
   String get assistantFeedbackThanksMessage;
+
+  /// No description provided for @cameraTabTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check a Crop'**
+  String get cameraTabTitle;
+
+  /// No description provided for @cameraTabPickCropHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Which crop do you want to check?'**
+  String get cameraTabPickCropHint;
+
+  /// No description provided for @cameraTabNoCropsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have any crops yet. Add a farm and crop first from the My Farm tab.'**
+  String get cameraTabNoCropsYet;
+
+  /// No description provided for @cameraTabSownOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sown'**
+  String get cameraTabSownOnLabel;
 }
 
 class _AppLocalizationsDelegate

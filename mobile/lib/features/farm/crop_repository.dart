@@ -17,6 +17,15 @@ class CropRepository {
     return items.map(CropCycle.fromJson).toList();
   }
 
+  /// Farmer-wide, across every farm/plot - for pickers (the Camera tab's
+  /// "which crop am I checking" step) that have no plot/crop context of
+  /// their own to scope a request to.
+  Future<List<CropCycle>> listAllMyCropCycles() async {
+    final response = await _apiClient.get('/crops');
+    final items = (response['items'] as List).cast<Map<String, dynamic>>();
+    return items.map(CropCycle.fromJson).toList();
+  }
+
   Future<CropCycle> getCropCycle(String cropCycleId) async {
     final response = await _apiClient.get('/crops/$cropCycleId');
     return CropCycle.fromJson(response);

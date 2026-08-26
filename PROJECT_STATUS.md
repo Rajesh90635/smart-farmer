@@ -919,3 +919,19 @@ Each defaults to exactly the statuses needing attention (`pending_review`, `pend
 **Correctly not built**: no new admin Flutter/web UI - Swagger `/docs` is the genuine, already-existing front door once these list endpoints exist; building a bespoke admin panel would duplicate FastAPI's own auto-generated one for zero farmer-facing benefit.
 
 **Not yet done**: the Camera tab placeholder and the dealer input-purchase marketplace (2 backend routers, zero Flutter consumer) remain, both previously disclosed.
+
+---
+
+## Camera Tab (continuing nav-bar order: Home → Camera → My Farm → Market → Assistant → Profile)
+
+**The real capture flow (`camera_capture_screen.dart`, reached via a session id) already existed and worked - only the Camera tab itself was a placeholder, because unlike every other entry point (always reached from a specific crop's details screen), the tab has no crop context of its own.** So its only real job is a "which crop am I checking" picker, then a handoff into the exact same, already-built `CropPhotoListScreen` - no photo/session logic duplicated.
+
+**Backend, one small addition**: `GET /crops` (farmer-wide, across every farm/plot) wires up `crop_cycle_repository.list_all_for_farmer`, which already existed but was only ever used internally by Phase 39's personalization scoring - never had a route. Added `.options(joinedload(CropCycle.crop))` and a deterministic `order_by` to that shared query (harmless to its existing caller, confirmed by re-running the full personalization suite) so the same rows serialize directly as `CropCycleResponse` for the new endpoint. No migration. 2 new tests (spans multiple plots; never leaks another farmer's cycles).
+
+**Flutter**: `screens/camera_screen.dart` rewritten from the placeholder into a real picker (crop name, sowing date, status chip; tapping a row pushes `CropPhotoListScreen(cropCycleId: cycle.id)`), reusing the existing `CropRepository`/`CropCycle` model - no new feature module needed since it has no state of its own beyond the list. Honest empty state ("You don't have any crops yet...") when a farmer has no crop cycles anywhere.
+
+**Actually run in a real browser**: backend + a Flutter release web build, driven with Playwright, using two real accounts - one with a real Tomato crop cycle (created via the actual API, not fixtures) confirmed the picker lists it and tapping it correctly navigates into the real `CropPhotoListScreen` ("Check Crop" FAB visible, ready for a real photo session); a second, fresh account with zero crops confirmed the honest empty state. Zero console/page errors in either path.
+
+`flutter analyze` clean (29 pre-existing issues, none new); `flutter test` 209/209 (no new model needed - reuses the already-tested `CropCycle` model). **Full backend regression: 597/597 passed** (595 baseline + 2 new).
+
+**All six nav-bar tabs are now real** - no placeholders remain. Next in "screen order" terms: nothing left on the primary nav; remaining known gaps are the dealer input-purchase marketplace (no Flutter consumer, deliberately deferred) and the buyer persona (deliberately out of scope).
