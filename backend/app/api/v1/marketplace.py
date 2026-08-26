@@ -24,6 +24,7 @@ from app.schemas.marketplace import (
     QualityDisputeCreateRequest,
     SaleCancelRequest,
     SaleDisputeCreateRequest,
+    SaleDisputeResolveRequest,
     SaleDisputeResponse,
     SaleFeedbackCreateRequest,
     SaleOrderListResponse,
@@ -195,6 +196,16 @@ def submit_feedback_as_farmer(
     db: Session = Depends(get_db),
 ) -> None:
     sale_order_service.submit_feedback(db, current_user.user_id, sale_id, payload, "farmer")
+
+
+@router.post("/disputes/{dispute_id}/resolve", response_model=SaleDisputeResponse)
+def resolve_sale_dispute(
+    dispute_id: uuid.UUID,
+    payload: SaleDisputeResolveRequest,
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> SaleDisputeResponse:
+    return sale_order_service.resolve_dispute(db, current_user.user_id, dispute_id, payload)
 
 
 @router.post("/disputes/{dispute_id}/quality-details", status_code=204)

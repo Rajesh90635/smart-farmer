@@ -169,6 +169,72 @@ def test_dispute_requires_delivery_stage(client, farmer_with_crop_cycle, verifie
     assert response.status_code == 422
 
 
+def _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id):
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id)
+    offer = client.post(f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(), headers=auth_headers(buyer_tokens)).json()
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens)).json()
+
+    client.post(f"/api/v1/marketplace/sales/{sale['id']}/accept", headers=auth_headers(farmer_tokens))
+    for status in ["preparing", "ready_for_collection", "collected", "in_transit", "delivered"]:
+        client.post(f"/api/v1/marketplace/sales/{sale['id']}/advance?target_status={status}", headers=auth_headers(farmer_tokens))
+
+    dispute = client.post(f"/api/v1/marketplace/sales/{sale['id']}/dispute", json={"reason": "damaged_crop"}, headers=auth_headers(farmer_tokens)).json()
+    return sale, dispute
+
+
+def test_dispute_resolution_cancelling_the_sale_restores_listing_quantity(client, farmer_with_crop_cycle, verified_buyer, admin_tokens):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    sale, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+    assert dispute["status"] == "open"
+
+    resolved = client.post(
+        f"/api/v1/marketplace/disputes/{dispute['id']}/resolve",
+        json={"status": "resolved", "resulting_sale_status": "cancelled", "resolution_note": "Buyer's claim upheld; sale cancelled."},
+        headers=auth_headers(admin_tokens),
+    )
+    assert resolved.status_code == 200, resolved.text
+    assert resolved.json()["status"] == "resolved"
+    assert resolved.json()["resolved_at"] is not None
+
+    sale_after = client.get(f"/api/v1/marketplace/sales/{sale['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert sale_after["status"] == "cancelled"
+
+    listings_after = client.get("/api/v1/harvests/listings/me", headers=auth_headers(farmer_tokens)).json()
+    assert listings_after["items"][0]["is_active"] is True
+
+
+def test_dispute_can_be_escalated_without_touching_sale_status(client, farmer_with_crop_cycle, verified_buyer, admin_tokens):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    sale, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    escalated = client.post(
+        f"/api/v1/marketplace/disputes/{dispute['id']}/resolve",
+        json={"status": "escalated"},
+        headers=auth_headers(admin_tokens),
+    )
+    assert escalated.status_code == 200
+    assert escalated.json()["status"] == "escalated"
+    assert escalated.json()["resolved_at"] is None
+
+    sale_after = client.get(f"/api/v1/marketplace/sales/{sale['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert sale_after["status"] == "disputed"
+
+
+def test_sale_status_change_rejected_unless_resolving_or_closing(client, farmer_with_crop_cycle, verified_buyer, admin_tokens):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    response = client.post(
+        f"/api/v1/marketplace/disputes/{dispute['id']}/resolve",
+        json={"status": "under_review", "resulting_sale_status": "completed"},
+        headers=auth_headers(admin_tokens),
+    )
+    assert response.status_code == 422
+
+
 def test_farmer_a_cannot_see_farmer_bs_sale(client, farmer_with_crop_cycle, verified_buyer, another_farmer):
     farmer_a_tokens, crop_cycle_id = farmer_with_crop_cycle
     buyer_tokens, _ = verified_buyer

@@ -15,19 +15,24 @@ from sqlalchemy.orm import Session
 from app.core import error_codes
 from app.core.errors import AppError
 from app.models.payment import Payment, PaymentProvider, PaymentStatus
-from app.models.sale_dispute import QualityDispute, SaleDispute, SaleFeedback
+from app.models.sale_dispute import QualityDispute, SaleDispute, SaleDisputeStatus, SaleFeedback
 from app.models.sale_order import ALLOWED_SALE_ORDER_TRANSITIONS, CANCELLATION_REASONS, SaleOrder, SaleOrderStatus
 from app.repositories import harvest_repository, order_repository, professional_repository, sale_order_repository
 from app.schemas.marketplace import (
     QualityDisputeCreateRequest,
     SaleCancelRequest,
     SaleDisputeCreateRequest,
+    SaleDisputeResolveRequest,
     SaleDisputeResponse,
     SaleFeedbackCreateRequest,
     SaleOrderListResponse,
     SaleOrderResponse,
 )
 from app.services.audit_logger import AuditLogger
+
+# A sale-status change is only meaningful once the dispute is being
+# finalized (resolved or closed) - not while merely opened/under review/escalated.
+_DISPUTE_STATUSES_ALLOWING_SALE_TRANSITION = {SaleDisputeStatus.RESOLVED, SaleDisputeStatus.CLOSED}
 
 
 def _apply_transition(sale: SaleOrder, target: SaleOrderStatus) -> None:
@@ -178,6 +183,44 @@ def create_dispute(db: Session, user_id: str, sale_id: uuid.UUID, payload: SaleD
     sale_order_repository.create_dispute(db, dispute)
 
     AuditLogger(db).log("SALE_DISPUTE_CREATED", actor_id=user_id, actor_role=role, entity="sale_order", entity_id=str(sale.id))
+    db.commit()
+    db.refresh(dispute)
+    return SaleDisputeResponse.model_validate(dispute)
+
+
+def resolve_dispute(db: Session, admin_user_id: str, dispute_id: uuid.UUID, payload: SaleDisputeResolveRequest) -> SaleDisputeResponse:
+    """Admin-only resolve/close/escalate for a sale dispute. A resulting
+    sale status may only be applied once the dispute is actually being
+    finalized (RESOLVED or CLOSED), and only while the sale is still
+    genuinely DISPUTED - never inferred, always an explicit admin choice."""
+    dispute = sale_order_repository.get_dispute(db, dispute_id)
+    if dispute is None:
+        raise AppError(error_codes.NOT_FOUND, "Dispute not found.", 404)
+
+    if payload.resulting_sale_status is not None and payload.status not in _DISPUTE_STATUSES_ALLOWING_SALE_TRANSITION:
+        raise AppError(error_codes.VALIDATION_ERROR, "A sale status change can only be applied when resolving or closing a dispute.", 422)
+
+    dispute.status = payload.status
+    dispute.resolution_note = payload.resolution_note
+    if payload.status in _DISPUTE_STATUSES_ALLOWING_SALE_TRANSITION:
+        dispute.resolved_at = datetime.now(timezone.utc)
+
+    if payload.resulting_sale_status is not None:
+        sale = sale_order_repository.get_sale_by_id(db, dispute.sale_order_id)
+        if sale is None:
+            raise AppError(error_codes.NOT_FOUND, "Sale not found.", 404)
+        if sale.status != SaleOrderStatus.DISPUTED:
+            raise AppError(error_codes.VALIDATION_ERROR, "This sale is no longer in a disputed state.", 409)
+
+        _apply_transition(sale, payload.resulting_sale_status)
+        if payload.resulting_sale_status == SaleOrderStatus.CANCELLED:
+            sale.cancellation_reason = "dispute_resolution"
+            listing = harvest_repository.get_listing_for_update(db, sale.harvest_listing_id)
+            if listing is not None:
+                listing.quantity_available += sale.quantity
+                listing.is_active = True
+
+    AuditLogger(db).log("SALE_DISPUTE_RESOLVED", actor_id=admin_user_id, actor_role="admin", entity="sale_order", entity_id=str(dispute.sale_order_id))
     db.commit()
     db.refresh(dispute)
     return SaleDisputeResponse.model_validate(dispute)

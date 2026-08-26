@@ -117,8 +117,16 @@ class SaleDisputeResponse(BaseModel):
     reason: SaleDisputeReason
     status: SaleDisputeStatus
     created_at: datetime
+    resolved_at: datetime | None = None
+    resolution_note: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class SaleDisputeResolveRequest(BaseModel):
+    status: SaleDisputeStatus
+    resulting_sale_status: SaleOrderStatus | None = None
+    resolution_note: str | None = Field(default=None, max_length=1000)
 
 
 class QualityDisputeCreateRequest(BaseModel):

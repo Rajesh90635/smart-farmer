@@ -879,3 +879,17 @@ Confirmed `PendingUploadQueue`/`SyncCoordinator` (Step 10) still exist unmodifie
 **Verification**: `flutter analyze` - 29 issues; the 3 new items are the same pre-existing `DropdownButtonFormField` deprecation already present in 6+ other screens (3 dropdowns: cancellation reason, dispute reason, feedback rating). `flutter test` - **204/204 passed** (197 baseline + 7 new), zero regressions. No backend change. No live click-through - would require a real farmer account with a listing that has real buyer offers on it.
 
 **Not yet done**: the buyer-side persona (registration, login, browsing, making offers) remains entirely unbuilt, by explicit decision - this is the correct next fork if that scope is ever wanted, not an oversight.
+
+---
+
+## Sale Dispute Resolution Backend Gap — Fixed
+
+**The genuine gap this closes**: `SaleDispute` (harvest-sale disputes) had create-only endpoints - once filed, a dispute could never be resolved, closed, or escalated through the app, unlike the pre-existing `OrderDispute` (input-purchase disputes), which already had a full admin `resolve` endpoint. Confirmed by inspection before writing any code: no resolve/close/escalate route existed anywhere for `SaleDispute`.
+
+**Backend**: one new admin-only endpoint, `POST /marketplace/disputes/{dispute_id}/resolve`, mirroring `OrderDispute`'s existing resolve pattern but adapted to `SaleOrder`'s own transition map (`DISPUTED` -> `PAYMENT_PENDING`/`COMPLETED`/`CANCELLED` - there is no refund/payment-gateway concept on the sale side to mirror, unlike orders). A sale-status change via this endpoint is only accepted when the dispute is actually being finalized (`status=resolved` or `status=closed`) and only while the sale is still genuinely `DISPUTED` - never inferred. Resolving to `CANCELLED` restores the listing's `quantity_available`/`is_active`, reusing the exact same logic as farmer/buyer-initiated cancellation. One additive column, `SaleDispute.resolution_note` (nullable `Text`), added via migration `b7c8d9e0f1a2` (down_revision `c1a2b3d4e5f6`) - upgrade -> downgrade -> re-upgrade verified end-to-end via a direct SQLAlchemy inspector column check at each step, zero schema drift confirmed via `alembic check`.
+
+**No Flutter change** - the existing farmer-side `fileSaleDispute()` call discards the response body entirely (fire-and-forget), and this is an admin-only endpoint with no admin-persona UI anywhere in this project (same disclosed boundary as every other admin/expert-side gap) - correctly out of scope.
+
+**Tests**: 3 new (`test_marketplace_offers.py`) - cancellation-resolution restores listing quantity, escalation leaves the sale's `disputed` status untouched, and a sale-status change is rejected (422) unless the dispute is being resolved/closed. **Full backend regression: 582/582 passed** (579 baseline + 3 new).
+
+**Remaining, correctly out of scope**: no admin dispute-listing endpoint exists to *discover* a `dispute_id` to resolve (same pre-existing limitation on the `OrderDispute` side - no admin panel exists in this project yet); a farmer/buyer still cannot view their own dispute's resolution outcome (no `GET` dispute endpoint exists on the sale side, matching this gap's originally disclosed scope of "resolve/close/escalate," not general dispute visibility).

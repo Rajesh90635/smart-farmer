@@ -68,6 +68,7 @@ class SaleDispute(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolution_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class QualityDispute(Base):
