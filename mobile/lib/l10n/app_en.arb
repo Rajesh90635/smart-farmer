@@ -344,5 +344,15 @@
   "noPhotosYet": "No photos yet. Tap below to check your crop.",
   "photoDetailTitle": "Photo",
   "deletePhotoConfirm": "Remove this photo?",
-  "photoDeleted": "Photo removed."
+  "photoDeleted": "Photo removed.",
+  "assistantChatTitle": "Smart Farmer Assistant",
+  "assistantEmptyStateHint": "Ask me about your crops, weather, harvest, orders, and more.",
+  "assistantChatSuggestionCropStatus": "What is happening to my crop?",
+  "assistantChatSuggestionWeather": "Will it rain today?",
+  "assistantChatSuggestionHarvest": "Is my crop ready to harvest?",
+  "assistantChatSuggestionOrders": "Where is my order?",
+  "assistantSendButtonTooltip": "Send",
+  "assistantMarkHelpfulTooltip": "Helpful",
+  "assistantMarkNotHelpfulTooltip": "Not helpful",
+  "assistantFeedbackThanksMessage": "Thanks for the feedback."
 }

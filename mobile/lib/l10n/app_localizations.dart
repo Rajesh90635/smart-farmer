@@ -2121,6 +2121,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Photo removed.'**
   String get photoDeleted;
+
+  /// No description provided for @assistantChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Farmer Assistant'**
+  String get assistantChatTitle;
+
+  /// No description provided for @assistantEmptyStateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask me about your crops, weather, harvest, orders, and more.'**
+  String get assistantEmptyStateHint;
+
+  /// No description provided for @assistantChatSuggestionCropStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'What is happening to my crop?'**
+  String get assistantChatSuggestionCropStatus;
+
+  /// No description provided for @assistantChatSuggestionWeather.
+  ///
+  /// In en, this message translates to:
+  /// **'Will it rain today?'**
+  String get assistantChatSuggestionWeather;
+
+  /// No description provided for @assistantChatSuggestionHarvest.
+  ///
+  /// In en, this message translates to:
+  /// **'Is my crop ready to harvest?'**
+  String get assistantChatSuggestionHarvest;
+
+  /// No description provided for @assistantChatSuggestionOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Where is my order?'**
+  String get assistantChatSuggestionOrders;
+
+  /// No description provided for @assistantSendButtonTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get assistantSendButtonTooltip;
+
+  /// No description provided for @assistantMarkHelpfulTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Helpful'**
+  String get assistantMarkHelpfulTooltip;
+
+  /// No description provided for @assistantMarkNotHelpfulTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Not helpful'**
+  String get assistantMarkNotHelpfulTooltip;
+
+  /// No description provided for @assistantFeedbackThanksMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for the feedback.'**
+  String get assistantFeedbackThanksMessage;
 }
 
 class _AppLocalizationsDelegate

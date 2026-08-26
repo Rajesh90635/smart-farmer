@@ -129,6 +129,11 @@ class SaleDisputeResolveRequest(BaseModel):
     resolution_note: str | None = Field(default=None, max_length=1000)
 
 
+class SaleDisputeListResponse(BaseModel):
+    items: list[SaleDisputeResponse]
+    total: int
+
+
 class QualityDisputeCreateRequest(BaseModel):
     buyer_claimed_grade: str
     description: str | None = Field(default=None, max_length=1000)

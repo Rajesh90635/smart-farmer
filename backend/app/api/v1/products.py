@@ -47,6 +47,23 @@ def create_product(
     return product_service.create_product(db, current_user.user_id, payload)
 
 
+@router.get("/products/admin", response_model=ProductListResponse)
+def list_products_admin(
+    status_filter: ProductStatus | None = Query(default=ProductStatus.PENDING_REVIEW, alias="status"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> ProductListResponse:
+    """Wires up product_service.list_all_products_admin (already existed,
+    just never had a route) - defaults to PENDING_REVIEW so an admin
+    lands on 'what needs my attention' first; any other real status
+    ('approved', 'rejected', 'suspended', 'recalled') can be requested
+    explicitly via ?status=. Declared before /products/{product_id} so
+    'admin' is never swallowed by that path param route."""
+    return product_service.list_all_products_admin(db, status=status_filter, limit=limit, offset=offset)
+
+
 @router.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(
     product_id: uuid.UUID,

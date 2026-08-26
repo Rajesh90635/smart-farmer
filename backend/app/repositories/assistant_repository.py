@@ -7,10 +7,21 @@ from app.models.assistant_conversation import AssistantConversation, AssistantMe
 from app.models.assistant_feedback import AssistantFeedback, AssistantPreference
 
 
+def get_active_conversation(db: Session, farmer_id: uuid.UUID) -> AssistantConversation | None:
+    """Read-only lookup (never creates) - lets a screen show prior chat
+    history without knowing a conversation_id yet, without the side
+    effect of creating an empty conversation just from opening the
+    screen."""
+    return db.execute(
+        select(AssistantConversation)
+        .where(AssistantConversation.farmer_id == farmer_id, AssistantConversation.is_archived.is_(False))
+        .order_by(AssistantConversation.created_at.desc())
+        .options(joinedload(AssistantConversation.messages))
+    ).unique().scalars().first()
+
+
 def get_or_create_active_conversation(db: Session, farmer_id: uuid.UUID) -> AssistantConversation:
-    conversation = db.execute(
-        select(AssistantConversation).where(AssistantConversation.farmer_id == farmer_id, AssistantConversation.is_archived.is_(False)).order_by(AssistantConversation.created_at.desc())
-    ).scalars().first()
+    conversation = get_active_conversation(db, farmer_id)
     if conversation is not None:
         return conversation
     conversation = AssistantConversation(farmer_id=farmer_id)

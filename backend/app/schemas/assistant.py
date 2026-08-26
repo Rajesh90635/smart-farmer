@@ -34,7 +34,7 @@ class ChatResponse(BaseModel):
 
 
 class ConversationHistoryResponse(BaseModel):
-    conversation_id: uuid.UUID
+    conversation_id: uuid.UUID | None
     messages: list[MessageResponse]
 
 

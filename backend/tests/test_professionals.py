@@ -78,6 +78,30 @@ def test_admin_can_verify_a_professional(client):
     assert response.json()["verification_status"] == "verified"
 
 
+def test_admin_can_list_pending_professionals_to_discover_who_needs_review(client):
+    """The admin discovery gap: verify/reject/suspend/reactivate already
+    existed, but there was no way to find a professional_id to act on."""
+    tokens, _ = _register_professional_user(client)
+    pending = client.post("/api/v1/professionals", json=valid_professional_payload(), headers=auth_headers(tokens)).json()
+
+    verified_tokens, _ = _register_professional_user(client, role="expert")
+    verified = client.post("/api/v1/professionals", json=valid_professional_payload(), headers=auth_headers(verified_tokens)).json()
+    admin_tokens, _ = _register_professional_user(client, role="admin")
+    client.post(f"/api/v1/professionals/{verified['id']}/verify", json={}, headers=auth_headers(admin_tokens))
+
+    response = client.get("/api/v1/professionals/pending", headers=auth_headers(admin_tokens))
+    assert response.status_code == 200
+    ids = [p["id"] for p in response.json()["items"]]
+    assert pending["id"] in ids
+    assert verified["id"] not in ids
+
+
+def test_farmer_cannot_list_pending_professionals(client):
+    tokens, _ = _register_professional_user(client, role="farmer")
+    response = client.get("/api/v1/professionals/pending", headers=auth_headers(tokens))
+    assert response.status_code == 403
+
+
 def test_admin_can_suspend_a_verified_professional(client):
     tokens, _ = _register_professional_user(client)
     profile = client.post("/api/v1/professionals", json=valid_professional_payload(), headers=auth_headers(tokens)).json()

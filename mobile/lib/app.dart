@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/api_client.dart';
 import 'core/flutter_tts_voice_service.dart';
 import 'core/voice_service.dart';
+import 'features/assistant/assistant_repository.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/auth_state.dart';
 import 'features/auth/farmer_repository.dart';
@@ -74,6 +75,7 @@ class SmartFarmerApp extends StatelessWidget {
         Provider<PersonalizationRepository>(create: (_) => PersonalizationRepository(apiClient: apiClient)),
         Provider<CropRiskRepository>(create: (_) => CropRiskRepository(apiClient: apiClient)),
         Provider<DailyBriefingRepository>(create: (_) => DailyBriefingRepository(apiClient: apiClient)),
+        Provider<AssistantRepository>(create: (_) => AssistantRepository(apiClient: apiClient)),
         Provider<VoiceService>(create: (_) => FlutterTtsVoiceService()),
         Provider<NetworkStatusChecker>(create: (_) => NetworkStatusChecker()),
         ChangeNotifierProvider<PendingUploadQueue>(create: (_) => PendingUploadQueue()),

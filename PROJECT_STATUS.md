@@ -893,3 +893,29 @@ Confirmed `PendingUploadQueue`/`SyncCoordinator` (Step 10) still exist unmodifie
 **Tests**: 3 new (`test_marketplace_offers.py`) - cancellation-resolution restores listing quantity, escalation leaves the sale's `disputed` status untouched, and a sale-status change is rejected (422) unless the dispute is being resolved/closed. **Full backend regression: 582/582 passed** (579 baseline + 3 new).
 
 **Remaining, correctly out of scope**: no admin dispute-listing endpoint exists to *discover* a `dispute_id` to resolve (same pre-existing limitation on the `OrderDispute` side - no admin panel exists in this project yet); a farmer/buyer still cannot view their own dispute's resolution outcome (no `GET` dispute endpoint exists on the sale side, matching this gap's originally disclosed scope of "resolve/close/escalate," not general dispute visibility).
+
+---
+
+## Master Audit + AI Assistant Chat Screen + Admin Discovery Endpoints
+
+**A fresh audit of the actual current code** (not the stale notes above - several had already been closed by later phases, e.g. Harvest/Market Flutter screens) found four genuine oversights and confirmed several documented gaps were still real: the farmer-wide **Assistant tab was a bare placeholder** despite a fully-tested, persisted AI Assistant backend existing since early in the project; the **Camera tab** was likewise a placeholder; **CropVariety** and **Notifications** had zero Flutter consumers; **12 admin-only endpoints had no operable front door** (no admin UI anywhere, and - a deeper finding - no way to even *discover* a dispute/product/professional id to act on, since only the action endpoints existed, never a list-pending query).
+
+### Assistant Chat Screen (`mobile/lib/features/assistant/`)
+**Backend, one small addition**: `GET /assistant/history` (new) returns the farmer's active conversation, or an empty result if none exists yet - `send_message`'s existing `get_or_create_active_conversation` would otherwise force a screen to send a throwaway message just to discover its own conversation_id. `ConversationHistoryResponse.conversation_id` made nullable to represent "no conversation yet" honestly, not a fabricated one. No migration - purely a new read-only repository query. 3 new backend tests; full regression re-confirmed clean.
+
+**Flutter**: real chat UI (bubbles, suggested-question chips, history restored on reopen) replacing `screens/assistant_screen.dart`'s placeholder entirely (file deleted). Also wires the existing, previously-unused `POST /assistant/feedback/{id}` (helpful/not-helpful) and reuses `VoiceService` for a per-message Listen button - both were fully built backend/service capabilities with zero prior consumer. 5 new Flutter model tests; `flutter analyze` clean; `flutter test` 209/209.
+
+**Actually run in a real browser this time, not just tests**: backend + a Flutter *release* web build (debug `-d web-server` mode never invoked `main()` without the Dart Debug extension attached - a real, disclosed environment limitation, not an app bug) were launched together and driven with Playwright: registered a farmer, logged in, opened the Assistant tab, confirmed the placeholder text was gone, sent a message both via a suggested chip and free text, saw both bubbles render with the backend's real (honest "weather unavailable") response, reloaded and confirmed history persisted, and confirmed the feedback button actually calls the backend and updates the UI. Zero console/page errors throughout.
+
+### Admin Discovery Endpoints (the "admin front door" fix)
+**The real finding**: every admin action endpoint (dispute resolve, product approve/reject/suspend, professional verify/reject/suspend/reactivate) already existed and worked - confirmed by this project's own extensive test suite. What never existed was any way for an admin to *find* an id to act on beyond being told one directly. FastAPI's auto-generated `/docs` Swagger UI already provides a real, authenticated "Authorize" flow (the existing `HTTPBearer` security scheme) - so the actual missing piece wasn't a custom admin panel, it was four read-only list queries:
+- `GET /products/admin?status=` (wires up `product_service.list_all_products_admin`, which already existed with zero route)
+- `GET /professionals/pending` (new `professional_repository.list_by_verification_status`)
+- `GET /disputes` (order disputes; new `order_repository.list_disputes_by_statuses`)
+- `GET /marketplace/disputes` (sale disputes; new `sale_order_repository.list_disputes_by_statuses`)
+
+Each defaults to exactly the statuses needing attention (`pending_review`, `pending`, `open`/`under_review`/`escalated`) and is admin-role-gated. The two path-shaped routes (`/products/admin`, `/professionals/pending`) were deliberately declared *before* their sibling `/{id}` routes in each router - Starlette matches path shape before FastAPI validates the parameter type, so a same-shaped static route declared after a `{uuid_param}` route would 422 instead of ever being reached. No migrations (pure queries over existing tables). 8 new tests (list-then-resolve-then-confirm-excluded, plus a 403 test per endpoint). **Full backend regression: 595/595 passed.**
+
+**Correctly not built**: no new admin Flutter/web UI - Swagger `/docs` is the genuine, already-existing front door once these list endpoints exist; building a bespoke admin panel would duplicate FastAPI's own auto-generated one for zero farmer-facing benefit.
+
+**Not yet done**: the Camera tab placeholder and the dealer input-purchase marketplace (2 backend routers, zero Flutter consumer) remain, both previously disclosed.

@@ -24,6 +24,7 @@ from app.schemas.marketplace import (
     QualityDisputeCreateRequest,
     SaleCancelRequest,
     SaleDisputeCreateRequest,
+    SaleDisputeListResponse,
     SaleDisputeResolveRequest,
     SaleDisputeResponse,
     SaleFeedbackCreateRequest,
@@ -196,6 +197,16 @@ def submit_feedback_as_farmer(
     db: Session = Depends(get_db),
 ) -> None:
     sale_order_service.submit_feedback(db, current_user.user_id, sale_id, payload, "farmer")
+
+
+@router.get("/disputes", response_model=SaleDisputeListResponse)
+def list_open_sale_disputes(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> SaleDisputeListResponse:
+    return sale_order_service.list_open_disputes(db, limit=limit, offset=offset)
 
 
 @router.post("/disputes/{dispute_id}/resolve", response_model=SaleDisputeResponse)

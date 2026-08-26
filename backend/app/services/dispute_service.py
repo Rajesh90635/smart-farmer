@@ -16,9 +16,11 @@ from app.core.errors import AppError
 from app.models.order import OrderStatus
 from app.models.order_dispute import DisputeStatus, OrderDispute, Refund, RefundStatus, RefundType
 from app.repositories import order_repository
-from app.schemas.order import DisputeCreateRequest, DisputeResolveRequest, DisputeResponse, RefundResponse
+from app.schemas.order import DisputeCreateRequest, DisputeListResponse, DisputeResolveRequest, DisputeResponse, RefundResponse
 from app.services.audit_logger import AuditLogger
 from app.services.order_transitions import apply_transition
+
+_OPEN_DISPUTE_STATUSES = [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW, DisputeStatus.ESCALATED]
 
 
 def create_dispute(db: Session, farmer_id: str, order_id: uuid.UUID, payload: DisputeCreateRequest) -> DisputeResponse:
@@ -86,6 +88,14 @@ def complete_refund(db: Session, admin_user_id: str, order_id: uuid.UUID) -> Ref
     db.commit()
     db.refresh(refund)
     return RefundResponse.model_validate(refund)
+
+
+def list_open_disputes(db: Session, *, limit: int = 50, offset: int = 0) -> DisputeListResponse:
+    """The admin discovery endpoint that was missing entirely - resolve_dispute
+    already existed, but an admin had no way to find a dispute_id to
+    resolve except being told one directly."""
+    items, total = order_repository.list_disputes_by_statuses(db, _OPEN_DISPUTE_STATUSES, limit=limit, offset=offset)
+    return DisputeListResponse(items=[DisputeResponse.model_validate(d) for d in items], total=total)
 
 
 def get_my_dispute(db: Session, farmer_id: str, order_id: uuid.UUID) -> DisputeResponse:

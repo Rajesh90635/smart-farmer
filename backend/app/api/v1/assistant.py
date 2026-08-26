@@ -44,6 +44,14 @@ def chat(
     return assistant_service.send_message(db, current_user.user_id, payload, weather_provider, model_provider, settings)
 
 
+@router.get("/history", response_model=ConversationHistoryResponse)
+def get_active_history(
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> ConversationHistoryResponse:
+    return assistant_service.get_active_history(db, current_user.user_id)
+
+
 @router.get("/history/{conversation_id}", response_model=ConversationHistoryResponse)
 def get_history(
     conversation_id: uuid.UUID,

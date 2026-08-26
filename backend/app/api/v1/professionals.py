@@ -66,6 +66,19 @@ def list_professionals(
     return professional_service.list_verified_professionals(db, role, limit=limit, offset=offset)
 
 
+@router.get("/pending", response_model=ProfessionalListResponse)
+def list_pending_professionals(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> ProfessionalListResponse:
+    """Declared before /{professional_id} so 'pending' is never swallowed
+    by that path param route - Starlette matches path shape first and
+    would otherwise 422 trying to parse 'pending' as a UUID."""
+    return professional_service.list_pending_professionals(db, limit=limit, offset=offset)
+
+
 @router.get("/{professional_id}", response_model=ProfessionalProfileResponse)
 def get_professional(
     professional_id: uuid.UUID,

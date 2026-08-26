@@ -22,6 +22,7 @@ from app.schemas.marketplace import (
     QualityDisputeCreateRequest,
     SaleCancelRequest,
     SaleDisputeCreateRequest,
+    SaleDisputeListResponse,
     SaleDisputeResolveRequest,
     SaleDisputeResponse,
     SaleFeedbackCreateRequest,
@@ -33,6 +34,7 @@ from app.services.audit_logger import AuditLogger
 # A sale-status change is only meaningful once the dispute is being
 # finalized (resolved or closed) - not while merely opened/under review/escalated.
 _DISPUTE_STATUSES_ALLOWING_SALE_TRANSITION = {SaleDisputeStatus.RESOLVED, SaleDisputeStatus.CLOSED}
+_OPEN_SALE_DISPUTE_STATUSES = [SaleDisputeStatus.OPEN, SaleDisputeStatus.UNDER_REVIEW, SaleDisputeStatus.ESCALATED]
 
 
 def _apply_transition(sale: SaleOrder, target: SaleOrderStatus) -> None:
@@ -224,6 +226,14 @@ def resolve_dispute(db: Session, admin_user_id: str, dispute_id: uuid.UUID, payl
     db.commit()
     db.refresh(dispute)
     return SaleDisputeResponse.model_validate(dispute)
+
+
+def list_open_disputes(db: Session, *, limit: int = 50, offset: int = 0) -> SaleDisputeListResponse:
+    """The admin discovery endpoint that was missing entirely - resolve_dispute
+    already existed, but an admin had no way to find a dispute_id to
+    resolve except being told one directly."""
+    items, total = sale_order_repository.list_disputes_by_statuses(db, _OPEN_SALE_DISPUTE_STATUSES, limit=limit, offset=offset)
+    return SaleDisputeListResponse(items=[SaleDisputeResponse.model_validate(d) for d in items], total=total)
 
 
 def add_quality_dispute_details(db: Session, dispute_id: uuid.UUID, payload: QualityDisputeCreateRequest) -> None:

@@ -103,6 +103,15 @@ def get_dispute_for_order(db: Session, order_id: uuid.UUID) -> OrderDispute | No
     return db.execute(select(OrderDispute).where(OrderDispute.order_id == order_id)).scalar_one_or_none()
 
 
+def list_disputes_by_statuses(db: Session, statuses: list, *, limit: int, offset: int) -> tuple[list[OrderDispute], int]:
+    """Admin-only discovery query - without this, an admin has no way to
+    find a dispute_id to resolve at all except being told one directly."""
+    base = select(OrderDispute).where(OrderDispute.status.in_(statuses))
+    total = db.execute(select(func.count()).select_from(base.subquery())).scalar_one()
+    items = db.execute(base.order_by(OrderDispute.created_at.desc()).limit(limit).offset(offset)).scalars().all()
+    return list(items), total
+
+
 def create_refund(db: Session, refund: Refund) -> Refund:
     db.add(refund)
     return refund

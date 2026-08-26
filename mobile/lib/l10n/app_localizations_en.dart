@@ -1046,4 +1046,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get photoDeleted => 'Photo removed.';
+
+  @override
+  String get assistantChatTitle => 'Smart Farmer Assistant';
+
+  @override
+  String get assistantEmptyStateHint =>
+      'Ask me about your crops, weather, harvest, orders, and more.';
+
+  @override
+  String get assistantChatSuggestionCropStatus =>
+      'What is happening to my crop?';
+
+  @override
+  String get assistantChatSuggestionWeather => 'Will it rain today?';
+
+  @override
+  String get assistantChatSuggestionHarvest => 'Is my crop ready to harvest?';
+
+  @override
+  String get assistantChatSuggestionOrders => 'Where is my order?';
+
+  @override
+  String get assistantSendButtonTooltip => 'Send';
+
+  @override
+  String get assistantMarkHelpfulTooltip => 'Helpful';
+
+  @override
+  String get assistantMarkNotHelpfulTooltip => 'Not helpful';
+
+  @override
+  String get assistantFeedbackThanksMessage => 'Thanks for the feedback.';
 }

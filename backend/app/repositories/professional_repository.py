@@ -27,6 +27,17 @@ def list_verified_by_role(db: Session, role: str, *, limit: int, offset: int) ->
     return list(items), total
 
 
+def list_by_verification_status(db: Session, status: VerificationStatus, *, limit: int, offset: int) -> tuple[list[ProfessionalProfile], int]:
+    """Admin-only discovery query - unlike list_verified_by_role, this is
+    never role-scoped and never restricted to VERIFIED, since its whole
+    purpose is finding professionals of ANY role sitting in PENDING (or
+    any other) status that need an admin action."""
+    base = select(ProfessionalProfile).where(ProfessionalProfile.verification_status == status)
+    total = db.execute(select(func.count()).select_from(base.subquery())).scalar_one()
+    items = db.execute(base.order_by(ProfessionalProfile.created_at.desc()).limit(limit).offset(offset)).scalars().all()
+    return list(items), total
+
+
 def candidates_for_matching(db: Session, role: str) -> list[ProfessionalProfile]:
     """All VERIFIED candidates for a role - full ranking/filtering
     (service area, expertise, language, availability, workload) happens in

@@ -89,6 +89,14 @@ def list_verified_professionals(db: Session, role: str, *, limit: int = 50, offs
     return ProfessionalListResponse(items=[ProfessionalProfileResponse.model_validate(p) for p in items], total=total)
 
 
+def list_pending_professionals(db: Session, *, limit: int = 50, offset: int = 0) -> ProfessionalListResponse:
+    """The admin discovery endpoint that was missing entirely - without
+    this, an admin has no way to find out which registrations are
+    awaiting verify/reject, across every professional role at once."""
+    items, total = professional_repository.list_by_verification_status(db, VerificationStatus.PENDING, limit=limit, offset=offset)
+    return ProfessionalListResponse(items=[ProfessionalProfileResponse.model_validate(p) for p in items], total=total)
+
+
 def _apply_verification_action(
     db: Session, admin_user_id: str, professional_id: uuid.UUID, action: VerificationAction, new_status: VerificationStatus, payload: VerificationActionRequest
 ) -> ProfessionalProfileResponse:

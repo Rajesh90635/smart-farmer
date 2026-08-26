@@ -235,6 +235,35 @@ def test_sale_status_change_rejected_unless_resolving_or_closing(client, farmer_
     assert response.status_code == 422
 
 
+def test_admin_can_list_open_sale_disputes_to_discover_what_needs_resolution(client, farmer_with_crop_cycle, verified_buyer, admin_tokens):
+    """The admin discovery gap: resolve_dispute already existed, but there
+    was no way to find a dispute_id to resolve except being told one
+    directly."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    open_list = client.get("/api/v1/marketplace/disputes", headers=auth_headers(admin_tokens))
+    assert open_list.status_code == 200
+    ids = [d["id"] for d in open_list.json()["items"]]
+    assert dispute["id"] in ids
+
+    client.post(
+        f"/api/v1/marketplace/disputes/{dispute['id']}/resolve",
+        json={"status": "closed"},
+        headers=auth_headers(admin_tokens),
+    )
+
+    after_resolve = client.get("/api/v1/marketplace/disputes", headers=auth_headers(admin_tokens))
+    assert dispute["id"] not in [d["id"] for d in after_resolve.json()["items"]]
+
+
+def test_farmer_cannot_list_open_sale_disputes(client, farmer_with_crop_cycle):
+    farmer_tokens, _ = farmer_with_crop_cycle
+    response = client.get("/api/v1/marketplace/disputes", headers=auth_headers(farmer_tokens))
+    assert response.status_code == 403
+
+
 def test_farmer_a_cannot_see_farmer_bs_sale(client, farmer_with_crop_cycle, verified_buyer, another_farmer):
     farmer_a_tokens, crop_cycle_id = farmer_with_crop_cycle
     buyer_tokens, _ = verified_buyer

@@ -120,6 +120,17 @@ def send_message(
     )
 
 
+def get_active_history(db: Session, farmer_id: str) -> ConversationHistoryResponse:
+    """For a chat screen opening cold, with no conversation_id in hand
+    yet - returns the farmer's current active conversation, or an empty
+    result if they've never sent a message (never creates one just from
+    viewing)."""
+    conversation = assistant_repository.get_active_conversation(db, uuid.UUID(farmer_id))
+    if conversation is None:
+        return ConversationHistoryResponse(conversation_id=None, messages=[])
+    return ConversationHistoryResponse(conversation_id=conversation.id, messages=[MessageResponse.model_validate(m) for m in conversation.messages])
+
+
 def get_history(db: Session, farmer_id: str, conversation_id: uuid.UUID) -> ConversationHistoryResponse:
     conversation = assistant_repository.get_conversation_owned(db, conversation_id, uuid.UUID(farmer_id))
     if conversation is None:

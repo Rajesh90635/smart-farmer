@@ -8,6 +8,24 @@ def test_product_starts_pending_review(client, admin_tokens):
     assert response.json()["status"] == "pending_review"
 
 
+def test_admin_can_list_pending_products_to_discover_what_needs_review(client, admin_tokens, approved_product):
+    """The admin discovery gap: approve_product/reject_product/suspend_product
+    already existed, but there was no way to find a product_id to act on."""
+    pending = client.post("/api/v1/products", json=valid_product_payload(), headers=auth_headers(admin_tokens)).json()
+
+    response = client.get("/api/v1/products/admin", headers=auth_headers(admin_tokens))
+    assert response.status_code == 200
+    ids = [p["id"] for p in response.json()["items"]]
+    assert pending["id"] in ids
+    assert approved_product["id"] not in ids
+
+
+def test_farmer_cannot_list_admin_products(client, registered_farmer):
+    _, tokens = registered_farmer
+    response = client.get("/api/v1/products/admin", headers=auth_headers(tokens))
+    assert response.status_code == 403
+
+
 def test_pending_product_excluded_from_farmer_listing(client, admin_tokens, registered_farmer):
     _, farmer_tokens = registered_farmer
     product = client.post("/api/v1/products", json=valid_product_payload(), headers=auth_headers(admin_tokens)).json()

@@ -51,6 +51,15 @@ def get_dispute_for_sale(db: Session, sale_id: uuid.UUID) -> SaleDispute | None:
     return db.execute(select(SaleDispute).where(SaleDispute.sale_order_id == sale_id)).scalar_one_or_none()
 
 
+def list_disputes_by_statuses(db: Session, statuses: list, *, limit: int, offset: int) -> tuple[list[SaleDispute], int]:
+    """Admin-only discovery query - without this, an admin has no way to
+    find a dispute_id to resolve at all except being told one directly."""
+    base = select(SaleDispute).where(SaleDispute.status.in_(statuses))
+    total = db.execute(select(func.count()).select_from(base.subquery())).scalar_one()
+    items = db.execute(base.order_by(SaleDispute.created_at.desc()).limit(limit).offset(offset)).scalars().all()
+    return list(items), total
+
+
 def create_quality_dispute(db: Session, quality_dispute: QualityDispute) -> QualityDispute:
     db.add(quality_dispute)
     return quality_dispute

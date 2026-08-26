@@ -120,6 +120,11 @@ class DisputeResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DisputeListResponse(BaseModel):
+    items: list[DisputeResponse]
+    total: int
+
+
 class DisputeResolveRequest(BaseModel):
     status: DisputeStatus
     refund_type: RefundType | None = None

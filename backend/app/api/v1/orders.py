@@ -20,6 +20,7 @@ from app.schemas.order import (
     DeliveryResponse,
     DeliveryUpdateRequest,
     DisputeCreateRequest,
+    DisputeListResponse,
     DisputeResolveRequest,
     DisputeResponse,
     OrderListResponse,
@@ -186,6 +187,16 @@ def get_dispute(
     db: Session = Depends(get_db),
 ) -> DisputeResponse:
     return dispute_service.get_my_dispute(db, current_user.user_id, order_id)
+
+
+@router.get("/disputes", response_model=DisputeListResponse)
+def list_open_disputes(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> DisputeListResponse:
+    return dispute_service.list_open_disputes(db, limit=limit, offset=offset)
 
 
 @router.post("/disputes/{dispute_id}/resolve", response_model=DisputeResponse)

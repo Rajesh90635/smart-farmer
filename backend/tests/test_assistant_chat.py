@@ -151,6 +151,34 @@ def test_daily_summary_includes_overdue_task_count_reusing_the_real_task_reposit
     assert any("1 overdue task" in line for line in lines), f"Expected an overdue-task line, got: {lines}"
 
 
+def test_active_history_is_empty_before_any_message(client, registered_farmer):
+    _, tokens = registered_farmer
+    response = client.get("/api/v1/assistant/history", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    assert response.json() == {"conversation_id": None, "messages": []}
+
+
+def test_active_history_reflects_the_active_conversation(client, registered_farmer):
+    _, tokens = registered_farmer
+    chat = _chat(client, tokens, "help").json()
+
+    response = client.get("/api/v1/assistant/history", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["conversation_id"] == chat["conversation_id"]
+    assert len(body["messages"]) == 2
+
+
+def test_active_history_never_leaks_another_farmers_conversation(client, registered_farmer, another_farmer):
+    _, tokens_a = registered_farmer
+    _, tokens_b = another_farmer
+    _chat(client, tokens_a, "help")
+
+    response = client.get("/api/v1/assistant/history", headers=auth_headers(tokens_b))
+    assert response.status_code == 200
+    assert response.json() == {"conversation_id": None, "messages": []}
+
+
 def test_help_intent(client, registered_farmer):
     _, tokens = registered_farmer
     response = _chat(client, tokens, "help")
