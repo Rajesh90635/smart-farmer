@@ -26,8 +26,24 @@ settings = get_settings()
 _login_limiter = InMemoryRateLimiter(max_requests=5, window_seconds=300)
 
 
-def _issue_tokens(db: Session, user: User) -> TokenResponse:
-    access_token = create_access_token(subject=str(user.id), role=RoleCode.FARMER.value)
+def _resolve_role(db: Session, user_id) -> str:
+    """The JWT/audit `role` claim must reflect the role actually assigned
+    in `user_roles`, not an assumption - this is what makes non-farmer
+    logins (admin, expert, dealer, ...) authenticate as themselves rather
+    than silently appearing as a farmer. A user with more than one role
+    is treated as admin if admin is among them (the higher-privilege
+    claim), otherwise the first assigned role - today every account has
+    exactly one role, so this is not yet exercised by multi-role users."""
+    role_codes = user_repository.get_role_codes_for_user(db, user_id)
+    if RoleCode.ADMIN.value in role_codes:
+        return RoleCode.ADMIN.value
+    if role_codes:
+        return role_codes[0]
+    raise AppError("ROLE_NOT_ASSIGNED", "This account has no assigned role.", 500)
+
+
+def _issue_tokens(db: Session, user: User, role: str) -> TokenResponse:
+    access_token = create_access_token(subject=str(user.id), role=role)
 
     raw_refresh = generate_refresh_token()
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.jwt_refresh_token_days)
@@ -89,7 +105,7 @@ def register(db: Session, payload: RegisterRequest) -> TokenResponse:
             )
         )
 
-    tokens = _issue_tokens(db, user)
+    tokens = _issue_tokens(db, user, RoleCode.FARMER.value)
 
     AuditLogger(db).log(
         "USER_REGISTERED", actor_id=str(user.id), actor_role=RoleCode.FARMER.value, entity="user", entity_id=str(user.id)
@@ -124,11 +140,13 @@ def login(db: Session, payload: LoginRequest) -> TokenResponse:
         db.commit()
         raise AppError(error_codes.ACCOUNT_DISABLED, "This account is not active.", 403)
 
+    role = _resolve_role(db, user.id)
+
     user.last_login_at = datetime.now(timezone.utc)
-    tokens = _issue_tokens(db, user)
+    tokens = _issue_tokens(db, user, role)
 
     AuditLogger(db).log(
-        "LOGIN_SUCCESS", actor_id=str(user.id), actor_role=RoleCode.FARMER.value, entity="user", entity_id=str(user.id)
+        "LOGIN_SUCCESS", actor_id=str(user.id), actor_role=role, entity="user", entity_id=str(user.id)
     )
 
     db.commit()
@@ -149,11 +167,13 @@ def refresh(db: Session, payload: RefreshRequest) -> TokenResponse:
 
     # Rotate: revoke the used refresh token, issue a fresh pair. Reduces the
     # blast radius if a refresh token is ever intercepted and replayed.
+    role = _resolve_role(db, user.id)
+
     refresh_token_repository.revoke(db, stored)
-    tokens = _issue_tokens(db, user)
+    tokens = _issue_tokens(db, user, role)
 
     AuditLogger(db).log(
-        "TOKEN_REFRESHED", actor_id=str(user.id), actor_role=RoleCode.FARMER.value, entity="user", entity_id=str(user.id)
+        "TOKEN_REFRESHED", actor_id=str(user.id), actor_role=role, entity="user", entity_id=str(user.id)
     )
 
     db.commit()

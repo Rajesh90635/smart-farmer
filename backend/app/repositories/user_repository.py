@@ -41,7 +41,14 @@ def assign_role(db: Session, user_id: uuid.UUID, role_id: int) -> UserRole:
 
 
 def get_role_codes_for_user(db: Session, user_id: uuid.UUID) -> list[str]:
+    """Ordered by UserRole.id (assignment order) so a caller picking
+    "the first assigned role" (see auth_service._resolve_role) gets a
+    deterministic result instead of arbitrary DB row order - matters
+    once an account ever holds more than one non-admin role."""
     rows = db.execute(
-        select(Role.code).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id)
+        select(Role.code)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+        .order_by(UserRole.id)
     ).all()
     return [r[0] for r in rows]
