@@ -25,6 +25,10 @@ class _AddCropScreenState extends State<AddCropScreen> {
   String? _season;
   bool _saving = false;
 
+  List<CropVariety> _varieties = [];
+  CropVariety? _selectedVariety;
+  bool _loadingVarieties = false;
+
   static const _seasons = ['kharif', 'rabi', 'zaid', 'perennial', 'other'];
 
   Future<void> _pickCrop() async {
@@ -33,7 +37,30 @@ class _AddCropScreenState extends State<AddCropScreen> {
       isScrollControlled: true,
       builder: (_) => _CropSearchSheet(cropRepository: context.read<CropRepository>()),
     );
-    if (selected != null) setState(() => _selectedCrop = selected);
+    if (selected == null) return;
+    setState(() {
+      _selectedCrop = selected;
+      _varieties = [];
+      _selectedVariety = null;
+    });
+    await _loadVarieties(selected.id);
+  }
+
+  Future<void> _loadVarieties(String cropId) async {
+    setState(() => _loadingVarieties = true);
+    try {
+      final varieties = await context.read<CropRepository>().listVarietiesForCrop(cropId);
+      if (!mounted) return;
+      setState(() {
+        _varieties = varieties;
+        _loadingVarieties = false;
+      });
+    } catch (_) {
+      // Variety data is optional context, not required to add a crop -
+      // fail silently into an empty list rather than blocking the form.
+      if (!mounted) return;
+      setState(() => _loadingVarieties = false);
+    }
   }
 
   Future<void> _pickDate({required bool isSowing}) async {
@@ -66,6 +93,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
             season: _season,
             sowingDate: _isoDate(_sowingDate!),
             expectedHarvestDate: _expectedHarvestDate != null ? _isoDate(_expectedHarvestDate!) : null,
+            varietyId: _selectedVariety?.id,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Crop added.')));
@@ -116,6 +144,23 @@ class _AddCropScreenState extends State<AddCropScreen> {
               items: _seasons.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (v) => setState(() => _season = v),
             ),
+            if (_loadingVarieties) ...[
+              const SizedBox(height: 16),
+              const Center(child: CircularProgressIndicator()),
+            ] else if (_varieties.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<CropVariety>(
+                value: _selectedVariety,
+                decoration: const InputDecoration(labelText: 'Variety (optional)'),
+                items: _varieties
+                    .map((v) => DropdownMenuItem(
+                          value: v,
+                          child: Text(v.typicalDurationDays != null ? '${v.name} (~${v.typicalDurationDays}d)' : v.name),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedVariety = v),
+              ),
+            ],
             const SizedBox(height: 32),
             if (_saving)
               const Center(child: CircularProgressIndicator())

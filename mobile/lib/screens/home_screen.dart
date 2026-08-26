@@ -4,8 +4,11 @@ import 'package:provider/provider.dart';
 import '../core/friendly_error.dart';
 import '../features/auth/farmer_repository.dart';
 import '../features/daily_briefing/daily_briefing_screen.dart';
+import '../features/dealer_market/product_list_screen.dart';
 import '../features/farm/my_farms_screen.dart';
 import '../features/harvest/harvest_history_screen.dart';
+import '../features/notifications/notification_list_screen.dart';
+import '../features/notifications/notification_repository.dart';
 import '../l10n/app_localizations.dart';
 
 /// Farmer Home: a simple farm/plot/crop summary only. No disease, weather,
@@ -23,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   FarmerDashboard? _dashboard;
   bool _loading = true;
   String? _error;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
@@ -47,12 +51,58 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     }
+    _loadUnreadNotificationCount();
+  }
+
+  /// Best-effort only, matching the dashboard's own pattern of not
+  /// blocking Home on a secondary data source - an unread badge that
+  /// fails to load just stays hidden rather than surfacing a second error.
+  Future<void> _loadUnreadNotificationCount() async {
+    try {
+      final page = await context.read<NotificationRepository>().listNotifications(unreadOnly: true, limit: 1);
+      if (!mounted) return;
+      setState(() => _unreadNotifications = page.unreadCount);
+    } catch (_) {
+      // See method doc.
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      appBar: AppBar(
+        title: const Text('Home'),
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                tooltip: 'Notifications',
+                onPressed: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationListScreen()));
+                  _loadUnreadNotificationCount();
+                },
+              ),
+              if (_unreadNotifications > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      '$_unreadNotifications',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
       body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
@@ -99,6 +149,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           icon: const Icon(Icons.agriculture),
           label: Text(l10n.viewHarvestHistoryButton),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListScreen()),
+          ),
+          icon: const Icon(Icons.shopping_cart_outlined),
+          label: const Text('Buy Inputs'),
         ),
         const SizedBox(height: 24),
         ElevatedButton.icon(

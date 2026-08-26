@@ -14,7 +14,7 @@ from app.core.errors import AppError
 from app.models.professional_profile import VerificationStatus
 from app.repositories import dealer_product_repository, product_repository, professional_repository
 from app.schemas.price import DealerOfferComparisonResponse, PriceComparisonResponse, ScamShieldStatusResponse
-from app.services.price_comparison import compare_price
+from app.services.price_comparison import compare_price, price_per_unit
 
 
 def compare_offers_for_product(db: Session, product_id: uuid.UUID, settings: Settings) -> PriceComparisonResponse:
@@ -44,7 +44,12 @@ def compare_offers_for_product(db: Session, product_id: uuid.UUID, settings: Set
     return PriceComparisonResponse(
         product_id=product_id,
         reference_price=ref.price if ref else None,
-        reference_price_per_unit=(ref.price / product.pack_size_value) if ref else None,
+        # Reuses the same helper every offer's own per-unit price already
+        # goes through (see compare_price above) - a second, duplicated raw
+        # division here previously bypassed that function's rounding and
+        # could return scientific notation (e.g. "1.0E+2") straight into
+        # the farmer-facing response.
+        reference_price_per_unit=price_per_unit(ref.price, product.pack_size_value) if ref else None,
         reference_source=ref.source_name if ref else None,
         offers=offers,
     )

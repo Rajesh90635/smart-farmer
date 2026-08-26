@@ -31,6 +31,13 @@ class CropRepository {
     return CropCycle.fromJson(response);
   }
 
+  /// Structured varieties for a crop (e.g. "Pusa Ruby" for Tomato), used to
+  /// populate the optional variety dropdown after a crop is selected.
+  Future<List<CropVariety>> listVarietiesForCrop(String cropId) async {
+    final response = await _apiClient.getList('/crops/$cropId/varieties');
+    return response.cast<Map<String, dynamic>>().map(CropVariety.fromJson).toList();
+  }
+
   Future<CropCycle> createCropCycle(
     String plotId, {
     required String cropId,
@@ -38,6 +45,7 @@ class CropRepository {
     required String sowingDate,
     String? expectedHarvestDate,
     String? seedVariety,
+    String? varietyId,
   }) async {
     final response = await _apiClient.post('/plots/$plotId/crops', body: {
       'crop_id': cropId,
@@ -45,6 +53,7 @@ class CropRepository {
       'sowing_date': sowingDate,
       if (expectedHarvestDate != null) 'expected_harvest_date': expectedHarvestDate,
       if (seedVariety != null) 'seed_variety': seedVariety,
+      if (varietyId != null) 'variety_id': varietyId,
     });
     return CropCycle.fromJson(response);
   }

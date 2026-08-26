@@ -43,6 +43,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
   bool _loading = true;
   bool _updating = false;
   String? _error;
+  String? _varietyName;
 
   @override
   void initState() {
@@ -56,16 +57,33 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       _error = null;
     });
     try {
-      final cycle = await context.read<CropRepository>().getCropCycle(widget.cropCycleId);
+      final repository = context.read<CropRepository>();
+      final cycle = await repository.getCropCycle(widget.cropCycleId);
       setState(() {
         _cycle = cycle;
         _loading = false;
       });
+      if (cycle.varietyId != null) await _loadVarietyName(repository, cycle.crop.id, cycle.varietyId!);
     } catch (e) {
       setState(() {
         _error = FriendlyError.from(e);
         _loading = false;
       });
+    }
+  }
+
+  /// CropCycleResponse only carries variety_id, not the variety's name - so
+  /// the name is resolved from the same crop-scoped variety list the add
+  /// form already uses. Best-effort: an unresolved name just means the
+  /// "Variety" row is omitted, never a fabricated label.
+  Future<void> _loadVarietyName(CropRepository repository, String cropId, String varietyId) async {
+    try {
+      final varieties = await repository.listVarietiesForCrop(cropId);
+      final match = varieties.where((v) => v.id == varietyId).toList();
+      if (!mounted || match.isEmpty) return;
+      setState(() => _varietyName = match.first.name);
+    } catch (_) {
+      // Best-effort only - see method doc.
     }
   }
 
@@ -294,6 +312,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
         if (cycle.actualHarvestDate != null)
           ListTile(title: const Text('Harvested on'), subtitle: Text(cycle.actualHarvestDate!)),
         if (cycle.season != null) ListTile(title: const Text('Season'), subtitle: Text(cycle.season!)),
+        if (_varietyName != null) ListTile(title: const Text('Variety'), subtitle: Text(_varietyName!)),
         if (cycle.seedVariety != null) ListTile(title: const Text('Seed variety'), subtitle: Text(cycle.seedVariety!)),
         const SizedBox(height: 32),
         if (_updating)

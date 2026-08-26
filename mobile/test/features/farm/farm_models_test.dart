@@ -109,6 +109,46 @@ void main() {
       });
       expect(cycle.crop.name, 'Tomato');
       expect(cycle.cultivationStatus, 'planned');
+      expect(cycle.varietyId, isNull);
+    });
+
+    test('parses a real variety_id when a structured variety was chosen', () {
+      final cycle = CropCycle.fromJson({
+        'id': 'c1',
+        'plot_id': 'p1',
+        'crop': {'id': 'crop1', 'name': 'Tomato', 'category': 'vegetable'},
+        'season': 'kharif',
+        'sowing_date': '2026-06-01',
+        'expected_harvest_date': null,
+        'actual_harvest_date': null,
+        'cultivation_status': 'planned',
+        'seed_variety': null,
+        'variety_id': 'v1',
+      });
+      expect(cycle.varietyId, 'v1');
+    });
+  });
+
+  group('CropVariety.fromJson', () {
+    test('parses a variety with a typical duration', () {
+      final variety = CropVariety.fromJson({
+        'id': 'v1',
+        'crop_id': 'crop1',
+        'name': 'Pusa Ruby',
+        'typical_duration_days': 75,
+      });
+      expect(variety.name, 'Pusa Ruby');
+      expect(variety.typicalDurationDays, 75);
+    });
+
+    test('leaves typical duration null rather than fabricating one', () {
+      final variety = CropVariety.fromJson({
+        'id': 'v1',
+        'crop_id': 'crop1',
+        'name': 'Local',
+        'typical_duration_days': null,
+      });
+      expect(variety.typicalDurationDays, isNull);
     });
   });
 }

@@ -114,6 +114,7 @@ class CropCycle {
   final String? actualHarvestDate;
   final String cultivationStatus;
   final String? seedVariety;
+  final String? varietyId;
 
   CropCycle({
     required this.id,
@@ -125,6 +126,7 @@ class CropCycle {
     this.actualHarvestDate,
     required this.cultivationStatus,
     this.seedVariety,
+    this.varietyId,
   });
 
   factory CropCycle.fromJson(Map<String, dynamic> json) => CropCycle(
@@ -137,6 +139,25 @@ class CropCycle {
         actualHarvestDate: json['actual_harvest_date'] as String?,
         cultivationStatus: json['cultivation_status'] as String,
         seedVariety: json['seed_variety'] as String?,
+        varietyId: json['variety_id'] as String?,
+      );
+}
+
+/// Mirrors backend/app/schemas/crop_variety.py's CropVarietyResponse - a
+/// structured, crop-scoped reference entity (e.g. "Pusa Ruby" for Tomato).
+class CropVariety {
+  final String id;
+  final String cropId;
+  final String name;
+  final int? typicalDurationDays;
+
+  CropVariety({required this.id, required this.cropId, required this.name, this.typicalDurationDays});
+
+  factory CropVariety.fromJson(Map<String, dynamic> json) => CropVariety(
+        id: json['id'] as String,
+        cropId: json['crop_id'] as String,
+        name: json['name'] as String,
+        typicalDurationDays: json['typical_duration_days'] as int?,
       );
 }
 

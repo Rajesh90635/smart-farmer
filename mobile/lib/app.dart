@@ -26,7 +26,9 @@ import 'features/health_timeline/health_timeline_repository.dart';
 import 'features/invoice/invoice_repository.dart';
 import 'features/ledger/ledger_repository.dart';
 import 'features/market/market_repository.dart';
+import 'features/dealer_market/dealer_market_repository.dart';
 import 'features/harvest/harvest_repository.dart';
+import 'features/notifications/notification_repository.dart';
 import 'features/task/task_repository.dart';
 import 'features/treatment/treatment_repository.dart';
 import 'features/weather_action/weather_action_repository.dart';
@@ -76,6 +78,8 @@ class SmartFarmerApp extends StatelessWidget {
         Provider<CropRiskRepository>(create: (_) => CropRiskRepository(apiClient: apiClient)),
         Provider<DailyBriefingRepository>(create: (_) => DailyBriefingRepository(apiClient: apiClient)),
         Provider<AssistantRepository>(create: (_) => AssistantRepository(apiClient: apiClient)),
+        Provider<NotificationRepository>(create: (_) => NotificationRepository(apiClient: apiClient)),
+        Provider<DealerMarketRepository>(create: (_) => DealerMarketRepository(apiClient: apiClient)),
         Provider<VoiceService>(create: (_) => FlutterTtsVoiceService()),
         Provider<NetworkStatusChecker>(create: (_) => NetworkStatusChecker()),
         ChangeNotifierProvider<PendingUploadQueue>(create: (_) => PendingUploadQueue()),

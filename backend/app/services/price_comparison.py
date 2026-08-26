@@ -31,7 +31,13 @@ class PriceComparisonResult:
 def price_per_unit(price: Decimal, pack_size_value: Decimal) -> Decimal:
     if pack_size_value <= 0:
         raise ValueError("pack_size_value must be greater than zero.")
-    return price / pack_size_value
+    # Quantized to money's own standard 2 decimal places (matches every
+    # price/amount column in this app, all Numeric(x, 2)) - plain Decimal
+    # division here can otherwise return an exact-but-scientific-notation
+    # result (e.g. Decimal("250.00") / Decimal("1.000") == Decimal("2.5E+2")),
+    # which serializes to JSON as the literal string "2.5E+2" and would
+    # render as garbage in a farmer-facing price display.
+    return (price / pack_size_value).quantize(Decimal("0.01"))
 
 
 def compare_price(
