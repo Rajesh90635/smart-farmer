@@ -1057,3 +1057,12 @@ No new Flutter code was needed - every farmer-facing behavior verified as alread
 Selected Vadlamudi and submitted the form - `POST /farms` returned `201`, the app navigated back to My Farms showing "Test Farm 1 5 acre" with a "Farm added." confirmation. **Verified past the UI, directly against the database** (not just trusting the 201): the new farm row's FK chain reads back exactly as selected - `state=Andhra Pradesh, district=Guntur, mandal=Chebrolu, village=Vadlamudi` - confirming the whole path (seed data -> API -> Flutter dropdowns -> farmer selection -> persisted FK relationships) is correct end-to-end, not just that each layer looks right in isolation. Zero console/page errors throughout.
 
 No application code was changed this pass - a live-verification pass only. Backend and web-server processes stopped afterward; no lingering state left running.
+
+
+---
+
+## Correction: the "all 11 Visakhapatnam mandals" claim in `3d61e7bd3ba9`'s entry above was wrong
+
+**Found while answering the user's "what's remaining for the 49 unmatched mandals" follow-up question**, by re-checking `mandal_mapping.json` directly rather than trusting the earlier written summary. The actual data: **10 of Visakhapatnam district's 11 mandals matched cleanly** (exact, distance-0 matches - Anandapuram, Bheemunipatnam, Gajuwaka, Gopalapatnam, Maharanipeta, Mulagada, Padmanabham, Pedagantyada, Pendurthi, Seethammadhara). Only **one** - "Visakhapatnam Rural" - is actually unmatched, and the real reason is different from what was written: the official source splits "Visakhapatnam(R)"/"Visakhapatnam(U)", but this table's `mandals` row set (seeded by `c1a2b3d4e5f6` from Wikipedia) never got a "Visakhapatnam Urban" row at all - a gap in that earlier migration, not a matching-algorithm problem. The official Visakhapatnam list separately does contain stale tribal-agency mandal duplicates (Araku Valley, Paderu, etc., already correctly filed under Alluri Sitharama Raju in this table) - that part of the original claim was accurate - but they don't explain an "all 11" outcome, since they never had a corresponding DB candidate to collide with in the first place.
+
+No data or migration changes needed - this was purely a wrong written explanation of an already-correct result. Recorded here rather than silently edited, since the original (wrong) sentence remains further up this file in an already-pushed, already-committed entry.
