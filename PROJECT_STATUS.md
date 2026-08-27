@@ -1023,3 +1023,16 @@ No new Flutter code was needed - every farmer-facing behavior verified as alread
 **Verified the same way as every other migration in this project**: upgrade (15,988, confirmed per-mandal counts match exactly) -> re-run upgrade (idempotent) -> downgrade (back to 15,886, confirmed) -> re-upgrade (15,988 again) -> `alembic revision --autogenerate` diff empty. Applied to the dev database.
 
 **Remaining, correctly disclosed and unchanged**: 49 mandals are still village-less for the reasons already documented in the prior phase's entry (structural splits the official source can't resolve, stale Visakhapatnam data, names too different to safely auto-match).
+
+
+---
+
+## Phase 41 follow-up part 4: corrective casing fix for 246 village names
+
+**Requested directly by the user**, after the prior phase disclosed roughly 211 (246 by exact count, once actually diffed rather than estimated) existing village names with a purely cosmetic casing bug: a no-space abbreviation in the source (e.g. `"R.T.PURAM"`, `"Y.S.R.Puram"`) got title-cased as a single token by the old title-caser (which only treated whitespace/`(`/`)`/`-` as word boundaries), capitalizing just the first letter and lowercasing the rest - producing `"R.t.puram"` / `"Y.s.r.puram"` instead of the correct `"R.T.Puram"` / `"Y.S.R.Puram"`.
+
+**Migration `f089b96621c7`**: an UPDATE-based migration (not INSERT) correcting exactly 246 village names, regenerated from the same cached source data already fetched for `3d61e7bd3ba9` (no re-fetch from the API needed) by diffing the old vs. already-fixed (`aacc6f6427d4`) title-casing function. Confirmed zero within-mandal name collisions before writing it (no corrected name coincides with another village already present in the same mandal). Row count unchanged (15,988 before and after) - pure casing correction, no rows added/removed/reassigned.
+
+**A real bug caught in this migration's own first draft, before it was ever run**: the initial `_apply(from_col, to_col)` helper tried to reuse one SQL template for both directions by renaming the `unnest()` column aliases per-direction (e.g. aliasing the 3rd unnest column as `new_name` on downgrade) - but renaming an alias doesn't change which bound array's data actually occupies that column position, so the downgrade would have silently written new-casing values back under the guise of "restoring" old-casing values. Caught by tracing through the generated SQL by hand before ever executing it, not by a failed test. Fixed by keeping the `unnest()` aliases fixed (`old_name`, `new_name`) always, varying only which one is referenced in `SET`/`WHERE`.
+
+**Idempotent by construction** (each `UPDATE` only touches rows still holding the old mis-cased name, so a re-run matches zero rows). **Verified the same way as every other migration in this project**: upgrade (spot-checked `R.t.puram`->`R.T.Puram` etc., 15,988 unchanged) -> re-run upgrade (idempotent, confirmed still `R.T.Puram`) -> downgrade (confirmed reverted to `R.t.puram`) -> re-upgrade (confirmed `R.T.Puram` again) -> `alembic revision --autogenerate` diff empty. Applied to the dev database; `tests/test_location.py` (8/8) re-confirmed the migration applies cleanly against the separate test database too.
