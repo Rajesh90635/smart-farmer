@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/friendly_error.dart';
 import '../../l10n/app_localizations.dart';
 import '../ledger/ledger_models.dart';
+import 'crop_cost_estimates_screen.dart';
 import 'crop_financial_models.dart';
 import 'crop_financial_repository.dart';
 
@@ -114,7 +115,21 @@ class _CropFinancialSummaryScreenState extends State<CropFinancialSummaryScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.financialSummaryTitle)),
+      appBar: AppBar(
+        title: Text(l10n.financialSummaryTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.format_list_bulleted),
+            tooltip: l10n.myEstimatesTitle,
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => CropCostEstimatesScreen(cropCycleId: widget.cropCycleId)),
+              );
+              _load();
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(onPressed: () => _showAddEstimateSheet(l10n), child: const Icon(Icons.add)),
       body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );

@@ -403,6 +403,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveEstimateButton => 'Save';
 
   @override
+  String get myEstimatesTitle => 'My Estimates';
+
+  @override
+  String get noEstimatesYet => 'No estimates yet. Tap + to add one.';
+
+  @override
   String get costAnalysisLabel => 'Cost Analysis';
 
   @override

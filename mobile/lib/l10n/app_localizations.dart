@@ -850,6 +850,18 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get saveEstimateButton;
 
+  /// No description provided for @myEstimatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Estimates'**
+  String get myEstimatesTitle;
+
+  /// No description provided for @noEstimatesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No estimates yet. Tap + to add one.'**
+  String get noEstimatesYet;
+
   /// No description provided for @costAnalysisLabel.
   ///
   /// In en, this message translates to:

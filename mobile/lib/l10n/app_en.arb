@@ -133,6 +133,8 @@
   "addEstimateHint": "Enter what you expect to spend. This is your own estimate, not a calculated prediction.",
   "estimatedAmountLabel": "Estimated Amount",
   "saveEstimateButton": "Save",
+  "myEstimatesTitle": "My Estimates",
+  "noEstimatesYet": "No estimates yet. Tap + to add one.",
   "costAnalysisLabel": "Cost Analysis",
   "estimatedCostLabel": "Estimated Cost",
   "actualCostLabel": "Actual Cost",
