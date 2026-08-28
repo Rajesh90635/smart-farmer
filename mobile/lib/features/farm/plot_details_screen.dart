@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'add_crop_screen.dart';
 import 'crop_details_screen.dart';
 import 'crop_repository.dart';
@@ -51,8 +52,9 @@ class _PlotDetailsScreenState extends State<PlotDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(_plot?.plotName ?? 'Plot')),
+      appBar: AppBar(title: Text(_plot?.plotName ?? l10n.plotDetailsFallbackTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final created = await Navigator.of(context).push<bool>(
@@ -61,13 +63,13 @@ class _PlotDetailsScreenState extends State<PlotDetailsScreen> {
           if (created == true) _load();
         },
         icon: const Icon(Icons.add),
-        label: const Text('Add Crop'),
+        label: Text(l10n.plotDetailsAddCropButton),
       ),
-      body: _buildBody(),
+      body: _buildBody(l10n),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -83,19 +85,19 @@ class _PlotDetailsScreenState extends State<PlotDetailsScreen> {
       onRefresh: _load,
       child: ListView(
         children: [
-          ListTile(title: const Text('Area'), subtitle: Text('${plot.areaValue} ${plot.areaUnit}')),
-          if (plot.soilType != null) ListTile(title: const Text('Soil'), subtitle: Text(plot.soilType!)),
-          if (plot.irrigationType != null) ListTile(title: const Text('Irrigation'), subtitle: Text(plot.irrigationType!)),
+          ListTile(title: Text(l10n.plotDetailsAreaLabel), subtitle: Text('${plot.areaValue} ${plot.areaUnit}')),
+          if (plot.soilType != null) ListTile(title: Text(l10n.plotDetailsSoilLabel), subtitle: Text(plot.soilType!)),
+          if (plot.irrigationType != null) ListTile(title: Text(l10n.plotDetailsIrrigationLabel), subtitle: Text(plot.irrigationType!)),
           const Divider(),
-          Padding(padding: const EdgeInsets.all(16), child: Text('Crops', style: Theme.of(context).textTheme.titleMedium)),
+          Padding(padding: const EdgeInsets.all(16), child: Text(l10n.plotDetailsCropsSectionLabel, style: Theme.of(context).textTheme.titleMedium)),
           if (_cycles.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('No crops yet. Tap "Add Crop" to start one.'))
+            Padding(padding: const EdgeInsets.all(16), child: Text(l10n.plotDetailsNoCropsYetMessage))
           else
             ..._cycles.map(
               (cycle) => ListTile(
                 leading: const Icon(Icons.eco),
                 title: Text(cycle.crop.name, style: const TextStyle(fontSize: 18)),
-                subtitle: Text('${_statusLabel(cycle.cultivationStatus)} · sown ${cycle.sowingDate}'),
+                subtitle: Text(l10n.plotDetailsCropStatusSownSubtitle(_statusLabel(cycle.cultivationStatus), cycle.sowingDate)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
                   await Navigator.of(context).push(

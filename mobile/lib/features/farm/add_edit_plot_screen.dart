@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'farm_models.dart';
 import 'plot_repository.dart';
 
@@ -44,7 +45,7 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  Future<void> _save(AppLocalizations l10n) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
@@ -65,7 +66,7 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
         );
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isEditing ? 'Plot updated.' : 'Plot added.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_isEditing ? l10n.addEditPlotUpdatedMessage : l10n.addEditPlotAddedMessage)));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
@@ -77,8 +78,9 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Plot' : 'Add Plot')),
+      appBar: AppBar(title: Text(_isEditing ? l10n.addEditPlotEditTitle : l10n.addEditPlotAddTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -89,8 +91,8 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Plot name'),
-                  validator: (v) => (v == null || v.trim().length < 2) ? 'Please enter a plot name.' : null,
+                  decoration: InputDecoration(labelText: l10n.addEditPlotNameLabel),
+                  validator: (v) => (v == null || v.trim().length < 2) ? l10n.addEditPlotNameRequiredError : null,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -99,11 +101,11 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
                       flex: 2,
                       child: TextFormField(
                         controller: _areaController,
-                        decoration: const InputDecoration(labelText: 'Area'),
+                        decoration: InputDecoration(labelText: l10n.addEditPlotAreaLabel),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         validator: (v) {
                           final value = double.tryParse(v?.trim() ?? '');
-                          if (value == null || value <= 0) return 'Enter a valid area.';
+                          if (value == null || value <= 0) return l10n.addEditPlotAreaInvalidError;
                           return null;
                         },
                       ),
@@ -112,7 +114,7 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _areaUnit,
-                        decoration: const InputDecoration(labelText: 'Unit'),
+                        decoration: InputDecoration(labelText: l10n.addEditPlotUnitLabel),
                         items: _areaUnits.map((u) => DropdownMenuItem(value: u, child: Text(u.replaceAll('_', ' ')))).toList(),
                         onChanged: (v) => setState(() => _areaUnit = v ?? _areaUnit),
                       ),
@@ -122,13 +124,13 @@ class _AddEditPlotScreenState extends State<AddEditPlotScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _irrigationController,
-                  decoration: const InputDecoration(labelText: 'Irrigation (optional)'),
+                  decoration: InputDecoration(labelText: l10n.addEditPlotIrrigationOptionalLabel),
                 ),
                 const SizedBox(height: 32),
                 if (_saving)
                   const Center(child: CircularProgressIndicator())
                 else
-                  ElevatedButton(onPressed: _save, child: Text(_isEditing ? 'Save changes' : 'Add plot')),
+                  ElevatedButton(onPressed: () => _save(l10n), child: Text(_isEditing ? l10n.addEditPlotSaveChangesButton : l10n.addEditPlotAddButton)),
               ],
             ),
           ),

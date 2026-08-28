@@ -2,20 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'dealer_market_models.dart';
 import 'dealer_market_repository.dart';
 import 'order_list_screen.dart';
 import 'product_detail_screen.dart';
 
-const Map<String, String> productCategoryLabels = {
-  'seed': 'Seed',
-  'fertilizer': 'Fertilizer',
-  'bio_input': 'Bio Input',
-  'pest_control_product': 'Pest Control',
-  'crop_protection_product': 'Crop Protection',
-  'equipment': 'Equipment',
-  'other_agricultural_input': 'Other',
-};
+String productCategoryLabel(String category, AppLocalizations l10n) {
+  switch (category) {
+    case 'seed':
+      return l10n.productCategorySeedLabel;
+    case 'fertilizer':
+      return l10n.productCategoryFertilizerLabel;
+    case 'bio_input':
+      return l10n.productCategoryBioInputLabel;
+    case 'pest_control_product':
+      return l10n.productCategoryPestControlLabel;
+    case 'crop_protection_product':
+      return l10n.productCategoryCropProtectionLabel;
+    case 'equipment':
+      return l10n.productCategoryEquipmentLabel;
+    case 'other_agricultural_input':
+      return l10n.productCategoryOtherLabel;
+    default:
+      return category;
+  }
+}
 
 /// Browse: only APPROVED products (enforced server-side by
 /// product_service.list_approved_products) ever appear here - a farmer
@@ -63,13 +75,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buy Inputs'),
+        title: Text(l10n.productListTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.receipt_long),
-            tooltip: 'My Orders',
+            tooltip: l10n.orderListTitle,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OrderListScreen())),
           ),
         ],
@@ -79,7 +92,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
-              decoration: const InputDecoration(labelText: 'Search products', prefixIcon: Icon(Icons.search)),
+              decoration: InputDecoration(labelText: l10n.productListSearchLabel, prefixIcon: const Icon(Icons.search)),
               onSubmitted: (v) {
                 _query = v;
                 _load();
@@ -95,7 +108,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: const Text('All'),
+                    label: Text(l10n.productListAllCategoryLabel),
                     selected: _selectedCategory == null,
                     onSelected: (_) => setState(() => _selectedCategory = null),
                   ),
@@ -104,7 +117,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   (category) => Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(productCategoryLabels[category] ?? category),
+                      label: Text(productCategoryLabel(category, l10n)),
                       selected: _selectedCategory == category,
                       onSelected: (_) => setState(() => _selectedCategory = category),
                     ),
@@ -113,13 +126,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ],
             ),
           ),
-          Expanded(child: RefreshIndicator(onRefresh: _load, child: _buildBody())),
+          Expanded(child: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n))),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -129,14 +142,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry))),
         ],
       );
     }
 
     final filtered = _selectedCategory == null ? _products : _products.where((p) => p.category == _selectedCategory).toList();
     if (filtered.isEmpty) {
-      return ListView(children: const [SizedBox(height: 100), Center(child: Text('No products found.'))]);
+      return ListView(children: [const SizedBox(height: 100), Center(child: Text(l10n.productListNoProductsFoundMessage))]);
     }
 
     return ListView.builder(
@@ -146,7 +159,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         return ListTile(
           leading: const Icon(Icons.inventory_2_outlined),
           title: Text(product.name),
-          subtitle: Text('${productCategoryLabels[product.category] ?? product.category} • ${product.packSizeValue} ${product.packSizeUnit}'),
+          subtitle: Text('${productCategoryLabel(product.category, l10n)} • ${product.packSizeValue} ${product.packSizeUnit}'),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id))),
         );
       },

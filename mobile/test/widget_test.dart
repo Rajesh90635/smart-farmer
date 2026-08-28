@@ -14,10 +14,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:smart_farmer_mobile/app.dart';
+import 'package:smart_farmer_mobile/core/locale_controller.dart';
 
 void main() {
   testWidgets('SmartFarmerApp builds and shows the splash loading screen first', (WidgetTester tester) async {
-    await tester.pumpWidget(const SmartFarmerApp());
+    await tester.pumpWidget(SmartFarmerApp(localeController: LocaleController()));
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);

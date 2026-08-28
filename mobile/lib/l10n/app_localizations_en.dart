@@ -75,6 +75,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseYourLanguageTitle => 'Choose your language';
 
   @override
+  String get profileScreenTitle => 'Profile';
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get phoneNumberDisplayLabel => 'Phone number';
+
+  @override
+  String get languageLabel => 'Language';
+
+  @override
+  String get saveButton => 'Save';
+
+  @override
+  String get editProfileButton => 'Edit profile';
+
+  @override
+  String get logOutButton => 'Log out';
+
+  @override
   String get navHome => 'Home';
 
   @override
@@ -1097,4 +1118,835 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cameraTabSownOnLabel => 'Sown';
+
+  @override
+  String get notificationListTitle => 'Notifications';
+
+  @override
+  String get notificationMarkAllReadButton => 'Mark all read';
+
+  @override
+  String get notificationPreferencesTooltip => 'Preferences';
+
+  @override
+  String get notificationListEmptyMessage => 'No notifications yet.';
+
+  @override
+  String get notificationPreferencesTitle => 'Notification Preferences';
+
+  @override
+  String get notificationPrefsWeatherAlertsLabel => 'Weather alerts';
+
+  @override
+  String get notificationPrefsRainAlertsLabel => 'Rain alerts';
+
+  @override
+  String get notificationPrefsCropAlertsLabel => 'Crop alerts';
+
+  @override
+  String get notificationPrefsDiseaseAlertsLabel => 'Disease alerts';
+
+  @override
+  String get notificationPrefsAudioAlertsLabel => 'Audio alerts';
+
+  @override
+  String get notificationPrefsAudioAlertsHint =>
+      'Off by default - opt in to have alerts read aloud';
+
+  @override
+  String get notificationPrefsGeneralNotificationsLabel =>
+      'General notifications';
+
+  @override
+  String get advisoryFeedbackTitle => 'Give Feedback';
+
+  @override
+  String get advisoryFeedbackSourcePrompt =>
+      'Which feature is this feedback about?';
+
+  @override
+  String get advisorySourceCropAssistantLabel => 'Crop Assistant';
+
+  @override
+  String get advisorySourceRiskScoreLabel => 'Risk Score';
+
+  @override
+  String get advisorySourceWeatherActionLabel => 'Weather Action';
+
+  @override
+  String get advisorySourceIrrigationIntelligenceLabel =>
+      'Irrigation Intelligence';
+
+  @override
+  String get advisorySourceTreatmentRecommendationLabel =>
+      'Treatment Recommendation';
+
+  @override
+  String get advisoryFeedbackHelpfulButton => 'Helpful';
+
+  @override
+  String get advisoryFeedbackNotHelpfulButton => 'Not Helpful';
+
+  @override
+  String get advisoryFeedbackWrongButton => 'Wrong';
+
+  @override
+  String get advisoryFeedbackNeedExpertButton => 'Need Expert';
+
+  @override
+  String get advisoryFeedbackThanksMessage => 'Thank you for your feedback.';
+
+  @override
+  String get learningSummaryTitle => 'Learning Summary';
+
+  @override
+  String learningSummaryFeatureVersionLabel(String version) {
+    return 'Feature version: $version';
+  }
+
+  @override
+  String get learningSummaryAvailableDataLabel => 'Available data';
+
+  @override
+  String get learningSummaryOutcomeLabel => 'Outcome';
+
+  @override
+  String get learningSummaryOutcomeNotAvailableMessage =>
+      'Not available yet - this crop has not reached a completed harvest outcome.';
+
+  @override
+  String get personalizationProfileTitle => 'Your Personalization Profile';
+
+  @override
+  String get personalizationConfidenceHighLabel => 'HIGH';
+
+  @override
+  String get personalizationConfidenceMediumLabel => 'MEDIUM';
+
+  @override
+  String get personalizationConfidenceLowLabel => 'LOW';
+
+  @override
+  String get personalizationProfileNoDataMessage =>
+      'Not enough data yet to identify a pattern.';
+
+  @override
+  String get orderStatusDraftLabel => 'Draft';
+
+  @override
+  String get orderStatusPendingConfirmationLabel => 'Pending Confirmation';
+
+  @override
+  String get orderStatusConfirmedLabel => 'Confirmed';
+
+  @override
+  String get orderStatusPaymentPendingLabel => 'Payment Pending';
+
+  @override
+  String get orderStatusPaidLabel => 'Paid';
+
+  @override
+  String get orderStatusAcceptedByDealerLabel => 'Accepted by Dealer';
+
+  @override
+  String get orderStatusPreparingLabel => 'Preparing';
+
+  @override
+  String get orderStatusReadyForDispatchLabel => 'Ready for Dispatch';
+
+  @override
+  String get orderStatusDispatchedLabel => 'Dispatched';
+
+  @override
+  String get orderStatusOutForDeliveryLabel => 'Out for Delivery';
+
+  @override
+  String get orderStatusDeliveredLabel => 'Delivered';
+
+  @override
+  String get orderStatusCancelledLabel => 'Cancelled';
+
+  @override
+  String get orderStatusRejectedLabel => 'Rejected';
+
+  @override
+  String get orderStatusRefundPendingLabel => 'Refund Pending';
+
+  @override
+  String get orderStatusRefundedLabel => 'Refunded';
+
+  @override
+  String get orderStatusDisputedLabel => 'Disputed';
+
+  @override
+  String get orderDisputeReasonWrongProductLabel => 'Wrong product';
+
+  @override
+  String get orderDisputeReasonMissingItemLabel => 'Missing item';
+
+  @override
+  String get orderDisputeReasonDamagedProductLabel => 'Damaged product';
+
+  @override
+  String get orderDisputeReasonPaymentIssueLabel => 'Payment issue';
+
+  @override
+  String get orderDisputeReasonDeliveryIssueLabel => 'Delivery issue';
+
+  @override
+  String get orderDisputeReasonUnexpectedChargeLabel => 'Unexpected charge';
+
+  @override
+  String get orderDisputeReasonProductAuthenticityConcernLabel =>
+      'Product authenticity concern';
+
+  @override
+  String get orderDetailCartTitle => 'Cart';
+
+  @override
+  String get orderDetailOrderTitle => 'Order';
+
+  @override
+  String get orderDetailOrderPlacedMessage => 'Order placed.';
+
+  @override
+  String get orderDetailCancelConfirmTitle => 'Cancel this order?';
+
+  @override
+  String get orderDetailCancelConfirmMessage => 'This cannot be undone.';
+
+  @override
+  String get orderDetailNoButton => 'No';
+
+  @override
+  String get orderDetailYesCancelButton => 'Yes, cancel';
+
+  @override
+  String get orderDetailDeliveryConfirmedMessage => 'Delivery confirmed.';
+
+  @override
+  String get orderDetailFileDisputeTitle => 'File a dispute';
+
+  @override
+  String get orderDetailDisputeReasonLabel => 'Reason';
+
+  @override
+  String get orderDetailDisputeDescriptionOptionalLabel =>
+      'Description (optional)';
+
+  @override
+  String get orderDetailSubmitDisputeButton => 'Submit dispute';
+
+  @override
+  String get orderDetailDisputeFiledMessage => 'Dispute filed.';
+
+  @override
+  String get orderDetailItemsLabel => 'Items';
+
+  @override
+  String get orderDetailNoItemsMessage => 'No items.';
+
+  @override
+  String orderDetailSubtotalLabel(String amount) {
+    return 'Subtotal: ₹$amount';
+  }
+
+  @override
+  String orderDetailTaxLabel(String amount) {
+    return 'Tax: ₹$amount';
+  }
+
+  @override
+  String orderDetailDeliveryFeeLabel(String amount) {
+    return 'Delivery fee: ₹$amount';
+  }
+
+  @override
+  String orderDetailTotalLabel(String amount) {
+    return 'Total: ₹$amount';
+  }
+
+  @override
+  String orderDetailRejectedLabel(String reason) {
+    return 'Rejected: $reason';
+  }
+
+  @override
+  String get orderDetailDeliveryLabel => 'Delivery';
+
+  @override
+  String orderDetailEstimatedDeliveryLabel(String date) {
+    return 'Estimated: $date';
+  }
+
+  @override
+  String get orderDetailDisputeLabel => 'Dispute';
+
+  @override
+  String orderDetailItemQuantityLabel(String quantity) {
+    return 'Qty: $quantity';
+  }
+
+  @override
+  String get orderDetailCheckoutButton => 'Checkout';
+
+  @override
+  String get orderDetailPayButton => 'Pay';
+
+  @override
+  String get orderDetailSimulatePaymentButton =>
+      'Simulate payment success (sandbox)';
+
+  @override
+  String get orderDetailCancelOrderButton => 'Cancel order';
+
+  @override
+  String get orderDetailConfirmDeliveryButton => 'Confirm delivery received';
+
+  @override
+  String get orderDetailFileDisputeButton => 'File a dispute';
+
+  @override
+  String get orderListTitle => 'My Orders';
+
+  @override
+  String get orderListNoOrdersYetMessage => 'No orders yet.';
+
+  @override
+  String get productCategorySeedLabel => 'Seed';
+
+  @override
+  String get productCategoryFertilizerLabel => 'Fertilizer';
+
+  @override
+  String get productCategoryBioInputLabel => 'Bio Input';
+
+  @override
+  String get productCategoryPestControlLabel => 'Pest Control';
+
+  @override
+  String get productCategoryCropProtectionLabel => 'Crop Protection';
+
+  @override
+  String get productCategoryEquipmentLabel => 'Equipment';
+
+  @override
+  String get productCategoryOtherLabel => 'Other';
+
+  @override
+  String get productListTitle => 'Buy Inputs';
+
+  @override
+  String get productListSearchLabel => 'Search products';
+
+  @override
+  String get productListAllCategoryLabel => 'All';
+
+  @override
+  String get productListNoProductsFoundMessage => 'No products found.';
+
+  @override
+  String get productDetailDefaultTitle => 'Product';
+
+  @override
+  String get productDetailScamShieldTitle => 'Scam Shield';
+
+  @override
+  String get productDetailOkButton => 'OK';
+
+  @override
+  String get productDetailQuantityLabel => 'Quantity';
+
+  @override
+  String productDetailInStockLabel(String quantity) {
+    return '$quantity in stock';
+  }
+
+  @override
+  String get productDetailAddToCartButton => 'Add to Cart';
+
+  @override
+  String productDetailByManufacturerLabel(String manufacturer) {
+    return 'By $manufacturer';
+  }
+
+  @override
+  String get productDetailUsageLabel => 'Usage';
+
+  @override
+  String productDetailReferencePriceLabel(String price) {
+    return 'Reference price: $price';
+  }
+
+  @override
+  String get productDetailAvailableFromDealersLabel => 'Available from dealers';
+
+  @override
+  String get productDetailNoDealersAvailableMessage =>
+      'No dealer currently has this product available.';
+
+  @override
+  String productDetailOfferSummaryLabel(
+      String pricePerUnit, String unit, String stockQuantity) {
+    return '$pricePerUnit per $unit • $stockQuantity in stock';
+  }
+
+  @override
+  String get productDetailCurrentlyUnavailableLabel => 'Currently unavailable';
+
+  @override
+  String get productDetailCheckPriceFairnessButton => 'Check price fairness';
+
+  @override
+  String get addCropAddedMessage => 'Crop added.';
+
+  @override
+  String get addCropTitle => 'Add Crop';
+
+  @override
+  String get addCropSelectCropLabel => 'Select a crop';
+
+  @override
+  String get addCropSowingDateLabel => 'Sowing date';
+
+  @override
+  String get addCropExpectedHarvestDateOptionalLabel =>
+      'Expected harvest date (optional)';
+
+  @override
+  String get addCropSeasonOptionalLabel => 'Season (optional)';
+
+  @override
+  String get addCropVarietyOptionalLabel => 'Variety (optional)';
+
+  @override
+  String get addCropSubmitButton => 'Add crop';
+
+  @override
+  String get addCropSearchCropLabel => 'Search crop';
+
+  @override
+  String get addEditFarmLocationPermissionRequiredMessage =>
+      'Location permission is required to use current location.';
+
+  @override
+  String get addEditFarmEnableLocationMessage =>
+      'Please turn on device location and try again.';
+
+  @override
+  String get addEditFarmLocationCapturedNoAreaMessage =>
+      'Location captured. Could not look up the area name - please select it below.';
+
+  @override
+  String get addEditFarmLocationCapturedSelectManuallyMessage =>
+      'Location captured. Please select your State/District/Mandal/Village below.';
+
+  @override
+  String addEditFarmDetectedStateMessage(String stateName) {
+    return 'Detected State: $stateName. Please select District/Mandal/Village below.';
+  }
+
+  @override
+  String addEditFarmDetectedStateDistrictMessage(
+      String stateName, String districtName) {
+    return 'Detected $stateName, $districtName. Please select Mandal/Village below.';
+  }
+
+  @override
+  String addEditFarmDetectedFullLocationMessage(
+      String stateName, String districtName, String mandalName) {
+    return 'Detected: $stateName, $districtName, $mandalName. Please confirm below.';
+  }
+
+  @override
+  String addEditFarmDetectedFullLocationWithVillageMessage(String stateName,
+      String districtName, String mandalName, String villageName) {
+    return 'Detected: $stateName, $districtName, $mandalName, $villageName. Please confirm below.';
+  }
+
+  @override
+  String get addEditFarmNoDataAvailableLabel => 'No data available yet';
+
+  @override
+  String get addEditFarmEditTitle => 'Edit Farm';
+
+  @override
+  String get addEditFarmAddTitle => 'Add Farm';
+
+  @override
+  String get addEditFarmNameLabel => 'Farm name';
+
+  @override
+  String get addEditFarmNameRequiredError => 'Please enter a farm name.';
+
+  @override
+  String get addEditFarmAreaLabel => 'Area';
+
+  @override
+  String get addEditFarmAreaRequiredError => 'Please enter the farm area.';
+
+  @override
+  String get addEditFarmAreaInvalidError => 'Enter a valid area.';
+
+  @override
+  String get addEditFarmUnitLabel => 'Unit';
+
+  @override
+  String get addEditFarmLocationSectionLabel => 'Location (optional)';
+
+  @override
+  String get addEditFarmDetectingLocationLabel => 'Detecting location...';
+
+  @override
+  String get addEditFarmUseCurrentLocationButton => 'Use current location';
+
+  @override
+  String get addEditFarmLatitudeLabel => 'Latitude';
+
+  @override
+  String get addEditFarmLongitudeLabel => 'Longitude';
+
+  @override
+  String get addEditFarmStateLabel => 'State';
+
+  @override
+  String get addEditFarmDistrictLabel => 'District';
+
+  @override
+  String get addEditFarmMandalLabel => 'Mandal / Taluk';
+
+  @override
+  String get addEditFarmVillageLabel => 'Village';
+
+  @override
+  String get addEditFarmSaveChangesButton => 'Save changes';
+
+  @override
+  String get addEditFarmAddFarmButton => 'Add farm';
+
+  @override
+  String get addEditFarmUpdatedMessage => 'Farm updated.';
+
+  @override
+  String get addEditFarmAddedMessage => 'Farm added.';
+
+  @override
+  String get addEditPlotUpdatedMessage => 'Plot updated.';
+
+  @override
+  String get addEditPlotAddedMessage => 'Plot added.';
+
+  @override
+  String get addEditPlotEditTitle => 'Edit Plot';
+
+  @override
+  String get addEditPlotAddTitle => 'Add Plot';
+
+  @override
+  String get addEditPlotNameLabel => 'Plot name';
+
+  @override
+  String get addEditPlotNameRequiredError => 'Please enter a plot name.';
+
+  @override
+  String get addEditPlotAreaLabel => 'Area';
+
+  @override
+  String get addEditPlotAreaInvalidError => 'Enter a valid area.';
+
+  @override
+  String get addEditPlotUnitLabel => 'Unit';
+
+  @override
+  String get addEditPlotIrrigationOptionalLabel => 'Irrigation (optional)';
+
+  @override
+  String get addEditPlotSaveChangesButton => 'Save changes';
+
+  @override
+  String get addEditPlotAddButton => 'Add plot';
+
+  @override
+  String get cropDetailsMarkedHarvestedMessage => 'Crop marked as harvested.';
+
+  @override
+  String get cropDetailsCancelConfirmTitle => 'Cancel this crop?';
+
+  @override
+  String get cropDetailsCancelConfirmMessage =>
+      'This marks the crop cycle as cancelled. This cannot be undone.';
+
+  @override
+  String get cropDetailsCancelConfirmNoButton => 'No';
+
+  @override
+  String get cropDetailsCancelConfirmYesButton => 'Yes, cancel';
+
+  @override
+  String get cropDetailsFallbackTitle => 'Crop';
+
+  @override
+  String get cropDetailsInsightsTooltip => 'Crop Insights';
+
+  @override
+  String get cropDetailsPerformanceScoreMenuItem => 'Performance Score';
+
+  @override
+  String get cropDetailsCompareCropsMenuItem => 'Compare Crops';
+
+  @override
+  String get cropDetailsInputSpendBreakdownMenuItem => 'Input Spend Breakdown';
+
+  @override
+  String get cropDetailsIrrigationIntelligenceMenuItem =>
+      'Irrigation Intelligence';
+
+  @override
+  String get cropDetailsPersonalizationProfileMenuItem =>
+      'Your Personalization Profile';
+
+  @override
+  String get cropDetailsLearningSummaryMenuItem => 'Learning Summary';
+
+  @override
+  String get cropDetailsGiveFeedbackMenuItem => 'Give Feedback';
+
+  @override
+  String get cropDetailsWeatherActionTooltip => 'Weather Action Advisor';
+
+  @override
+  String get cropDetailsAiAssistantTooltip => 'AI Crop Assistant';
+
+  @override
+  String get cropDetailsHealthTimelineTooltip => 'Health Timeline';
+
+  @override
+  String get cropDetailsTreatmentsTooltip => 'Treatments';
+
+  @override
+  String get cropDetailsCropRiskTooltip => 'Crop Risk';
+
+  @override
+  String get cropDetailsProfitForecastTooltip => 'Profit Forecast';
+
+  @override
+  String get cropDetailsFinancialSummaryTooltip => 'Financial Summary';
+
+  @override
+  String get cropDetailsFinancialLedgerTooltip => 'Financial Ledger';
+
+  @override
+  String get cropDetailsTasksTooltip => 'Tasks';
+
+  @override
+  String get cropDetailsCheckCropTooltip => 'Check Crop';
+
+  @override
+  String get cropDetailsHarvestTooltip => 'Harvest';
+
+  @override
+  String get cropDetailsSowingDateLabel => 'Sowing date';
+
+  @override
+  String get cropDetailsExpectedHarvestLabel => 'Expected harvest';
+
+  @override
+  String get cropDetailsHarvestedOnLabel => 'Harvested on';
+
+  @override
+  String get cropDetailsSeasonLabel => 'Season';
+
+  @override
+  String get cropDetailsVarietyLabel => 'Variety';
+
+  @override
+  String get cropDetailsSeedVarietyLabel => 'Seed variety';
+
+  @override
+  String get cropDetailsMarkAsHarvestedButton => 'Mark as harvested';
+
+  @override
+  String cropDetailsAdvanceToButton(String status) {
+    return 'Advance to $status';
+  }
+
+  @override
+  String get cropDetailsCancelCropButton => 'Cancel this crop';
+
+  @override
+  String get farmDetailsRemoveConfirmTitle => 'Remove this farm?';
+
+  @override
+  String get farmDetailsRemoveConfirmMessage =>
+      'This farm will be removed from your active list. Its history is kept.';
+
+  @override
+  String get farmDetailsRemoveConfirmCancelButton => 'Cancel';
+
+  @override
+  String get farmDetailsRemoveConfirmRemoveButton => 'Remove';
+
+  @override
+  String get farmDetailsFallbackTitle => 'Farm';
+
+  @override
+  String get farmDetailsWeatherTooltip => 'Weather';
+
+  @override
+  String get farmDetailsEditFarmMenuItem => 'Edit farm';
+
+  @override
+  String get farmDetailsRemoveFarmMenuItem => 'Remove farm';
+
+  @override
+  String get farmDetailsAddPlotButton => 'Add Plot';
+
+  @override
+  String get farmDetailsTotalAreaLabel => 'Total area';
+
+  @override
+  String get farmDetailsNotesLabel => 'Notes';
+
+  @override
+  String get farmDetailsPlotsSectionLabel => 'Plots';
+
+  @override
+  String get farmDetailsNoPlotsYetMessage =>
+      'No plots yet. Tap \"Add Plot\" to create one.';
+
+  @override
+  String get myFarmsTitle => 'My Farms';
+
+  @override
+  String get myFarmsAddFarmButton => 'Add Farm';
+
+  @override
+  String get myFarmsEmptyStateMessage =>
+      'No farms yet. Tap \"Add Farm\" to get started.';
+
+  @override
+  String get plotDetailsFallbackTitle => 'Plot';
+
+  @override
+  String get plotDetailsAddCropButton => 'Add Crop';
+
+  @override
+  String get plotDetailsAreaLabel => 'Area';
+
+  @override
+  String get plotDetailsSoilLabel => 'Soil';
+
+  @override
+  String get plotDetailsIrrigationLabel => 'Irrigation';
+
+  @override
+  String get plotDetailsCropsSectionLabel => 'Crops';
+
+  @override
+  String get plotDetailsNoCropsYetMessage =>
+      'No crops yet. Tap \"Add Crop\" to start one.';
+
+  @override
+  String plotDetailsCropStatusSownSubtitle(String status, String sowingDate) {
+    return '$status · sown $sowingDate';
+  }
+
+  @override
+  String get cropComparisonTitle => 'Compare Crops';
+
+  @override
+  String get otherCropCycleIdLabel => 'Other crop cycle ID';
+
+  @override
+  String get compareButton => 'Compare';
+
+  @override
+  String get cropComparisonEmptyMessage =>
+      'Enter another crop cycle ID to compare.';
+
+  @override
+  String cropComparisonMetricRow(String valueA, String valueB) {
+    return 'This crop: $valueA    Other crop: $valueB';
+  }
+
+  @override
+  String get cropComparisonVerdictAHigher =>
+      'This crop — higher (based on available data)';
+
+  @override
+  String get cropComparisonVerdictBHigher =>
+      'Other crop — higher (based on available data)';
+
+  @override
+  String get cropComparisonVerdictEqual => 'Equal';
+
+  @override
+  String get cropComparisonVerdictNotComparable => 'Not directly comparable';
+
+  @override
+  String get insufficientDataLabel => 'Insufficient data';
+
+  @override
+  String get inputRoiTitle => 'Input Spend Breakdown';
+
+  @override
+  String inputRoiTotalActualCostLabel(String amount) {
+    return 'Total Actual Cost: $amount';
+  }
+
+  @override
+  String get inputRoiNoExpensesMessage =>
+      'No expenses recorded yet for this crop.';
+
+  @override
+  String inputRoiActualLabel(String amount) {
+    return 'Actual: $amount';
+  }
+
+  @override
+  String inputRoiEstimatedVarianceLabel(String estimated, String variance) {
+    return 'Estimated: $estimated  ·  Variance: $variance';
+  }
+
+  @override
+  String get irrigationIntelligenceTitle => 'Irrigation Intelligence';
+
+  @override
+  String get irrigationRecommendationIrrigateNow => 'IRRIGATE NOW';
+
+  @override
+  String get irrigationRecommendationDelay => 'DELAY';
+
+  @override
+  String get irrigationRecommendationMonitor => 'MONITOR';
+
+  @override
+  String get irrigationRecommendationNoAction => 'NO ACTION NEEDED';
+
+  @override
+  String get irrigationRecommendationUnknown => 'UNKNOWN';
+
+  @override
+  String irrigationWeatherSignalLabel(String status) {
+    return 'Weather signal: $status';
+  }
+
+  @override
+  String get irrigationPendingTaskMessage =>
+      'A pending irrigation task exists for this crop.';
+
+  @override
+  String get irrigationSoilMoistureDisclosure =>
+      'Soil moisture data is unavailable. This recommendation is based on weather forecast and task status only.';
+
+  @override
+  String get cropPerformanceTitle => 'Crop Performance';
+
+  @override
+  String get performanceOverallScoreLabel => 'Overall Score';
+
+  @override
+  String performanceDataCompletenessLabel(String percent) {
+    return 'Data completeness: $percent%';
+  }
 }

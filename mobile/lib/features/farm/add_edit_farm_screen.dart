@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
 import '../../core/nominatim_reverse_geocoder.dart';
+import '../../l10n/app_localizations.dart';
 import 'farm_models.dart';
 import 'farm_repository.dart';
 import 'location_models.dart';
@@ -184,7 +185,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     return null;
   }
 
-  Future<void> _useCurrentLocation() async {
+  Future<void> _useCurrentLocation(AppLocalizations l10n) async {
     setState(() => _detectingLocation = true);
     try {
       var permission = await Geolocator.checkPermission();
@@ -194,14 +195,14 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permission is required to use current location.')),
+          SnackBar(content: Text(l10n.addEditFarmLocationPermissionRequiredMessage)),
         );
         return;
       }
       if (!await Geolocator.isLocationServiceEnabled()) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please turn on device location and try again.')),
+          SnackBar(content: Text(l10n.addEditFarmEnableLocationMessage)),
         );
         return;
       }
@@ -215,7 +216,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
         _lngController.text = position.longitude.toStringAsFixed(6);
       });
 
-      await _autoFillLocationFromGps(position.latitude, position.longitude);
+      await _autoFillLocationFromGps(position.latitude, position.longitude, l10n);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
@@ -224,7 +225,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     }
   }
 
-  Future<void> _autoFillLocationFromGps(double latitude, double longitude) async {
+  Future<void> _autoFillLocationFromGps(double latitude, double longitude, AppLocalizations l10n) async {
     ReverseGeocodeGuess? guess;
     try {
       guess = await NominatimReverseGeocoder().reverseGeocode(latitude: latitude, longitude: longitude);
@@ -235,7 +236,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     if (guess == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location captured. Could not look up the area name - please select it below.')),
+        SnackBar(content: Text(l10n.addEditFarmLocationCapturedNoAreaMessage)),
       );
       return;
     }
@@ -245,7 +246,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     if (matchedState == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location captured. Please select your State/District/Mandal/Village below.')),
+        SnackBar(content: Text(l10n.addEditFarmLocationCapturedSelectManuallyMessage)),
       );
       return;
     }
@@ -255,7 +256,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     final matchedDistrict = _bestMatch(_districts, guess.districtName);
     if (matchedDistrict == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Detected State: ${matchedState.name}. Please select District/Mandal/Village below.')),
+        SnackBar(content: Text(l10n.addEditFarmDetectedStateMessage(matchedState.name))),
       );
       return;
     }
@@ -266,7 +267,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     if (matchedMandal == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Detected ${matchedState.name}, ${matchedDistrict.name}. Please select Mandal/Village below.'),
+          content: Text(l10n.addEditFarmDetectedStateDistrictMessage(matchedState.name, matchedDistrict.name)),
         ),
       );
       return;
@@ -281,14 +282,16 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Detected: ${matchedState.name}, ${matchedDistrict.name}, ${matchedMandal.name}'
-          '${matchedVillage != null ? ', ${matchedVillage.name}' : ''}. Please confirm below.',
+          matchedVillage != null
+              ? l10n.addEditFarmDetectedFullLocationWithVillageMessage(
+                  matchedState.name, matchedDistrict.name, matchedMandal.name, matchedVillage.name)
+              : l10n.addEditFarmDetectedFullLocationMessage(matchedState.name, matchedDistrict.name, matchedMandal.name),
         ),
       ),
     );
   }
 
-  Future<void> _save() async {
+  Future<void> _save(AppLocalizations l10n) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
@@ -320,7 +323,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isEditing ? 'Farm updated.' : 'Farm added.')),
+        SnackBar(content: Text(_isEditing ? l10n.addEditFarmUpdatedMessage : l10n.addEditFarmAddedMessage)),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -338,13 +341,14 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
     required bool loading,
     required bool enabled,
     required ValueChanged<int?> onChanged,
+    required AppLocalizations l10n,
   }) {
     final hasOptions = options.isNotEmpty;
     return DropdownButtonFormField<int>(
       value: value,
       decoration: InputDecoration(
         labelText: label,
-        helperText: enabled && !loading && !hasOptions ? 'No data available yet' : null,
+        helperText: enabled && !loading && !hasOptions ? l10n.addEditFarmNoDataAvailableLabel : null,
         suffixIcon: loading
             ? const Padding(
                 padding: EdgeInsets.all(12),
@@ -359,8 +363,9 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Farm' : 'Add Farm')),
+      appBar: AppBar(title: Text(_isEditing ? l10n.addEditFarmEditTitle : l10n.addEditFarmAddTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -371,8 +376,8 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Farm name'),
-                  validator: (v) => (v == null || v.trim().length < 2) ? 'Please enter a farm name.' : null,
+                  decoration: InputDecoration(labelText: l10n.addEditFarmNameLabel),
+                  validator: (v) => (v == null || v.trim().length < 2) ? l10n.addEditFarmNameRequiredError : null,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -381,13 +386,13 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
                       flex: 2,
                       child: TextFormField(
                         controller: _areaController,
-                        decoration: const InputDecoration(labelText: 'Area'),
+                        decoration: InputDecoration(labelText: l10n.addEditFarmAreaLabel),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         validator: (v) {
                           final trimmed = v?.trim() ?? '';
-                          if (trimmed.isEmpty) return 'Please enter the farm area.';
+                          if (trimmed.isEmpty) return l10n.addEditFarmAreaRequiredError;
                           final value = double.tryParse(trimmed);
-                          if (value == null || value <= 0) return 'Enter a valid area.';
+                          if (value == null || value <= 0) return l10n.addEditFarmAreaInvalidError;
                           return null;
                         },
                       ),
@@ -396,7 +401,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _areaUnit,
-                        decoration: const InputDecoration(labelText: 'Unit'),
+                        decoration: InputDecoration(labelText: l10n.addEditFarmUnitLabel),
                         items: _areaUnits
                             .map((u) => DropdownMenuItem(value: u, child: Text(u.replaceAll('_', ' '))))
                             .toList(),
@@ -407,14 +412,14 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
                 ),
                 if (!_isEditing) ...[
                   const SizedBox(height: 24),
-                  const Text('Location (optional)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.addEditFarmLocationSectionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
-                    onPressed: _detectingLocation ? null : _useCurrentLocation,
+                    onPressed: _detectingLocation ? null : () => _useCurrentLocation(l10n),
                     icon: _detectingLocation
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.my_location),
-                    label: Text(_detectingLocation ? 'Detecting location...' : 'Use current location'),
+                    label: Text(_detectingLocation ? l10n.addEditFarmDetectingLocationLabel : l10n.addEditFarmUseCurrentLocationButton),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -422,7 +427,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _latController,
-                          decoration: const InputDecoration(labelText: 'Latitude'),
+                          decoration: InputDecoration(labelText: l10n.addEditFarmLatitudeLabel),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                         ),
                       ),
@@ -430,7 +435,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _lngController,
-                          decoration: const InputDecoration(labelText: 'Longitude'),
+                          decoration: InputDecoration(labelText: l10n.addEditFarmLongitudeLabel),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                         ),
                       ),
@@ -438,46 +443,50 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildLocationDropdown(
-                    label: 'State',
+                    label: l10n.addEditFarmStateLabel,
                     options: _states,
                     value: _selectedStateId,
                     loading: _loadingStates,
                     enabled: true,
                     onChanged: _onStateChanged,
+                    l10n: l10n,
                   ),
                   const SizedBox(height: 12),
                   _buildLocationDropdown(
-                    label: 'District',
+                    label: l10n.addEditFarmDistrictLabel,
                     options: _districts,
                     value: _selectedDistrictId,
                     loading: _loadingDistricts,
                     enabled: _selectedStateId != null,
                     onChanged: _onDistrictChanged,
+                    l10n: l10n,
                   ),
                   const SizedBox(height: 12),
                   _buildLocationDropdown(
-                    label: 'Mandal / Taluk',
+                    label: l10n.addEditFarmMandalLabel,
                     options: _mandals,
                     value: _selectedMandalId,
                     loading: _loadingMandals,
                     enabled: _selectedDistrictId != null,
                     onChanged: _onMandalChanged,
+                    l10n: l10n,
                   ),
                   const SizedBox(height: 12),
                   _buildLocationDropdown(
-                    label: 'Village',
+                    label: l10n.addEditFarmVillageLabel,
                     options: _villages,
                     value: _selectedVillageId,
                     loading: _loadingVillages,
                     enabled: _selectedMandalId != null,
                     onChanged: _onVillageChanged,
+                    l10n: l10n,
                   ),
                 ],
                 const SizedBox(height: 32),
                 if (_saving)
                   const Center(child: CircularProgressIndicator())
                 else
-                  ElevatedButton(onPressed: _save, child: Text(_isEditing ? 'Save changes' : 'Add farm')),
+                  ElevatedButton(onPressed: () => _save(l10n), child: Text(_isEditing ? l10n.addEditFarmSaveChangesButton : l10n.addEditFarmAddFarmButton)),
               ],
             ),
           ),

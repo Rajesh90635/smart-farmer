@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'crop_performance_models.dart';
 import 'crop_performance_repository.dart';
 
@@ -50,13 +51,14 @@ class _InputRoiScreenState extends State<InputRoiScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Input Spend Breakdown')),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      appBar: AppBar(title: Text(l10n.inputRoiTitle)),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -73,15 +75,15 @@ class _InputRoiScreenState extends State<InputRoiScreen> {
           child: Padding(padding: const EdgeInsets.all(12), child: Text(roi.limitationNote, style: const TextStyle(fontSize: 12))),
         ),
         const SizedBox(height: 12),
-        Text('Total Actual Cost: ${roi.totalActualCost}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(l10n.inputRoiTotalActualCostLabel(roi.totalActualCost), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 12),
-        if (roi.categories.isEmpty) const Text('No expenses recorded yet for this crop.'),
-        ...roi.categories.map(_buildCategoryCard),
+        if (roi.categories.isEmpty) Text(l10n.inputRoiNoExpensesMessage),
+        ...roi.categories.map((c) => _buildCategoryCard(l10n, c)),
       ],
     );
   }
 
-  Widget _buildCategoryCard(InputCategoryBreakdown category) {
+  Widget _buildCategoryCard(AppLocalizations l10n, InputCategoryBreakdown category) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -95,8 +97,9 @@ class _InputRoiScreenState extends State<InputRoiScreen> {
                 Text('${category.percentOfTotalCost}%'),
               ],
             ),
-            Text('Actual: ${category.actualCost}'),
-            if (category.estimatedCost != null) Text('Estimated: ${category.estimatedCost}  ·  Variance: ${category.variance}'),
+            Text(l10n.inputRoiActualLabel(category.actualCost)),
+            if (category.estimatedCost != null)
+              Text(l10n.inputRoiEstimatedVarianceLabel(category.estimatedCost!, category.variance!)),
           ],
         ),
       ),

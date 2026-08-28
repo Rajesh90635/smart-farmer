@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'notification_models.dart';
 import 'notification_preferences_screen.dart';
 import 'notification_repository.dart';
@@ -82,30 +83,31 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final unreadCount = _page?.unreadCount ?? 0;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(l10n.notificationListTitle),
         actions: [
           if (unreadCount > 0)
             TextButton(
               onPressed: _markAllRead,
-              child: const Text('Mark all read', style: TextStyle(color: Colors.white)),
+              child: Text(l10n.notificationMarkAllReadButton, style: const TextStyle(color: Colors.white)),
             ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Preferences',
+            tooltip: l10n.notificationPreferencesTooltip,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen()),
             ),
           ),
         ],
       ),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -115,7 +117,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry))),
         ],
       );
     }
@@ -123,7 +125,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
     final items = _page!.items;
     if (items.isEmpty) {
       return ListView(
-        children: const [SizedBox(height: 100), Center(child: Text('No notifications yet.'))],
+        children: [SizedBox(height: 100), Center(child: Text(l10n.notificationListEmptyMessage))],
       );
     }
 

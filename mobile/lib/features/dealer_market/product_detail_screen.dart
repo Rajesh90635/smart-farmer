@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'dealer_market_models.dart';
 import 'dealer_market_repository.dart';
 import 'order_detail_screen.dart';
@@ -56,16 +57,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  Future<void> _checkScamShield(DealerOffer offer) async {
+  Future<void> _checkScamShield(DealerOffer offer, AppLocalizations l10n) async {
     try {
       final status = await context.read<DealerMarketRepository>().getScamShieldStatus(offer.dealerProductId);
       if (!mounted) return;
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Scam Shield'),
+          title: Text(l10n.productDetailScamShieldTitle),
           content: Text(status.message),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.productDetailOkButton))],
         ),
       );
     } catch (e) {
@@ -74,7 +75,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  Future<void> _addToCart(DealerOffer offer) async {
+  Future<void> _addToCart(DealerOffer offer, AppLocalizations l10n) async {
     int quantity = 1;
     final confirmed = await showModalBottomSheet<int>(
       context: context,
@@ -86,7 +87,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Quantity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(l10n.productDetailQuantityLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -102,9 +103,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ],
               ),
-              Text('${offer.stockQuantity} in stock', style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
+              Text(
+                l10n.productDetailInStockLabel(offer.stockQuantity.toString()),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 16),
-              ElevatedButton(onPressed: () => Navigator.of(sheetContext).pop(quantity), child: const Text('Add to Cart')),
+              ElevatedButton(onPressed: () => Navigator.of(sheetContext).pop(quantity), child: Text(l10n.productDetailAddToCartButton)),
             ],
           ),
         ),
@@ -127,19 +132,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(_product?.name ?? 'Product')),
-      body: _buildBody(),
+      appBar: AppBar(title: Text(_product?.name ?? l10n.productDetailDefaultTitle)),
+      body: _buildBody(l10n),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry))],
         ),
       );
     }
@@ -150,35 +156,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(productCategoryLabels[product.category] ?? product.category, style: const TextStyle(color: Colors.grey)),
+        Text(productCategoryLabel(product.category, l10n), style: const TextStyle(color: Colors.grey)),
         const SizedBox(height: 4),
         Text('${product.packSizeValue} ${product.packSizeUnit}', style: const TextStyle(fontSize: 16)),
-        if (product.manufacturer != null) Text('By ${product.manufacturer}'),
+        if (product.manufacturer != null) Text(l10n.productDetailByManufacturerLabel(product.manufacturer!)),
         if (product.description != null) ...[const SizedBox(height: 12), Text(product.description!)],
         if (product.usageInformation != null) ...[
           const SizedBox(height: 12),
-          Text('Usage', style: Theme.of(context).textTheme.titleSmall),
+          Text(l10n.productDetailUsageLabel, style: Theme.of(context).textTheme.titleSmall),
           Text(product.usageInformation!),
         ],
         if (comparison.referencePricePerUnit != null) ...[
           const SizedBox(height: 16),
           Text(
-            'Reference price: ${comparison.referencePricePerUnit}${comparison.referenceSource != null ? ' (${comparison.referenceSource})' : ''}',
+            '${l10n.productDetailReferencePriceLabel(comparison.referencePricePerUnit!)}${comparison.referenceSource != null ? ' (${comparison.referenceSource})' : ''}',
             style: const TextStyle(fontStyle: FontStyle.italic),
           ),
         ],
         const SizedBox(height: 20),
-        Text('Available from dealers', style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.productDetailAvailableFromDealersLabel, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         if (comparison.offers.isEmpty)
-          const Text('No dealer currently has this product available.')
+          Text(l10n.productDetailNoDealersAvailableMessage)
         else
-          ...comparison.offers.map((offer) => _buildOfferCard(offer)),
+          ...comparison.offers.map((offer) => _buildOfferCard(offer, l10n)),
       ],
     );
   }
 
-  Widget _buildOfferCard(DealerOffer offer) {
+  Widget _buildOfferCard(DealerOffer offer, AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -186,16 +192,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('₹${offer.dealerPrice}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text('${offer.pricePerUnit} per ${offer.unit} • ${offer.stockQuantity} in stock', style: const TextStyle(fontSize: 12)),
-            if (!offer.isAvailable) const Text('Currently unavailable', style: TextStyle(color: Colors.red, fontSize: 12)),
+            Text(
+              l10n.productDetailOfferSummaryLabel(offer.pricePerUnit, offer.unit, offer.stockQuantity.toString()),
+              style: const TextStyle(fontSize: 12),
+            ),
+            if (!offer.isAvailable) Text(l10n.productDetailCurrentlyUnavailableLabel, style: const TextStyle(color: Colors.red, fontSize: 12)),
             const SizedBox(height: 8),
             Row(
               children: [
-                TextButton(onPressed: () => _checkScamShield(offer), child: const Text('Check price fairness')),
+                TextButton(onPressed: () => _checkScamShield(offer, l10n), child: Text(l10n.productDetailCheckPriceFairnessButton)),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: offer.isAvailable && offer.stockQuantity > 0 && !_addingToCart ? () => _addToCart(offer) : null,
-                  child: const Text('Add to Cart'),
+                  onPressed: offer.isAvailable && offer.stockQuantity > 0 && !_addingToCart ? () => _addToCart(offer, l10n) : null,
+                  child: Text(l10n.productDetailAddToCartButton),
                 ),
               ],
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'crop_repository.dart';
 import 'farm_models.dart';
 
@@ -83,7 +84,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
 
   bool get _canSave => _selectedCrop != null && _sowingDate != null;
 
-  Future<void> _save() async {
+  Future<void> _save(AppLocalizations l10n) async {
     if (!_canSave) return;
     setState(() => _saving = true);
     try {
@@ -96,7 +97,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
             varietyId: _selectedVariety?.id,
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Crop added.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.addCropAddedMessage)));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
@@ -111,36 +112,37 @@ class _AddCropScreenState extends State<AddCropScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Crop')),
+      appBar: AppBar(title: Text(l10n.addCropTitle)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             ListTile(
               tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              title: Text(_selectedCrop?.name ?? 'Select a crop'),
+              title: Text(_selectedCrop?.name ?? l10n.addCropSelectCropLabel),
               trailing: const Icon(Icons.search),
               onTap: _pickCrop,
             ),
             const SizedBox(height: 16),
             ListTile(
               tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              title: Text(_sowingDate == null ? 'Sowing date' : _isoDate(_sowingDate!)),
+              title: Text(_sowingDate == null ? l10n.addCropSowingDateLabel : _isoDate(_sowingDate!)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () => _pickDate(isSowing: true),
             ),
             const SizedBox(height: 16),
             ListTile(
               tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              title: Text(_expectedHarvestDate == null ? 'Expected harvest date (optional)' : _isoDate(_expectedHarvestDate!)),
+              title: Text(_expectedHarvestDate == null ? l10n.addCropExpectedHarvestDateOptionalLabel : _isoDate(_expectedHarvestDate!)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () => _pickDate(isSowing: false),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _season,
-              decoration: const InputDecoration(labelText: 'Season (optional)'),
+              decoration: InputDecoration(labelText: l10n.addCropSeasonOptionalLabel),
               items: _seasons.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (v) => setState(() => _season = v),
             ),
@@ -151,7 +153,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<CropVariety>(
                 value: _selectedVariety,
-                decoration: const InputDecoration(labelText: 'Variety (optional)'),
+                decoration: InputDecoration(labelText: l10n.addCropVarietyOptionalLabel),
                 items: _varieties
                     .map((v) => DropdownMenuItem(
                           value: v,
@@ -165,7 +167,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
             if (_saving)
               const Center(child: CircularProgressIndicator())
             else
-              ElevatedButton(onPressed: _canSave ? _save : null, child: const Text('Add crop')),
+              ElevatedButton(onPressed: _canSave ? () => _save(l10n) : null, child: Text(l10n.addCropSubmitButton)),
           ],
         ),
       ),
@@ -217,7 +219,7 @@ class _CropSearchSheetState extends State<_CropSearchSheet> {
               padding: const EdgeInsets.all(16),
               child: TextField(
                 controller: _controller,
-                decoration: const InputDecoration(labelText: 'Search crop', prefixIcon: Icon(Icons.search)),
+                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.addCropSearchCropLabel, prefixIcon: const Icon(Icons.search)),
                 onChanged: _search,
               ),
             ),

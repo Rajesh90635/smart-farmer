@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'crop_performance_repository.dart';
 
 /// soilMoistureAvailable is ALWAYS false in this system - this screen
@@ -61,30 +62,31 @@ class _IrrigationIntelligenceScreenState extends State<IrrigationIntelligenceScr
     }
   }
 
-  String _label(String recommendation) {
+  String _label(AppLocalizations l10n, String recommendation) {
     switch (recommendation) {
       case 'irrigate_now':
-        return 'IRRIGATE NOW';
+        return l10n.irrigationRecommendationIrrigateNow;
       case 'delay':
-        return 'DELAY';
+        return l10n.irrigationRecommendationDelay;
       case 'monitor':
-        return 'MONITOR';
+        return l10n.irrigationRecommendationMonitor;
       case 'no_action':
-        return 'NO ACTION NEEDED';
+        return l10n.irrigationRecommendationNoAction;
       default:
-        return 'UNKNOWN';
+        return l10n.irrigationRecommendationUnknown;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Irrigation Intelligence')),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      appBar: AppBar(title: Text(l10n.irrigationIntelligenceTitle)),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -104,7 +106,7 @@ class _IrrigationIntelligenceScreenState extends State<IrrigationIntelligenceScr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _label(intelligence.recommendation),
+                  _label(l10n, intelligence.recommendation),
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _colorFor(intelligence.recommendation)),
                 ),
                 const SizedBox(height: 8),
@@ -120,8 +122,8 @@ class _IrrigationIntelligenceScreenState extends State<IrrigationIntelligenceScr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Weather signal: ${intelligence.weatherStatus}'),
-                if (intelligence.pendingIrrigationTaskId != null) const Text('A pending irrigation task exists for this crop.'),
+                Text(l10n.irrigationWeatherSignalLabel(intelligence.weatherStatus)),
+                if (intelligence.pendingIrrigationTaskId != null) Text(l10n.irrigationPendingTaskMessage),
               ],
             ),
           ),
@@ -129,11 +131,11 @@ class _IrrigationIntelligenceScreenState extends State<IrrigationIntelligenceScr
         const SizedBox(height: 12),
         Card(
           color: Colors.grey.shade100,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
             child: Text(
-              'Soil moisture data is unavailable. This recommendation is based on weather forecast and task status only.',
-              style: TextStyle(fontSize: 12),
+              l10n.irrigationSoilMoistureDisclosure,
+              style: const TextStyle(fontSize: 12),
             ),
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'add_edit_farm_screen.dart';
 import 'farm_models.dart';
 import 'farm_details_screen.dart';
@@ -43,12 +44,13 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('My Farms')),
+      appBar: AppBar(title: Text(l10n.myFarmsTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addFarm,
         icon: const Icon(Icons.add),
-        label: const Text('Add Farm'),
+        label: Text(l10n.myFarmsAddFarmButton),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -64,11 +66,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
             final farms = snapshot.data ?? [];
             if (farms.isEmpty) {
               return ListView(
-                children: const [
-                  SizedBox(height: 80),
-                  Center(child: Icon(Icons.grass, size: 64, color: Colors.grey)),
-                  SizedBox(height: 16),
-                  Center(child: Text('No farms yet. Tap "Add Farm" to get started.')),
+                children: [
+                  const SizedBox(height: 80),
+                  const Center(child: Icon(Icons.grass, size: 64, color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  Center(child: Text(l10n.myFarmsEmptyStateMessage)),
                 ],
               );
             }

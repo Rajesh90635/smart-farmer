@@ -6,6 +6,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_hi.dart';
+import 'app_localizations_kn.dart';
+import 'app_localizations_ml.dart';
+import 'app_localizations_mr.dart';
+import 'app_localizations_ta.dart';
+import 'app_localizations_te.dart';
 
 // ignore_for_file: type=lint
 
@@ -92,7 +98,15 @@ abstract class AppLocalizations {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('hi'),
+    Locale('kn'),
+    Locale('ml'),
+    Locale('mr'),
+    Locale('ta'),
+    Locale('te')
+  ];
 
   /// Displayed app name
   ///
@@ -225,6 +239,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose your language'**
   String get chooseYourLanguageTitle;
+
+  /// No description provided for @profileScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileScreenTitle;
+
+  /// No description provided for @nameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameLabel;
+
+  /// No description provided for @phoneNumberDisplayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get phoneNumberDisplayLabel;
+
+  /// No description provided for @languageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get languageLabel;
+
+  /// No description provided for @saveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveButton;
+
+  /// No description provided for @editProfileButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get editProfileButton;
+
+  /// No description provided for @logOutButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get logOutButton;
 
   /// No description provided for @navHome.
   ///
@@ -2217,6 +2273,1510 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sown'**
   String get cameraTabSownOnLabel;
+
+  /// No description provided for @notificationListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationListTitle;
+
+  /// No description provided for @notificationMarkAllReadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get notificationMarkAllReadButton;
+
+  /// No description provided for @notificationPreferencesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get notificationPreferencesTooltip;
+
+  /// No description provided for @notificationListEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet.'**
+  String get notificationListEmptyMessage;
+
+  /// No description provided for @notificationPreferencesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Preferences'**
+  String get notificationPreferencesTitle;
+
+  /// No description provided for @notificationPrefsWeatherAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather alerts'**
+  String get notificationPrefsWeatherAlertsLabel;
+
+  /// No description provided for @notificationPrefsRainAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rain alerts'**
+  String get notificationPrefsRainAlertsLabel;
+
+  /// No description provided for @notificationPrefsCropAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop alerts'**
+  String get notificationPrefsCropAlertsLabel;
+
+  /// No description provided for @notificationPrefsDiseaseAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Disease alerts'**
+  String get notificationPrefsDiseaseAlertsLabel;
+
+  /// No description provided for @notificationPrefsAudioAlertsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio alerts'**
+  String get notificationPrefsAudioAlertsLabel;
+
+  /// No description provided for @notificationPrefsAudioAlertsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Off by default - opt in to have alerts read aloud'**
+  String get notificationPrefsAudioAlertsHint;
+
+  /// No description provided for @notificationPrefsGeneralNotificationsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'General notifications'**
+  String get notificationPrefsGeneralNotificationsLabel;
+
+  /// No description provided for @advisoryFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Give Feedback'**
+  String get advisoryFeedbackTitle;
+
+  /// No description provided for @advisoryFeedbackSourcePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which feature is this feedback about?'**
+  String get advisoryFeedbackSourcePrompt;
+
+  /// No description provided for @advisorySourceCropAssistantLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Assistant'**
+  String get advisorySourceCropAssistantLabel;
+
+  /// No description provided for @advisorySourceRiskScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk Score'**
+  String get advisorySourceRiskScoreLabel;
+
+  /// No description provided for @advisorySourceWeatherActionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather Action'**
+  String get advisorySourceWeatherActionLabel;
+
+  /// No description provided for @advisorySourceIrrigationIntelligenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Irrigation Intelligence'**
+  String get advisorySourceIrrigationIntelligenceLabel;
+
+  /// No description provided for @advisorySourceTreatmentRecommendationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Treatment Recommendation'**
+  String get advisorySourceTreatmentRecommendationLabel;
+
+  /// No description provided for @advisoryFeedbackHelpfulButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Helpful'**
+  String get advisoryFeedbackHelpfulButton;
+
+  /// No description provided for @advisoryFeedbackNotHelpfulButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Helpful'**
+  String get advisoryFeedbackNotHelpfulButton;
+
+  /// No description provided for @advisoryFeedbackWrongButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong'**
+  String get advisoryFeedbackWrongButton;
+
+  /// No description provided for @advisoryFeedbackNeedExpertButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Need Expert'**
+  String get advisoryFeedbackNeedExpertButton;
+
+  /// No description provided for @advisoryFeedbackThanksMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your feedback.'**
+  String get advisoryFeedbackThanksMessage;
+
+  /// No description provided for @learningSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Summary'**
+  String get learningSummaryTitle;
+
+  /// No description provided for @learningSummaryFeatureVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature version: {version}'**
+  String learningSummaryFeatureVersionLabel(String version);
+
+  /// No description provided for @learningSummaryAvailableDataLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Available data'**
+  String get learningSummaryAvailableDataLabel;
+
+  /// No description provided for @learningSummaryOutcomeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Outcome'**
+  String get learningSummaryOutcomeLabel;
+
+  /// No description provided for @learningSummaryOutcomeNotAvailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available yet - this crop has not reached a completed harvest outcome.'**
+  String get learningSummaryOutcomeNotAvailableMessage;
+
+  /// No description provided for @personalizationProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Personalization Profile'**
+  String get personalizationProfileTitle;
+
+  /// No description provided for @personalizationConfidenceHighLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'HIGH'**
+  String get personalizationConfidenceHighLabel;
+
+  /// No description provided for @personalizationConfidenceMediumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'MEDIUM'**
+  String get personalizationConfidenceMediumLabel;
+
+  /// No description provided for @personalizationConfidenceLowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'LOW'**
+  String get personalizationConfidenceLowLabel;
+
+  /// No description provided for @personalizationProfileNoDataMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data yet to identify a pattern.'**
+  String get personalizationProfileNoDataMessage;
+
+  /// No description provided for @orderStatusDraftLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get orderStatusDraftLabel;
+
+  /// No description provided for @orderStatusPendingConfirmationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Confirmation'**
+  String get orderStatusPendingConfirmationLabel;
+
+  /// No description provided for @orderStatusConfirmedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get orderStatusConfirmedLabel;
+
+  /// No description provided for @orderStatusPaymentPendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Pending'**
+  String get orderStatusPaymentPendingLabel;
+
+  /// No description provided for @orderStatusPaidLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get orderStatusPaidLabel;
+
+  /// No description provided for @orderStatusAcceptedByDealerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted by Dealer'**
+  String get orderStatusAcceptedByDealerLabel;
+
+  /// No description provided for @orderStatusPreparingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing'**
+  String get orderStatusPreparingLabel;
+
+  /// No description provided for @orderStatusReadyForDispatchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for Dispatch'**
+  String get orderStatusReadyForDispatchLabel;
+
+  /// No description provided for @orderStatusDispatchedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispatched'**
+  String get orderStatusDispatchedLabel;
+
+  /// No description provided for @orderStatusOutForDeliveryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Out for Delivery'**
+  String get orderStatusOutForDeliveryLabel;
+
+  /// No description provided for @orderStatusDeliveredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get orderStatusDeliveredLabel;
+
+  /// No description provided for @orderStatusCancelledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get orderStatusCancelledLabel;
+
+  /// No description provided for @orderStatusRejectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get orderStatusRejectedLabel;
+
+  /// No description provided for @orderStatusRefundPendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund Pending'**
+  String get orderStatusRefundPendingLabel;
+
+  /// No description provided for @orderStatusRefundedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get orderStatusRefundedLabel;
+
+  /// No description provided for @orderStatusDisputedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Disputed'**
+  String get orderStatusDisputedLabel;
+
+  /// No description provided for @orderDisputeReasonWrongProductLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong product'**
+  String get orderDisputeReasonWrongProductLabel;
+
+  /// No description provided for @orderDisputeReasonMissingItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing item'**
+  String get orderDisputeReasonMissingItemLabel;
+
+  /// No description provided for @orderDisputeReasonDamagedProductLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Damaged product'**
+  String get orderDisputeReasonDamagedProductLabel;
+
+  /// No description provided for @orderDisputeReasonPaymentIssueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment issue'**
+  String get orderDisputeReasonPaymentIssueLabel;
+
+  /// No description provided for @orderDisputeReasonDeliveryIssueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery issue'**
+  String get orderDisputeReasonDeliveryIssueLabel;
+
+  /// No description provided for @orderDisputeReasonUnexpectedChargeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected charge'**
+  String get orderDisputeReasonUnexpectedChargeLabel;
+
+  /// No description provided for @orderDisputeReasonProductAuthenticityConcernLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Product authenticity concern'**
+  String get orderDisputeReasonProductAuthenticityConcernLabel;
+
+  /// No description provided for @orderDetailCartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cart'**
+  String get orderDetailCartTitle;
+
+  /// No description provided for @orderDetailOrderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Order'**
+  String get orderDetailOrderTitle;
+
+  /// No description provided for @orderDetailOrderPlacedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Order placed.'**
+  String get orderDetailOrderPlacedMessage;
+
+  /// No description provided for @orderDetailCancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this order?'**
+  String get orderDetailCancelConfirmTitle;
+
+  /// No description provided for @orderDetailCancelConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone.'**
+  String get orderDetailCancelConfirmMessage;
+
+  /// No description provided for @orderDetailNoButton.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get orderDetailNoButton;
+
+  /// No description provided for @orderDetailYesCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, cancel'**
+  String get orderDetailYesCancelButton;
+
+  /// No description provided for @orderDetailDeliveryConfirmedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery confirmed.'**
+  String get orderDetailDeliveryConfirmedMessage;
+
+  /// No description provided for @orderDetailFileDisputeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'File a dispute'**
+  String get orderDetailFileDisputeTitle;
+
+  /// No description provided for @orderDetailDisputeReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get orderDetailDisputeReasonLabel;
+
+  /// No description provided for @orderDetailDisputeDescriptionOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get orderDetailDisputeDescriptionOptionalLabel;
+
+  /// No description provided for @orderDetailSubmitDisputeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit dispute'**
+  String get orderDetailSubmitDisputeButton;
+
+  /// No description provided for @orderDetailDisputeFiledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute filed.'**
+  String get orderDetailDisputeFiledMessage;
+
+  /// No description provided for @orderDetailItemsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Items'**
+  String get orderDetailItemsLabel;
+
+  /// No description provided for @orderDetailNoItemsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No items.'**
+  String get orderDetailNoItemsMessage;
+
+  /// No description provided for @orderDetailSubtotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtotal: ₹{amount}'**
+  String orderDetailSubtotalLabel(String amount);
+
+  /// No description provided for @orderDetailTaxLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tax: ₹{amount}'**
+  String orderDetailTaxLabel(String amount);
+
+  /// No description provided for @orderDetailDeliveryFeeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery fee: ₹{amount}'**
+  String orderDetailDeliveryFeeLabel(String amount);
+
+  /// No description provided for @orderDetailTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total: ₹{amount}'**
+  String orderDetailTotalLabel(String amount);
+
+  /// No description provided for @orderDetailRejectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected: {reason}'**
+  String orderDetailRejectedLabel(String reason);
+
+  /// No description provided for @orderDetailDeliveryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get orderDetailDeliveryLabel;
+
+  /// No description provided for @orderDetailEstimatedDeliveryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated: {date}'**
+  String orderDetailEstimatedDeliveryLabel(String date);
+
+  /// No description provided for @orderDetailDisputeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute'**
+  String get orderDetailDisputeLabel;
+
+  /// No description provided for @orderDetailItemQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Qty: {quantity}'**
+  String orderDetailItemQuantityLabel(String quantity);
+
+  /// No description provided for @orderDetailCheckoutButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout'**
+  String get orderDetailCheckoutButton;
+
+  /// No description provided for @orderDetailPayButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay'**
+  String get orderDetailPayButton;
+
+  /// No description provided for @orderDetailSimulatePaymentButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulate payment success (sandbox)'**
+  String get orderDetailSimulatePaymentButton;
+
+  /// No description provided for @orderDetailCancelOrderButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel order'**
+  String get orderDetailCancelOrderButton;
+
+  /// No description provided for @orderDetailConfirmDeliveryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm delivery received'**
+  String get orderDetailConfirmDeliveryButton;
+
+  /// No description provided for @orderDetailFileDisputeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'File a dispute'**
+  String get orderDetailFileDisputeButton;
+
+  /// No description provided for @orderListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Orders'**
+  String get orderListTitle;
+
+  /// No description provided for @orderListNoOrdersYetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No orders yet.'**
+  String get orderListNoOrdersYetMessage;
+
+  /// No description provided for @productCategorySeedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed'**
+  String get productCategorySeedLabel;
+
+  /// No description provided for @productCategoryFertilizerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Fertilizer'**
+  String get productCategoryFertilizerLabel;
+
+  /// No description provided for @productCategoryBioInputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio Input'**
+  String get productCategoryBioInputLabel;
+
+  /// No description provided for @productCategoryPestControlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pest Control'**
+  String get productCategoryPestControlLabel;
+
+  /// No description provided for @productCategoryCropProtectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Protection'**
+  String get productCategoryCropProtectionLabel;
+
+  /// No description provided for @productCategoryEquipmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment'**
+  String get productCategoryEquipmentLabel;
+
+  /// No description provided for @productCategoryOtherLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get productCategoryOtherLabel;
+
+  /// No description provided for @productListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Inputs'**
+  String get productListTitle;
+
+  /// No description provided for @productListSearchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search products'**
+  String get productListSearchLabel;
+
+  /// No description provided for @productListAllCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get productListAllCategoryLabel;
+
+  /// No description provided for @productListNoProductsFoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No products found.'**
+  String get productListNoProductsFoundMessage;
+
+  /// No description provided for @productDetailDefaultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Product'**
+  String get productDetailDefaultTitle;
+
+  /// No description provided for @productDetailScamShieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scam Shield'**
+  String get productDetailScamShieldTitle;
+
+  /// No description provided for @productDetailOkButton.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get productDetailOkButton;
+
+  /// No description provided for @productDetailQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get productDetailQuantityLabel;
+
+  /// No description provided for @productDetailInStockLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{quantity} in stock'**
+  String productDetailInStockLabel(String quantity);
+
+  /// No description provided for @productDetailAddToCartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Cart'**
+  String get productDetailAddToCartButton;
+
+  /// No description provided for @productDetailByManufacturerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'By {manufacturer}'**
+  String productDetailByManufacturerLabel(String manufacturer);
+
+  /// No description provided for @productDetailUsageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage'**
+  String get productDetailUsageLabel;
+
+  /// No description provided for @productDetailReferencePriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference price: {price}'**
+  String productDetailReferencePriceLabel(String price);
+
+  /// No description provided for @productDetailAvailableFromDealersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Available from dealers'**
+  String get productDetailAvailableFromDealersLabel;
+
+  /// No description provided for @productDetailNoDealersAvailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No dealer currently has this product available.'**
+  String get productDetailNoDealersAvailableMessage;
+
+  /// No description provided for @productDetailOfferSummaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{pricePerUnit} per {unit} • {stockQuantity} in stock'**
+  String productDetailOfferSummaryLabel(
+      String pricePerUnit, String unit, String stockQuantity);
+
+  /// No description provided for @productDetailCurrentlyUnavailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently unavailable'**
+  String get productDetailCurrentlyUnavailableLabel;
+
+  /// No description provided for @productDetailCheckPriceFairnessButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Check price fairness'**
+  String get productDetailCheckPriceFairnessButton;
+
+  /// No description provided for @addCropAddedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop added.'**
+  String get addCropAddedMessage;
+
+  /// No description provided for @addCropTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Crop'**
+  String get addCropTitle;
+
+  /// No description provided for @addCropSelectCropLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a crop'**
+  String get addCropSelectCropLabel;
+
+  /// No description provided for @addCropSowingDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sowing date'**
+  String get addCropSowingDateLabel;
+
+  /// No description provided for @addCropExpectedHarvestDateOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected harvest date (optional)'**
+  String get addCropExpectedHarvestDateOptionalLabel;
+
+  /// No description provided for @addCropSeasonOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Season (optional)'**
+  String get addCropSeasonOptionalLabel;
+
+  /// No description provided for @addCropVarietyOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Variety (optional)'**
+  String get addCropVarietyOptionalLabel;
+
+  /// No description provided for @addCropSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add crop'**
+  String get addCropSubmitButton;
+
+  /// No description provided for @addCropSearchCropLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search crop'**
+  String get addCropSearchCropLabel;
+
+  /// No description provided for @addEditFarmLocationPermissionRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required to use current location.'**
+  String get addEditFarmLocationPermissionRequiredMessage;
+
+  /// No description provided for @addEditFarmEnableLocationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please turn on device location and try again.'**
+  String get addEditFarmEnableLocationMessage;
+
+  /// No description provided for @addEditFarmLocationCapturedNoAreaMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location captured. Could not look up the area name - please select it below.'**
+  String get addEditFarmLocationCapturedNoAreaMessage;
+
+  /// No description provided for @addEditFarmLocationCapturedSelectManuallyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location captured. Please select your State/District/Mandal/Village below.'**
+  String get addEditFarmLocationCapturedSelectManuallyMessage;
+
+  /// No description provided for @addEditFarmDetectedStateMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected State: {stateName}. Please select District/Mandal/Village below.'**
+  String addEditFarmDetectedStateMessage(String stateName);
+
+  /// No description provided for @addEditFarmDetectedStateDistrictMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected {stateName}, {districtName}. Please select Mandal/Village below.'**
+  String addEditFarmDetectedStateDistrictMessage(
+      String stateName, String districtName);
+
+  /// No description provided for @addEditFarmDetectedFullLocationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected: {stateName}, {districtName}, {mandalName}. Please confirm below.'**
+  String addEditFarmDetectedFullLocationMessage(
+      String stateName, String districtName, String mandalName);
+
+  /// No description provided for @addEditFarmDetectedFullLocationWithVillageMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected: {stateName}, {districtName}, {mandalName}, {villageName}. Please confirm below.'**
+  String addEditFarmDetectedFullLocationWithVillageMessage(String stateName,
+      String districtName, String mandalName, String villageName);
+
+  /// No description provided for @addEditFarmNoDataAvailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No data available yet'**
+  String get addEditFarmNoDataAvailableLabel;
+
+  /// No description provided for @addEditFarmEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Farm'**
+  String get addEditFarmEditTitle;
+
+  /// No description provided for @addEditFarmAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Farm'**
+  String get addEditFarmAddTitle;
+
+  /// No description provided for @addEditFarmNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Farm name'**
+  String get addEditFarmNameLabel;
+
+  /// No description provided for @addEditFarmNameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a farm name.'**
+  String get addEditFarmNameRequiredError;
+
+  /// No description provided for @addEditFarmAreaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get addEditFarmAreaLabel;
+
+  /// No description provided for @addEditFarmAreaRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the farm area.'**
+  String get addEditFarmAreaRequiredError;
+
+  /// No description provided for @addEditFarmAreaInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid area.'**
+  String get addEditFarmAreaInvalidError;
+
+  /// No description provided for @addEditFarmUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get addEditFarmUnitLabel;
+
+  /// No description provided for @addEditFarmLocationSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location (optional)'**
+  String get addEditFarmLocationSectionLabel;
+
+  /// No description provided for @addEditFarmDetectingLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detecting location...'**
+  String get addEditFarmDetectingLocationLabel;
+
+  /// No description provided for @addEditFarmUseCurrentLocationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Use current location'**
+  String get addEditFarmUseCurrentLocationButton;
+
+  /// No description provided for @addEditFarmLatitudeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Latitude'**
+  String get addEditFarmLatitudeLabel;
+
+  /// No description provided for @addEditFarmLongitudeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Longitude'**
+  String get addEditFarmLongitudeLabel;
+
+  /// No description provided for @addEditFarmStateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get addEditFarmStateLabel;
+
+  /// No description provided for @addEditFarmDistrictLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'District'**
+  String get addEditFarmDistrictLabel;
+
+  /// No description provided for @addEditFarmMandalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mandal / Taluk'**
+  String get addEditFarmMandalLabel;
+
+  /// No description provided for @addEditFarmVillageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Village'**
+  String get addEditFarmVillageLabel;
+
+  /// No description provided for @addEditFarmSaveChangesButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get addEditFarmSaveChangesButton;
+
+  /// No description provided for @addEditFarmAddFarmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add farm'**
+  String get addEditFarmAddFarmButton;
+
+  /// No description provided for @addEditFarmUpdatedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Farm updated.'**
+  String get addEditFarmUpdatedMessage;
+
+  /// No description provided for @addEditFarmAddedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Farm added.'**
+  String get addEditFarmAddedMessage;
+
+  /// No description provided for @addEditPlotUpdatedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Plot updated.'**
+  String get addEditPlotUpdatedMessage;
+
+  /// No description provided for @addEditPlotAddedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Plot added.'**
+  String get addEditPlotAddedMessage;
+
+  /// No description provided for @addEditPlotEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Plot'**
+  String get addEditPlotEditTitle;
+
+  /// No description provided for @addEditPlotAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Plot'**
+  String get addEditPlotAddTitle;
+
+  /// No description provided for @addEditPlotNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plot name'**
+  String get addEditPlotNameLabel;
+
+  /// No description provided for @addEditPlotNameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a plot name.'**
+  String get addEditPlotNameRequiredError;
+
+  /// No description provided for @addEditPlotAreaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get addEditPlotAreaLabel;
+
+  /// No description provided for @addEditPlotAreaInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid area.'**
+  String get addEditPlotAreaInvalidError;
+
+  /// No description provided for @addEditPlotUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get addEditPlotUnitLabel;
+
+  /// No description provided for @addEditPlotIrrigationOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Irrigation (optional)'**
+  String get addEditPlotIrrigationOptionalLabel;
+
+  /// No description provided for @addEditPlotSaveChangesButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get addEditPlotSaveChangesButton;
+
+  /// No description provided for @addEditPlotAddButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add plot'**
+  String get addEditPlotAddButton;
+
+  /// No description provided for @cropDetailsMarkedHarvestedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop marked as harvested.'**
+  String get cropDetailsMarkedHarvestedMessage;
+
+  /// No description provided for @cropDetailsCancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this crop?'**
+  String get cropDetailsCancelConfirmTitle;
+
+  /// No description provided for @cropDetailsCancelConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This marks the crop cycle as cancelled. This cannot be undone.'**
+  String get cropDetailsCancelConfirmMessage;
+
+  /// No description provided for @cropDetailsCancelConfirmNoButton.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get cropDetailsCancelConfirmNoButton;
+
+  /// No description provided for @cropDetailsCancelConfirmYesButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, cancel'**
+  String get cropDetailsCancelConfirmYesButton;
+
+  /// No description provided for @cropDetailsFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop'**
+  String get cropDetailsFallbackTitle;
+
+  /// No description provided for @cropDetailsInsightsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Insights'**
+  String get cropDetailsInsightsTooltip;
+
+  /// No description provided for @cropDetailsPerformanceScoreMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance Score'**
+  String get cropDetailsPerformanceScoreMenuItem;
+
+  /// No description provided for @cropDetailsCompareCropsMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare Crops'**
+  String get cropDetailsCompareCropsMenuItem;
+
+  /// No description provided for @cropDetailsInputSpendBreakdownMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Spend Breakdown'**
+  String get cropDetailsInputSpendBreakdownMenuItem;
+
+  /// No description provided for @cropDetailsIrrigationIntelligenceMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Irrigation Intelligence'**
+  String get cropDetailsIrrigationIntelligenceMenuItem;
+
+  /// No description provided for @cropDetailsPersonalizationProfileMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Personalization Profile'**
+  String get cropDetailsPersonalizationProfileMenuItem;
+
+  /// No description provided for @cropDetailsLearningSummaryMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Summary'**
+  String get cropDetailsLearningSummaryMenuItem;
+
+  /// No description provided for @cropDetailsGiveFeedbackMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Give Feedback'**
+  String get cropDetailsGiveFeedbackMenuItem;
+
+  /// No description provided for @cropDetailsWeatherActionTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather Action Advisor'**
+  String get cropDetailsWeatherActionTooltip;
+
+  /// No description provided for @cropDetailsAiAssistantTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Crop Assistant'**
+  String get cropDetailsAiAssistantTooltip;
+
+  /// No description provided for @cropDetailsHealthTimelineTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Timeline'**
+  String get cropDetailsHealthTimelineTooltip;
+
+  /// No description provided for @cropDetailsTreatmentsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Treatments'**
+  String get cropDetailsTreatmentsTooltip;
+
+  /// No description provided for @cropDetailsCropRiskTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Risk'**
+  String get cropDetailsCropRiskTooltip;
+
+  /// No description provided for @cropDetailsProfitForecastTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit Forecast'**
+  String get cropDetailsProfitForecastTooltip;
+
+  /// No description provided for @cropDetailsFinancialSummaryTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial Summary'**
+  String get cropDetailsFinancialSummaryTooltip;
+
+  /// No description provided for @cropDetailsFinancialLedgerTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial Ledger'**
+  String get cropDetailsFinancialLedgerTooltip;
+
+  /// No description provided for @cropDetailsTasksTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get cropDetailsTasksTooltip;
+
+  /// No description provided for @cropDetailsCheckCropTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Crop'**
+  String get cropDetailsCheckCropTooltip;
+
+  /// No description provided for @cropDetailsHarvestTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvest'**
+  String get cropDetailsHarvestTooltip;
+
+  /// No description provided for @cropDetailsSowingDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sowing date'**
+  String get cropDetailsSowingDateLabel;
+
+  /// No description provided for @cropDetailsExpectedHarvestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected harvest'**
+  String get cropDetailsExpectedHarvestLabel;
+
+  /// No description provided for @cropDetailsHarvestedOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Harvested on'**
+  String get cropDetailsHarvestedOnLabel;
+
+  /// No description provided for @cropDetailsSeasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Season'**
+  String get cropDetailsSeasonLabel;
+
+  /// No description provided for @cropDetailsVarietyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Variety'**
+  String get cropDetailsVarietyLabel;
+
+  /// No description provided for @cropDetailsSeedVarietyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed variety'**
+  String get cropDetailsSeedVarietyLabel;
+
+  /// No description provided for @cropDetailsMarkAsHarvestedButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as harvested'**
+  String get cropDetailsMarkAsHarvestedButton;
+
+  /// No description provided for @cropDetailsAdvanceToButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Advance to {status}'**
+  String cropDetailsAdvanceToButton(String status);
+
+  /// No description provided for @cropDetailsCancelCropButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this crop'**
+  String get cropDetailsCancelCropButton;
+
+  /// No description provided for @farmDetailsRemoveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this farm?'**
+  String get farmDetailsRemoveConfirmTitle;
+
+  /// No description provided for @farmDetailsRemoveConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This farm will be removed from your active list. Its history is kept.'**
+  String get farmDetailsRemoveConfirmMessage;
+
+  /// No description provided for @farmDetailsRemoveConfirmCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get farmDetailsRemoveConfirmCancelButton;
+
+  /// No description provided for @farmDetailsRemoveConfirmRemoveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get farmDetailsRemoveConfirmRemoveButton;
+
+  /// No description provided for @farmDetailsFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Farm'**
+  String get farmDetailsFallbackTitle;
+
+  /// No description provided for @farmDetailsWeatherTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather'**
+  String get farmDetailsWeatherTooltip;
+
+  /// No description provided for @farmDetailsEditFarmMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit farm'**
+  String get farmDetailsEditFarmMenuItem;
+
+  /// No description provided for @farmDetailsRemoveFarmMenuItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove farm'**
+  String get farmDetailsRemoveFarmMenuItem;
+
+  /// No description provided for @farmDetailsAddPlotButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Plot'**
+  String get farmDetailsAddPlotButton;
+
+  /// No description provided for @farmDetailsTotalAreaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total area'**
+  String get farmDetailsTotalAreaLabel;
+
+  /// No description provided for @farmDetailsNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get farmDetailsNotesLabel;
+
+  /// No description provided for @farmDetailsPlotsSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plots'**
+  String get farmDetailsPlotsSectionLabel;
+
+  /// No description provided for @farmDetailsNoPlotsYetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No plots yet. Tap \"Add Plot\" to create one.'**
+  String get farmDetailsNoPlotsYetMessage;
+
+  /// No description provided for @myFarmsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Farms'**
+  String get myFarmsTitle;
+
+  /// No description provided for @myFarmsAddFarmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Farm'**
+  String get myFarmsAddFarmButton;
+
+  /// No description provided for @myFarmsEmptyStateMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No farms yet. Tap \"Add Farm\" to get started.'**
+  String get myFarmsEmptyStateMessage;
+
+  /// No description provided for @plotDetailsFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plot'**
+  String get plotDetailsFallbackTitle;
+
+  /// No description provided for @plotDetailsAddCropButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Crop'**
+  String get plotDetailsAddCropButton;
+
+  /// No description provided for @plotDetailsAreaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get plotDetailsAreaLabel;
+
+  /// No description provided for @plotDetailsSoilLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Soil'**
+  String get plotDetailsSoilLabel;
+
+  /// No description provided for @plotDetailsIrrigationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Irrigation'**
+  String get plotDetailsIrrigationLabel;
+
+  /// No description provided for @plotDetailsCropsSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Crops'**
+  String get plotDetailsCropsSectionLabel;
+
+  /// No description provided for @plotDetailsNoCropsYetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No crops yet. Tap \"Add Crop\" to start one.'**
+  String get plotDetailsNoCropsYetMessage;
+
+  /// No description provided for @plotDetailsCropStatusSownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{status} · sown {sowingDate}'**
+  String plotDetailsCropStatusSownSubtitle(String status, String sowingDate);
+
+  /// No description provided for @cropComparisonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare Crops'**
+  String get cropComparisonTitle;
+
+  /// No description provided for @otherCropCycleIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other crop cycle ID'**
+  String get otherCropCycleIdLabel;
+
+  /// No description provided for @compareButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare'**
+  String get compareButton;
+
+  /// No description provided for @cropComparisonEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter another crop cycle ID to compare.'**
+  String get cropComparisonEmptyMessage;
+
+  /// No description provided for @cropComparisonMetricRow.
+  ///
+  /// In en, this message translates to:
+  /// **'This crop: {valueA}    Other crop: {valueB}'**
+  String cropComparisonMetricRow(String valueA, String valueB);
+
+  /// No description provided for @cropComparisonVerdictAHigher.
+  ///
+  /// In en, this message translates to:
+  /// **'This crop — higher (based on available data)'**
+  String get cropComparisonVerdictAHigher;
+
+  /// No description provided for @cropComparisonVerdictBHigher.
+  ///
+  /// In en, this message translates to:
+  /// **'Other crop — higher (based on available data)'**
+  String get cropComparisonVerdictBHigher;
+
+  /// No description provided for @cropComparisonVerdictEqual.
+  ///
+  /// In en, this message translates to:
+  /// **'Equal'**
+  String get cropComparisonVerdictEqual;
+
+  /// No description provided for @cropComparisonVerdictNotComparable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not directly comparable'**
+  String get cropComparisonVerdictNotComparable;
+
+  /// No description provided for @insufficientDataLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient data'**
+  String get insufficientDataLabel;
+
+  /// No description provided for @inputRoiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Spend Breakdown'**
+  String get inputRoiTitle;
+
+  /// No description provided for @inputRoiTotalActualCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Actual Cost: {amount}'**
+  String inputRoiTotalActualCostLabel(String amount);
+
+  /// No description provided for @inputRoiNoExpensesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No expenses recorded yet for this crop.'**
+  String get inputRoiNoExpensesMessage;
+
+  /// No description provided for @inputRoiActualLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual: {amount}'**
+  String inputRoiActualLabel(String amount);
+
+  /// No description provided for @inputRoiEstimatedVarianceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated: {estimated}  ·  Variance: {variance}'**
+  String inputRoiEstimatedVarianceLabel(String estimated, String variance);
+
+  /// No description provided for @irrigationIntelligenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Irrigation Intelligence'**
+  String get irrigationIntelligenceTitle;
+
+  /// No description provided for @irrigationRecommendationIrrigateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'IRRIGATE NOW'**
+  String get irrigationRecommendationIrrigateNow;
+
+  /// No description provided for @irrigationRecommendationDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'DELAY'**
+  String get irrigationRecommendationDelay;
+
+  /// No description provided for @irrigationRecommendationMonitor.
+  ///
+  /// In en, this message translates to:
+  /// **'MONITOR'**
+  String get irrigationRecommendationMonitor;
+
+  /// No description provided for @irrigationRecommendationNoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'NO ACTION NEEDED'**
+  String get irrigationRecommendationNoAction;
+
+  /// No description provided for @irrigationRecommendationUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'UNKNOWN'**
+  String get irrigationRecommendationUnknown;
+
+  /// No description provided for @irrigationWeatherSignalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather signal: {status}'**
+  String irrigationWeatherSignalLabel(String status);
+
+  /// No description provided for @irrigationPendingTaskMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'A pending irrigation task exists for this crop.'**
+  String get irrigationPendingTaskMessage;
+
+  /// No description provided for @irrigationSoilMoistureDisclosure.
+  ///
+  /// In en, this message translates to:
+  /// **'Soil moisture data is unavailable. This recommendation is based on weather forecast and task status only.'**
+  String get irrigationSoilMoistureDisclosure;
+
+  /// No description provided for @cropPerformanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Performance'**
+  String get cropPerformanceTitle;
+
+  /// No description provided for @performanceOverallScoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall Score'**
+  String get performanceOverallScoreLabel;
+
+  /// No description provided for @performanceDataCompletenessLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Data completeness: {percent}%'**
+  String performanceDataCompletenessLabel(String percent);
 }
 
 class _AppLocalizationsDelegate
@@ -2229,8 +3789,15 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+        'en',
+        'hi',
+        'kn',
+        'ml',
+        'mr',
+        'ta',
+        'te'
+      ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -2241,6 +3808,18 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'hi':
+      return AppLocalizationsHi();
+    case 'kn':
+      return AppLocalizationsKn();
+    case 'ml':
+      return AppLocalizationsMl();
+    case 'mr':
+      return AppLocalizationsMr();
+    case 'ta':
+      return AppLocalizationsTa();
+    case 'te':
+      return AppLocalizationsTe();
   }
 
   throw FlutterError(

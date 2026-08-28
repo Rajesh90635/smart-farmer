@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'personalization_models.dart';
 import 'personalization_repository.dart';
 
@@ -63,15 +64,29 @@ class _PersonalizationProfileScreenState extends State<PersonalizationProfileScr
 
   String _friendlySignalName(String name) => name.replaceAll('_', ' ');
 
+  String _confidenceLabel(String confidence, AppLocalizations l10n) {
+    switch (confidence) {
+      case 'high':
+        return l10n.personalizationConfidenceHighLabel;
+      case 'medium':
+        return l10n.personalizationConfidenceMediumLabel;
+      case 'low':
+        return l10n.personalizationConfidenceLowLabel;
+      default:
+        return confidence.toUpperCase();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Personalization Profile')),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      appBar: AppBar(title: Text(l10n.personalizationProfileTitle)),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -82,11 +97,11 @@ class _PersonalizationProfileScreenState extends State<PersonalizationProfileScr
     final profile = _profile!;
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: profile.preferences.map(_buildPreferenceCard).toList(),
+      children: profile.preferences.map((preference) => _buildPreferenceCard(preference, l10n)).toList(),
     );
   }
 
-  Widget _buildPreferenceCard(LearnedPreference preference) {
+  Widget _buildPreferenceCard(LearnedPreference preference, AppLocalizations l10n) {
     final hasEvidence = preference.confidence != null;
     return Card(
       child: Padding(
@@ -106,7 +121,7 @@ class _PersonalizationProfileScreenState extends State<PersonalizationProfileScr
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      preference.confidence!.toUpperCase(),
+                      _confidenceLabel(preference.confidence!, l10n),
                       style: TextStyle(color: _colorForConfidence(preference.confidence), fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -114,7 +129,7 @@ class _PersonalizationProfileScreenState extends State<PersonalizationProfileScr
             ),
             const SizedBox(height: 6),
             Text(
-              preference.observation ?? 'Not enough data yet to identify a pattern.',
+              preference.observation ?? l10n.personalizationProfileNoDataMessage,
               style: TextStyle(fontStyle: hasEvidence ? FontStyle.normal : FontStyle.italic, color: hasEvidence ? null : Colors.grey),
             ),
             const SizedBox(height: 4),

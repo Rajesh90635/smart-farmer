@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'crop_performance_models.dart';
 import 'crop_performance_repository.dart';
 
@@ -45,25 +46,26 @@ class _CropComparisonScreenState extends State<CropComparisonScreen> {
     }
   }
 
-  String _verdictLabel(String comparison) {
+  String _verdictLabel(AppLocalizations l10n, String comparison) {
     switch (comparison) {
       case 'a_higher':
-        return 'This crop — higher (based on available data)';
+        return l10n.cropComparisonVerdictAHigher;
       case 'b_higher':
-        return 'Other crop — higher (based on available data)';
+        return l10n.cropComparisonVerdictBHigher;
       case 'equal':
-        return 'Equal';
+        return l10n.cropComparisonVerdictEqual;
       case 'not_directly_comparable':
-        return 'Not directly comparable';
+        return l10n.cropComparisonVerdictNotComparable;
       default:
-        return 'Insufficient data';
+        return l10n.insufficientDataLabel;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Compare Crops')),
+      appBar: AppBar(title: Text(l10n.cropComparisonTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -74,25 +76,25 @@ class _CropComparisonScreenState extends State<CropComparisonScreen> {
                 Expanded(
                   child: TextField(
                     controller: _otherIdController,
-                    decoration: const InputDecoration(labelText: 'Other crop cycle ID', border: OutlineInputBorder()),
+                    decoration: InputDecoration(labelText: l10n.otherCropCycleIdLabel, border: const OutlineInputBorder()),
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: _compare, child: const Text('Compare')),
+                ElevatedButton(onPressed: _compare, child: Text(l10n.compareButton)),
               ],
             ),
             const SizedBox(height: 16),
-            Expanded(child: _buildBody()),
+            Expanded(child: _buildBody(l10n)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text(_error!));
-    if (_comparison == null) return const Center(child: Text('Enter another crop cycle ID to compare.'));
+    if (_comparison == null) return Center(child: Text(l10n.cropComparisonEmptyMessage));
 
     return ListView(
       children: _comparison!.metrics
@@ -104,9 +106,9 @@ class _CropComparisonScreenState extends State<CropComparisonScreen> {
                     children: [
                       Text(m.metricName.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text('This crop: ${m.valueA ?? 'Not available'}    Other crop: ${m.valueB ?? 'Not available'}'),
+                      Text(l10n.cropComparisonMetricRow(m.valueA ?? l10n.notAvailableLabel, m.valueB ?? l10n.notAvailableLabel)),
                       const SizedBox(height: 4),
-                      Text(_verdictLabel(m.comparison), style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+                      Text(_verdictLabel(l10n, m.comparison), style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
                     ],
                   ),
                 ),

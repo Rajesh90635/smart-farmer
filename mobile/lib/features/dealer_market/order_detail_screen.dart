@@ -2,19 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'dealer_market_models.dart';
 import 'dealer_market_repository.dart';
 import 'order_status_labels.dart';
 
-const Map<String, String> _disputeReasonLabels = {
-  'wrong_product': 'Wrong product',
-  'missing_item': 'Missing item',
-  'damaged_product': 'Damaged product',
-  'payment_issue': 'Payment issue',
-  'delivery_issue': 'Delivery issue',
-  'unexpected_charge': 'Unexpected charge',
-  'product_authenticity_concern': 'Product authenticity concern',
-};
+String _disputeReasonLabel(String reason, AppLocalizations l10n) {
+  switch (reason) {
+    case 'wrong_product':
+      return l10n.orderDisputeReasonWrongProductLabel;
+    case 'missing_item':
+      return l10n.orderDisputeReasonMissingItemLabel;
+    case 'damaged_product':
+      return l10n.orderDisputeReasonDamagedProductLabel;
+    case 'payment_issue':
+      return l10n.orderDisputeReasonPaymentIssueLabel;
+    case 'delivery_issue':
+      return l10n.orderDisputeReasonDeliveryIssueLabel;
+    case 'unexpected_charge':
+      return l10n.orderDisputeReasonUnexpectedChargeLabel;
+    case 'product_authenticity_concern':
+      return l10n.orderDisputeReasonProductAuthenticityConcernLabel;
+    default:
+      return l10n.otherReasonLabel;
+  }
+}
 
 /// Serves double duty as both the cart (status == draft) and the order
 /// tracking screen (any later status) - the backend itself models a cart
@@ -96,14 +108,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  Future<void> _checkout() async {
+  Future<void> _checkout(AppLocalizations l10n) async {
     if (_order!.items.isEmpty) return;
     setState(() => _acting = true);
     try {
       final idempotencyKey = 'checkout-${_order!.id}-${_order!.items.length}-${_order!.items.map((i) => i.quantity).join('-')}';
       await context.read<DealerMarketRepository>().checkout(orderId: _order!.id, idempotencyKey: idempotencyKey);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order placed.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.orderDetailOrderPlacedMessage)));
       await _load();
     } catch (e) {
       if (!mounted) return;
@@ -113,15 +125,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  Future<void> _cancelOrder() async {
+  Future<void> _cancelOrder(AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Cancel this order?'),
-        content: const Text('This cannot be undone.'),
+        title: Text(l10n.orderDetailCancelConfirmTitle),
+        content: Text(l10n.orderDetailCancelConfirmMessage),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.orderDetailNoButton)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.orderDetailYesCancelButton)),
         ],
       ),
     );
@@ -167,12 +179,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  Future<void> _confirmDelivery() async {
+  Future<void> _confirmDelivery(AppLocalizations l10n) async {
     setState(() => _acting = true);
     try {
       await context.read<DealerMarketRepository>().confirmDelivery(widget.orderId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Delivery confirmed.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.orderDetailDeliveryConfirmedMessage)));
       await _load();
     } catch (e) {
       if (!mounted) return;
@@ -182,7 +194,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  Future<void> _showDisputeSheet() async {
+  Future<void> _showDisputeSheet(AppLocalizations l10n) async {
     String selectedReason = orderDisputeReasons.first;
     final descriptionController = TextEditingController();
     await showModalBottomSheet(
@@ -195,16 +207,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('File a dispute', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(l10n.orderDetailFileDisputeTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: selectedReason,
-                items: orderDisputeReasons.map((r) => DropdownMenuItem(value: r, child: Text(_disputeReasonLabels[r] ?? r))).toList(),
+                items: orderDisputeReasons.map((r) => DropdownMenuItem(value: r, child: Text(_disputeReasonLabel(r, l10n)))).toList(),
                 onChanged: (v) => setSheetState(() => selectedReason = v ?? orderDisputeReasons.first),
-                decoration: const InputDecoration(labelText: 'Reason'),
+                decoration: InputDecoration(labelText: l10n.orderDetailDisputeReasonLabel),
               ),
               const SizedBox(height: 12),
-              TextField(controller: descriptionController, decoration: const InputDecoration(labelText: 'Description (optional)')),
+              TextField(controller: descriptionController, decoration: InputDecoration(labelText: l10n.orderDetailDisputeDescriptionOptionalLabel)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
@@ -217,7 +229,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           description: descriptionController.text.trim().isEmpty ? null : descriptionController.text.trim(),
                         );
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute filed.')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.orderDetailDisputeFiledMessage)));
                     await _load();
                   } catch (e) {
                     if (!mounted) return;
@@ -226,7 +238,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     if (mounted) setState(() => _acting = false);
                   }
                 },
-                child: const Text('Submit dispute'),
+                child: Text(l10n.orderDetailSubmitDisputeButton),
               ),
             ],
           ),
@@ -237,14 +249,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isCart = _order?.status == 'draft';
     return Scaffold(
-      appBar: AppBar(title: Text(isCart ? 'Cart' : 'Order')),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      appBar: AppBar(title: Text(isCart ? l10n.orderDetailCartTitle : l10n.orderDetailOrderTitle)),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return ListView(
@@ -252,7 +265,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry))),
         ],
       );
     }
@@ -268,48 +281,50 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             children: [
               Container(width: 12, height: 12, decoration: BoxDecoration(color: orderStatusColor(order.status), shape: BoxShape.circle)),
               const SizedBox(width: 8),
-              Text(orderStatusLabel(order.status), style: TextStyle(color: orderStatusColor(order.status), fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(orderStatusLabel(order.status, l10n), style: TextStyle(color: orderStatusColor(order.status), fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
           const SizedBox(height: 16),
         ],
-        Text('Items', style: Theme.of(context).textTheme.titleMedium),
-        ...order.items.map((item) => _buildItemTile(item, isCart)),
-        if (order.items.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Text('No items.')),
+        Text(l10n.orderDetailItemsLabel, style: Theme.of(context).textTheme.titleMedium),
+        ...order.items.map((item) => _buildItemTile(item, isCart, l10n)),
+        if (order.items.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(l10n.orderDetailNoItemsMessage)),
         if (!isCart && order.finalAmount != null) ...[
           const Divider(height: 32),
-          if (order.subtotalAmount != null) Text('Subtotal: ₹${order.subtotalAmount}'),
-          if (order.taxAmount != null) Text('Tax: ₹${order.taxAmount}'),
-          if (order.deliveryFeeAmount != null) Text('Delivery fee: ₹${order.deliveryFeeAmount}'),
-          Text('Total: ₹${order.finalAmount}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          if (order.subtotalAmount != null) Text(l10n.orderDetailSubtotalLabel(order.subtotalAmount!)),
+          if (order.taxAmount != null) Text(l10n.orderDetailTaxLabel(order.taxAmount!)),
+          if (order.deliveryFeeAmount != null) Text(l10n.orderDetailDeliveryFeeLabel(order.deliveryFeeAmount!)),
+          Text(l10n.orderDetailTotalLabel(order.finalAmount!), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         ],
         if (order.rejectionReason != null) ...[
           const SizedBox(height: 8),
-          Text('Rejected: ${order.rejectionReason}', style: const TextStyle(color: Colors.red)),
+          Text(l10n.orderDetailRejectedLabel(order.rejectionReason!), style: const TextStyle(color: Colors.red)),
         ],
         if (_delivery != null) ...[
           const Divider(height: 32),
-          Text('Delivery', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.orderDetailDeliveryLabel, style: Theme.of(context).textTheme.titleMedium),
           Text(_delivery!.status.replaceAll('_', ' ').toUpperCase()),
-          if (_delivery!.estimatedDeliveryDate != null) Text('Estimated: ${_delivery!.estimatedDeliveryDate}'),
+          if (_delivery!.estimatedDeliveryDate != null) Text(l10n.orderDetailEstimatedDeliveryLabel(_delivery!.estimatedDeliveryDate!)),
           if (_delivery!.trackingNote != null) Text(_delivery!.trackingNote!),
         ],
         if (_dispute != null) ...[
           const Divider(height: 32),
-          Text('Dispute', style: Theme.of(context).textTheme.titleMedium),
-          Text('${_disputeReasonLabels[_dispute!.reason] ?? _dispute!.reason} - ${_dispute!.status.replaceAll('_', ' ').toUpperCase()}'),
+          Text(l10n.orderDetailDisputeLabel, style: Theme.of(context).textTheme.titleMedium),
+          Text('${_disputeReasonLabel(_dispute!.reason, l10n)} - ${_dispute!.status.replaceAll('_', ' ').toUpperCase()}'),
         ],
         const SizedBox(height: 24),
-        if (_acting) const Center(child: CircularProgressIndicator()) else _buildActions(order, isCart),
+        if (_acting) const Center(child: CircularProgressIndicator()) else _buildActions(order, isCart, l10n),
       ],
     );
   }
 
-  Widget _buildItemTile(DealerOrderItem item, bool isCart) {
+  Widget _buildItemTile(DealerOrderItem item, bool isCart, AppLocalizations l10n) {
     return Card(
       child: ListTile(
         title: Text(item.productNameSnapshot),
-        subtitle: item.finalItemAmount != null ? Text('₹${item.unitPrice} x ${item.quantity} = ₹${item.finalItemAmount}') : Text('Qty: ${item.quantity}'),
+        subtitle: item.finalItemAmount != null
+            ? Text('₹${item.unitPrice} x ${item.quantity} = ₹${item.finalItemAmount}')
+            : Text(l10n.orderDetailItemQuantityLabel(item.quantity.toString())),
         trailing: isCart
             ? Row(
                 mainAxisSize: MainAxisSize.min,
@@ -324,22 +339,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildActions(DealerOrder order, bool isCart) {
+  Widget _buildActions(DealerOrder order, bool isCart, AppLocalizations l10n) {
     if (isCart) {
-      return ElevatedButton(onPressed: order.items.isEmpty ? null : _checkout, child: const Text('Checkout'));
+      return ElevatedButton(onPressed: order.items.isEmpty ? null : () => _checkout(l10n), child: Text(l10n.orderDetailCheckoutButton));
     }
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        if (order.status == 'confirmed') ElevatedButton(onPressed: _pay, child: const Text('Pay')),
+        if (order.status == 'confirmed') ElevatedButton(onPressed: _pay, child: Text(l10n.orderDetailPayButton)),
         if (order.status == 'payment_pending')
-          ElevatedButton(onPressed: _completeSandboxPayment, child: const Text('Simulate payment success (sandbox)')),
-        if (cancellableOrderStatuses.contains(order.status)) OutlinedButton(onPressed: _cancelOrder, child: const Text('Cancel order')),
-        if (order.status == 'delivered') ElevatedButton(onPressed: _confirmDelivery, child: const Text('Confirm delivery received')),
+          ElevatedButton(onPressed: _completeSandboxPayment, child: Text(l10n.orderDetailSimulatePaymentButton)),
+        if (cancellableOrderStatuses.contains(order.status))
+          OutlinedButton(onPressed: () => _cancelOrder(l10n), child: Text(l10n.orderDetailCancelOrderButton)),
+        if (order.status == 'delivered')
+          ElevatedButton(onPressed: () => _confirmDelivery(l10n), child: Text(l10n.orderDetailConfirmDeliveryButton)),
         if (_disputableStatuses.contains(order.status) && _dispute == null)
-          OutlinedButton(onPressed: _showDisputeSheet, child: const Text('File a dispute')),
+          OutlinedButton(onPressed: () => _showDisputeSheet(l10n), child: Text(l10n.orderDetailFileDisputeButton)),
       ],
     );
   }

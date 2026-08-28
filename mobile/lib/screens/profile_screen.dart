@@ -5,6 +5,8 @@ import '../features/auth/auth_state.dart';
 import '../features/auth/farmer_repository.dart';
 import '../features/auth/language_selection_screen.dart';
 import '../core/friendly_error.dart';
+import '../core/locale_controller.dart';
+import '../l10n/app_localizations.dart';
 
 /// Farmer profile screen: view, edit, change language, logout. Kept
 /// deliberately simple and uncrowded per the UX rule - one screen, large
@@ -74,7 +76,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final languageCode = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const LanguageSelectionScreen()),
     );
-    if (languageCode == null) return;
+    if (languageCode == null || !mounted) return;
+
+    // Switch the app's displayed language immediately - this must not wait
+    // on (or fail because of) the network call below. Syncing the choice to
+    // the farmer's backend profile is best-effort on top of that.
+    final localeController = context.read<LocaleController>();
+    await localeController.setLocale(languageCode);
+    if (!mounted) return;
 
     try {
       final updated =
@@ -94,13 +103,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: _buildBody(),
+      appBar: AppBar(title: Text(l10n.profileScreenTitle)),
+      body: _buildBody(l10n),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -109,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Text(_error!),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('Try again')),
+            ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry)),
           ],
         ),
       );
@@ -123,30 +133,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(child: const Icon(Icons.account_circle, size: 96)),
           const SizedBox(height: 24),
           if (_editing)
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name'))
+            TextField(controller: _nameController, decoration: InputDecoration(labelText: l10n.nameLabel))
           else
             ListTile(
-              title: const Text('Name'),
+              title: Text(l10n.nameLabel),
               subtitle: Text(profile.fullName, style: const TextStyle(fontSize: 18)),
             ),
           const SizedBox(height: 8),
           ListTile(
-            title: const Text('Phone number'),
+            title: Text(l10n.phoneNumberDisplayLabel),
             subtitle: Text(profile.phoneNumber, style: const TextStyle(fontSize: 18)),
           ),
           ListTile(
-            title: const Text('Language'),
-            subtitle: Text(profile.preferredLanguageCode, style: const TextStyle(fontSize: 18)),
+            title: Text(l10n.languageLabel),
+            subtitle: Text(
+              LanguageSelectionScreen.labelForCode(profile.preferredLanguageCode),
+              style: const TextStyle(fontSize: 18),
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: _changeLanguage,
           ),
           const SizedBox(height: 32),
           if (_editing)
-            ElevatedButton(onPressed: _saveName, child: const Text('Save'))
+            ElevatedButton(onPressed: _saveName, child: Text(l10n.saveButton))
           else
-            ElevatedButton(onPressed: () => setState(() => _editing = true), child: const Text('Edit profile')),
+            ElevatedButton(onPressed: () => setState(() => _editing = true), child: Text(l10n.editProfileButton)),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: _logout, child: const Text('Log out')),
+          OutlinedButton(onPressed: _logout, child: Text(l10n.logOutButton)),
         ],
       ),
     );

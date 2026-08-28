@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'personalization_repository.dart';
 
 /// mlTrainingJustified is always false in this system - this screen
@@ -49,13 +50,14 @@ class _LearningSummaryScreenState extends State<LearningSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Learning Summary')),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      appBar: AppBar(title: Text(l10n.learningSummaryTitle)),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -79,9 +81,9 @@ class _LearningSummaryScreenState extends State<LearningSummaryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Feature version: ${snapshot.featureVersion}', style: const TextStyle(fontSize: 12)),
+                Text(l10n.learningSummaryFeatureVersionLabel(snapshot.featureVersion.toString()), style: const TextStyle(fontSize: 12)),
                 const SizedBox(height: 8),
-                const Text('Available data', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.learningSummaryAvailableDataLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                 ...snapshot.availableAtTime.entries.map((e) => Text('${e.key}: ${e.value}', style: const TextStyle(fontSize: 12))),
               ],
             ),
@@ -94,11 +96,11 @@ class _LearningSummaryScreenState extends State<LearningSummaryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Outcome', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.learningSummaryOutcomeLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   snapshot.outcomeLabel != null
                       ? snapshot.outcomeLabel.entries.map((e) => '${e.key}: ${e.value}').join(', ')
-                      : 'Not available yet - this crop has not reached a completed harvest outcome.',
+                      : l10n.learningSummaryOutcomeNotAvailableMessage,
                   style: const TextStyle(fontSize: 12),
                 ),
               ],

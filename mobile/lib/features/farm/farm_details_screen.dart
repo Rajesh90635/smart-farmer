@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import '../weather/weather_screen.dart';
 import 'add_edit_farm_screen.dart';
 import 'add_edit_plot_screen.dart';
@@ -51,15 +52,15 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
     }
   }
 
-  Future<void> _deactivateFarm() async {
+  Future<void> _deactivateFarm(AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remove this farm?'),
-        content: const Text('This farm will be removed from your active list. Its history is kept.'),
+        title: Text(l10n.farmDetailsRemoveConfirmTitle),
+        content: Text(l10n.farmDetailsRemoveConfirmMessage),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Remove')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.farmDetailsRemoveConfirmCancelButton)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.farmDetailsRemoveConfirmRemoveButton)),
         ],
       ),
     );
@@ -77,14 +78,15 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_farm?.farmName ?? 'Farm'),
+        title: Text(_farm?.farmName ?? l10n.farmDetailsFallbackTitle),
         actions: [
           if (_farm != null)
             IconButton(
               icon: const Icon(Icons.wb_cloudy_outlined),
-              tooltip: 'Weather',
+              tooltip: l10n.farmDetailsWeatherTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => WeatherScreen(farmId: _farm!.id)),
               ),
@@ -98,12 +100,12 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
                   );
                   if (updated == true) _load();
                 } else if (value == 'deactivate') {
-                  _deactivateFarm();
+                  _deactivateFarm(l10n);
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit farm')),
-                PopupMenuItem(value: 'deactivate', child: Text('Remove farm')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'edit', child: Text(l10n.farmDetailsEditFarmMenuItem)),
+                PopupMenuItem(value: 'deactivate', child: Text(l10n.farmDetailsRemoveFarmMenuItem)),
               ],
             ),
         ],
@@ -116,13 +118,13 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
           if (created == true) _load();
         },
         icon: const Icon(Icons.add),
-        label: const Text('Add Plot'),
+        label: Text(l10n.farmDetailsAddPlotButton),
       ),
-      body: _buildBody(),
+      body: _buildBody(l10n),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -139,20 +141,20 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
       child: ListView(
         children: [
           ListTile(
-            title: const Text('Total area'),
+            title: Text(l10n.farmDetailsTotalAreaLabel),
             subtitle: Text('${farm.areaValue} ${farm.areaUnit}'),
           ),
           if (farm.description != null && farm.description!.isNotEmpty)
-            ListTile(title: const Text('Notes'), subtitle: Text(farm.description!)),
+            ListTile(title: Text(l10n.farmDetailsNotesLabel), subtitle: Text(farm.description!)),
           const Divider(),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Plots', style: Theme.of(context).textTheme.titleMedium),
+            child: Text(l10n.farmDetailsPlotsSectionLabel, style: Theme.of(context).textTheme.titleMedium),
           ),
           if (_plots.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('No plots yet. Tap "Add Plot" to create one.'),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(l10n.farmDetailsNoPlotsYetMessage),
             )
           else
             ..._plots.map(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'notification_models.dart';
 import 'notification_repository.dart';
 
@@ -76,19 +77,20 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Notification Preferences')),
-      body: _buildBody(),
+      appBar: AppBar(title: Text(l10n.notificationPreferencesTitle)),
+      body: _buildBody(l10n),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry))],
         ),
       );
     }
@@ -97,33 +99,33 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     return ListView(
       children: [
         SwitchListTile(
-          title: const Text('Weather alerts'),
+          title: Text(l10n.notificationPrefsWeatherAlertsLabel),
           value: preferences.weatherAlertsEnabled,
           onChanged: _saving ? null : (v) => _toggle('weather', v),
         ),
         SwitchListTile(
-          title: const Text('Rain alerts'),
+          title: Text(l10n.notificationPrefsRainAlertsLabel),
           value: preferences.rainAlertsEnabled,
           onChanged: _saving ? null : (v) => _toggle('rain', v),
         ),
         SwitchListTile(
-          title: const Text('Crop alerts'),
+          title: Text(l10n.notificationPrefsCropAlertsLabel),
           value: preferences.cropAlertsEnabled,
           onChanged: _saving ? null : (v) => _toggle('crop', v),
         ),
         SwitchListTile(
-          title: const Text('Disease alerts'),
+          title: Text(l10n.notificationPrefsDiseaseAlertsLabel),
           value: preferences.diseaseAlertsEnabled,
           onChanged: _saving ? null : (v) => _toggle('disease', v),
         ),
         SwitchListTile(
-          title: const Text('Audio alerts'),
-          subtitle: const Text('Off by default - opt in to have alerts read aloud'),
+          title: Text(l10n.notificationPrefsAudioAlertsLabel),
+          subtitle: Text(l10n.notificationPrefsAudioAlertsHint),
           value: preferences.audioAlertsEnabled,
           onChanged: _saving ? null : (v) => _toggle('audio', v),
         ),
         SwitchListTile(
-          title: const Text('General notifications'),
+          title: Text(l10n.notificationPrefsGeneralNotificationsLabel),
           value: preferences.generalNotificationsEnabled,
           onChanged: _saving ? null : (v) => _toggle('general', v),
         ),

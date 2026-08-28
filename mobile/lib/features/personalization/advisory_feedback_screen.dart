@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'personalization_repository.dart';
 
 /// Only submits feedback actions actually supported by the backend
@@ -22,7 +23,24 @@ class _AdvisoryFeedbackScreenState extends State<AdvisoryFeedbackScreen> {
 
   static const _sourceTypes = ['crop_assistant', 'risk_score', 'weather_action', 'irrigation_intelligence', 'treatment_recommendation'];
 
-  Future<void> _submit(String feedbackType) async {
+  String _sourceTypeLabel(String sourceType, AppLocalizations l10n) {
+    switch (sourceType) {
+      case 'crop_assistant':
+        return l10n.advisorySourceCropAssistantLabel;
+      case 'risk_score':
+        return l10n.advisorySourceRiskScoreLabel;
+      case 'weather_action':
+        return l10n.advisorySourceWeatherActionLabel;
+      case 'irrigation_intelligence':
+        return l10n.advisorySourceIrrigationIntelligenceLabel;
+      case 'treatment_recommendation':
+        return l10n.advisorySourceTreatmentRecommendationLabel;
+      default:
+        return sourceType.replaceAll('_', ' ');
+    }
+  }
+
+  Future<void> _submit(String feedbackType, AppLocalizations l10n) async {
     setState(() {
       _submitting = true;
       _message = null;
@@ -35,7 +53,7 @@ class _AdvisoryFeedbackScreenState extends State<AdvisoryFeedbackScreen> {
           );
       if (!mounted) return;
       setState(() {
-        _message = 'Thank you for your feedback.';
+        _message = l10n.advisoryFeedbackThanksMessage;
         _submitting = false;
       });
     } catch (e) {
@@ -49,31 +67,32 @@ class _AdvisoryFeedbackScreenState extends State<AdvisoryFeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Give Feedback')),
+      appBar: AppBar(title: Text(l10n.advisoryFeedbackTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Which feature is this feedback about?', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.advisoryFeedbackSourcePrompt, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButton<String>(
               isExpanded: true,
               value: _sourceType,
-              items: _sourceTypes.map((t) => DropdownMenuItem(value: t, child: Text(t.replaceAll('_', ' ')))).toList(),
+              items: _sourceTypes.map((t) => DropdownMenuItem(value: t, child: Text(_sourceTypeLabel(t, l10n)))).toList(),
               onChanged: (value) => setState(() => _sourceType = value ?? _sourceType),
             ),
             const SizedBox(height: 24),
             if (_submitting) const Center(child: CircularProgressIndicator()),
             if (!_submitting) ...[
-              ElevatedButton(onPressed: () => _submit('helpful'), child: const Text('Helpful')),
+              ElevatedButton(onPressed: () => _submit('helpful', l10n), child: Text(l10n.advisoryFeedbackHelpfulButton)),
               const SizedBox(height: 8),
-              ElevatedButton(onPressed: () => _submit('not_helpful'), child: const Text('Not Helpful')),
+              ElevatedButton(onPressed: () => _submit('not_helpful', l10n), child: Text(l10n.advisoryFeedbackNotHelpfulButton)),
               const SizedBox(height: 8),
-              ElevatedButton(onPressed: () => _submit('wrong'), child: const Text('Wrong')),
+              ElevatedButton(onPressed: () => _submit('wrong', l10n), child: Text(l10n.advisoryFeedbackWrongButton)),
               const SizedBox(height: 8),
-              ElevatedButton(onPressed: () => _submit('need_expert'), child: const Text('Need Expert')),
+              ElevatedButton(onPressed: () => _submit('need_expert', l10n), child: Text(l10n.advisoryFeedbackNeedExpertButton)),
             ],
             if (_message != null) ...[
               const SizedBox(height: 16),

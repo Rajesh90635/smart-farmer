@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'core/api_client.dart';
 import 'core/flutter_tts_voice_service.dart';
+import 'core/locale_controller.dart';
 import 'core/voice_service.dart';
 import 'features/assistant/assistant_repository.dart';
 import 'features/auth/auth_repository.dart';
@@ -42,7 +43,9 @@ import 'screens/welcome_screen.dart';
 import 'theme/app_theme.dart';
 
 class SmartFarmerApp extends StatelessWidget {
-  const SmartFarmerApp({super.key});
+  const SmartFarmerApp({super.key, required this.localeController});
+
+  final LocaleController localeController;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +57,7 @@ class SmartFarmerApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<LocaleController>.value(value: localeController),
         Provider<ApiClient>.value(value: apiClient),
         Provider<AuthRepository>.value(value: authRepository),
         Provider<FarmerRepository>(create: (_) => FarmerRepository(apiClient: apiClient)),
@@ -85,17 +89,27 @@ class SmartFarmerApp extends StatelessWidget {
         ChangeNotifierProvider<PendingUploadQueue>(create: (_) => PendingUploadQueue()),
         ChangeNotifierProvider<AuthState>(create: (_) => AuthState(repository: authRepository)),
       ],
-      child: MaterialApp(
+      child: Consumer<LocaleController>(
+        builder: (context, localeController, _) => MaterialApp(
         title: 'Smart Farmer',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
+        locale: localeController.locale,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [Locale('en')],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('hi'),
+          Locale('kn'),
+          Locale('te'),
+          Locale('ta'),
+          Locale('ml'),
+          Locale('mr'),
+        ],
         initialRoute: '/splash',
         routes: {
           '/splash': (_) => const SplashScreen(),
@@ -104,6 +118,7 @@ class SmartFarmerApp extends StatelessWidget {
           '/login': (_) => const LoginScreen(),
           '/home': (_) => const MainNavigationShell(),
         },
+        ),
       ),
     );
   }

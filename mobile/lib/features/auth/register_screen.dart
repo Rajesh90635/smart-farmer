@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/locale_controller.dart';
 import '../../l10n/app_localizations.dart';
 import 'auth_repository.dart';
 import 'auth_state.dart';
@@ -41,6 +42,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       MaterialPageRoute(builder: (_) => const LanguageSelectionScreen()),
     );
     if (languageCode == null || !mounted) return;
+
+    // Apply immediately so the rest of registration (consent, and the app
+    // beyond it) renders in the chosen language right away, not just after
+    // the account is created.
+    await context.read<LocaleController>().setLocale(languageCode);
+    if (!mounted) return;
 
     final consents = await Navigator.of(context).push<List<ConsentInput>>(
       MaterialPageRoute(builder: (_) => const ConsentScreen()),

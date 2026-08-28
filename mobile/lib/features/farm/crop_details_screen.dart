@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import '../crop_assistant/crop_assistant_screen.dart';
 import '../crop_financial/crop_financial_summary_screen.dart';
 import '../crop_financial/profit_forecast_screen.dart';
@@ -87,7 +88,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
     }
   }
 
-  Future<void> _advanceStatus(String newStatus) async {
+  Future<void> _advanceStatus(String newStatus, AppLocalizations l10n) async {
     setState(() => _updating = true);
     try {
       final updated = await context.read<CropRepository>().updateCropCycleStatus(widget.cropCycleId, newStatus);
@@ -100,7 +101,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
     }
   }
 
-  Future<void> _closeHarvest() async {
+  Future<void> _closeHarvest(AppLocalizations l10n) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -117,7 +118,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       final updated = await context.read<CropRepository>().closeCropCycle(widget.cropCycleId, isoDate);
       setState(() => _cycle = updated);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Crop marked as harvested.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.cropDetailsMarkedHarvestedMessage)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
@@ -126,30 +127,31 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
     }
   }
 
-  Future<void> _cancelCropCycle() async {
+  Future<void> _cancelCropCycle(AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Cancel this crop?'),
-        content: const Text('This marks the crop cycle as cancelled. This cannot be undone.'),
+        title: Text(l10n.cropDetailsCancelConfirmTitle),
+        content: Text(l10n.cropDetailsCancelConfirmMessage),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.cropDetailsCancelConfirmNoButton)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.cropDetailsCancelConfirmYesButton)),
         ],
       ),
     );
-    if (confirmed == true) _advanceStatus('cancelled');
+    if (confirmed == true) _advanceStatus('cancelled', l10n);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_cycle?.crop.name ?? 'Crop'),
+        title: Text(_cycle?.crop.name ?? l10n.cropDetailsFallbackTitle),
         actions: [
           if (_cycle != null)
             PopupMenuButton<String>(
-              tooltip: 'Crop Insights',
+              tooltip: l10n.cropDetailsInsightsTooltip,
               icon: const Icon(Icons.insights_outlined),
               onSelected: (value) {
                 final cycleId = _cycle!.id;
@@ -177,20 +179,20 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
                     break;
                 }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'performance', child: Text('Performance Score')),
-                PopupMenuItem(value: 'comparison', child: Text('Compare Crops')),
-                PopupMenuItem(value: 'input_roi', child: Text('Input Spend Breakdown')),
-                PopupMenuItem(value: 'irrigation', child: Text('Irrigation Intelligence')),
-                PopupMenuItem(value: 'personalization', child: Text('Your Personalization Profile')),
-                PopupMenuItem(value: 'learning_summary', child: Text('Learning Summary')),
-                PopupMenuItem(value: 'feedback', child: Text('Give Feedback')),
+              itemBuilder: (context) => [
+                PopupMenuItem(value: 'performance', child: Text(l10n.cropDetailsPerformanceScoreMenuItem)),
+                PopupMenuItem(value: 'comparison', child: Text(l10n.cropDetailsCompareCropsMenuItem)),
+                PopupMenuItem(value: 'input_roi', child: Text(l10n.cropDetailsInputSpendBreakdownMenuItem)),
+                PopupMenuItem(value: 'irrigation', child: Text(l10n.cropDetailsIrrigationIntelligenceMenuItem)),
+                PopupMenuItem(value: 'personalization', child: Text(l10n.cropDetailsPersonalizationProfileMenuItem)),
+                PopupMenuItem(value: 'learning_summary', child: Text(l10n.cropDetailsLearningSummaryMenuItem)),
+                PopupMenuItem(value: 'feedback', child: Text(l10n.cropDetailsGiveFeedbackMenuItem)),
               ],
             ),
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.cloudy_snowing),
-              tooltip: 'Weather Action Advisor',
+              tooltip: l10n.cropDetailsWeatherActionTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => WeatherActionScreen(cropCycleId: _cycle!.id)),
               ),
@@ -198,7 +200,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.chat_outlined),
-              tooltip: 'AI Crop Assistant',
+              tooltip: l10n.cropDetailsAiAssistantTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => CropAssistantScreen(cropCycleId: _cycle!.id)),
               ),
@@ -206,7 +208,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.history),
-              tooltip: 'Health Timeline',
+              tooltip: l10n.cropDetailsHealthTimelineTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => HealthTimelineScreen(cropCycleId: _cycle!.id)),
               ),
@@ -214,7 +216,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.medical_services_outlined),
-              tooltip: 'Treatments',
+              tooltip: l10n.cropDetailsTreatmentsTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => TreatmentListScreen(cropCycleId: _cycle!.id)),
               ),
@@ -222,7 +224,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.health_and_safety_outlined),
-              tooltip: 'Crop Risk',
+              tooltip: l10n.cropDetailsCropRiskTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => RiskScoreScreen(cropCycleId: _cycle!.id)),
               ),
@@ -230,7 +232,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.trending_up),
-              tooltip: 'Profit Forecast',
+              tooltip: l10n.cropDetailsProfitForecastTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => ProfitForecastScreen(cropCycleId: _cycle!.id)),
               ),
@@ -238,7 +240,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.assessment_outlined),
-              tooltip: 'Financial Summary',
+              tooltip: l10n.cropDetailsFinancialSummaryTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => CropFinancialSummaryScreen(cropCycleId: _cycle!.id)),
               ),
@@ -246,7 +248,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.account_balance_wallet_outlined),
-              tooltip: 'Financial Ledger',
+              tooltip: l10n.cropDetailsFinancialLedgerTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => LedgerScreen(cropCycleId: _cycle!.id)),
               ),
@@ -254,7 +256,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.checklist),
-              tooltip: 'Tasks',
+              tooltip: l10n.cropDetailsTasksTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => TaskListScreen(cropCycleId: _cycle!.id)),
               ),
@@ -262,7 +264,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.camera_alt),
-              tooltip: 'Check Crop',
+              tooltip: l10n.cropDetailsCheckCropTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => CropPhotoListScreen(cropCycleId: _cycle!.id)),
               ),
@@ -270,18 +272,18 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           if (_cycle != null)
             IconButton(
               icon: const Icon(Icons.agriculture),
-              tooltip: 'Harvest',
+              tooltip: l10n.cropDetailsHarvestTooltip,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => HarvestListScreen(cropCycleId: _cycle!.id)),
               ),
             ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildBody(l10n),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -306,31 +308,31 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        ListTile(title: const Text('Sowing date'), subtitle: Text(cycle.sowingDate)),
+        ListTile(title: Text(l10n.cropDetailsSowingDateLabel), subtitle: Text(cycle.sowingDate)),
         if (cycle.expectedHarvestDate != null)
-          ListTile(title: const Text('Expected harvest'), subtitle: Text(cycle.expectedHarvestDate!)),
+          ListTile(title: Text(l10n.cropDetailsExpectedHarvestLabel), subtitle: Text(cycle.expectedHarvestDate!)),
         if (cycle.actualHarvestDate != null)
-          ListTile(title: const Text('Harvested on'), subtitle: Text(cycle.actualHarvestDate!)),
-        if (cycle.season != null) ListTile(title: const Text('Season'), subtitle: Text(cycle.season!)),
-        if (_varietyName != null) ListTile(title: const Text('Variety'), subtitle: Text(_varietyName!)),
-        if (cycle.seedVariety != null) ListTile(title: const Text('Seed variety'), subtitle: Text(cycle.seedVariety!)),
+          ListTile(title: Text(l10n.cropDetailsHarvestedOnLabel), subtitle: Text(cycle.actualHarvestDate!)),
+        if (cycle.season != null) ListTile(title: Text(l10n.cropDetailsSeasonLabel), subtitle: Text(cycle.season!)),
+        if (_varietyName != null) ListTile(title: Text(l10n.cropDetailsVarietyLabel), subtitle: Text(_varietyName!)),
+        if (cycle.seedVariety != null) ListTile(title: Text(l10n.cropDetailsSeedVarietyLabel), subtitle: Text(cycle.seedVariety!)),
         const SizedBox(height: 32),
         if (_updating)
           const Center(child: CircularProgressIndicator())
         else if (!isTerminal) ...[
           if (cycle.cultivationStatus == 'ready_for_harvest')
             ElevatedButton.icon(
-              onPressed: _closeHarvest,
+              onPressed: () => _closeHarvest(l10n),
               icon: const Icon(Icons.agriculture),
-              label: const Text('Mark as harvested'),
+              label: Text(l10n.cropDetailsMarkAsHarvestedButton),
             )
           else if (next != null)
             ElevatedButton(
-              onPressed: () => _advanceStatus(next),
-              child: Text('Advance to ${next.replaceAll('_', ' ')}'),
+              onPressed: () => _advanceStatus(next, l10n),
+              child: Text(l10n.cropDetailsAdvanceToButton(next.replaceAll('_', ' '))),
             ),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: _cancelCropCycle, child: const Text('Cancel this crop')),
+          OutlinedButton(onPressed: () => _cancelCropCycle(l10n), child: Text(l10n.cropDetailsCancelCropButton)),
         ],
       ],
     );

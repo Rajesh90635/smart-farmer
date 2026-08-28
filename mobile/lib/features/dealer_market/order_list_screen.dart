@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'dealer_market_models.dart';
 import 'dealer_market_repository.dart';
 import 'order_detail_screen.dart';
@@ -52,13 +53,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('My Orders')),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      appBar: AppBar(title: Text(l10n.orderListTitle)),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody(l10n)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
     }
@@ -68,12 +70,12 @@ class _OrderListScreenState extends State<OrderListScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.genericErrorRetry))),
         ],
       );
     }
     if (_orders.isEmpty) {
-      return ListView(children: const [SizedBox(height: 100), Center(child: Text('No orders yet.'))]);
+      return ListView(children: [const SizedBox(height: 100), Center(child: Text(l10n.orderListNoOrdersYetMessage))]);
     }
 
     return ListView.builder(
@@ -84,7 +86,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         return ListTile(
           leading: Container(width: 12, height: 12, decoration: BoxDecoration(color: orderStatusColor(order.status), shape: BoxShape.circle)),
           title: Text(itemsSummary, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(orderStatusLabel(order.status)),
+          subtitle: Text(orderStatusLabel(order.status, l10n)),
           trailing: order.finalAmount != null ? Text('₹${order.finalAmount}') : null,
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id))).then((_) => _load()),
         );

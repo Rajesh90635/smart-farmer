@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'core/locale_controller.dart';
 
-void main() {
-  runApp(const SmartFarmerApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final localeController = LocaleController();
+  await localeController.loadSaved();
+  runApp(SmartFarmerApp(localeController: localeController));
 }

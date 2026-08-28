@@ -9,7 +9,7 @@ import '../../l10n/app_localizations.dart';
 class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
 
-  static const _languages = [
+  static const languages = [
     ('en', 'English'),
     ('hi', 'हिन्दी (Hindi)'),
     ('kn', 'ಕನ್ನಡ (Kannada)'),
@@ -19,6 +19,17 @@ class LanguageSelectionScreen extends StatelessWidget {
     ('mr', 'मराठी (Marathi)'),
   ];
 
+  /// Human-readable label for a language code, e.g. for displaying the
+  /// farmer's current choice on the Profile screen. Falls back to the raw
+  /// code for any value outside the list above (should not happen since
+  /// both this screen and the backend validate against the same set).
+  static String labelForCode(String code) {
+    for (final (c, label) in languages) {
+      if (c == code) return label;
+    }
+    return code;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -26,9 +37,9 @@ class LanguageSelectionScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.chooseYourLanguageTitle)),
       body: ListView.builder(
-        itemCount: _languages.length,
+        itemCount: languages.length,
         itemBuilder: (context, index) {
-          final (code, label) = _languages[index];
+          final (code, label) = languages[index];
           return ListTile(
             title: Text(label, style: const TextStyle(fontSize: 18)),
             onTap: () => Navigator.of(context).pop(code),
