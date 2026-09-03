@@ -49,8 +49,12 @@ def reject_order(db: Session, user_id: str, order_id: uuid.UUID, payload: Dealer
     apply_transition(order, OrderStatus.REJECTED)
     order.rejection_reason = payload.reason
 
-    for item in order.items:
-        listing = dealer_product_repository.get_by_id(db, item.dealer_product_id)
+    # Lock every listing (in a fixed order, mirroring order_service.checkout)
+    # before restocking - a concurrent rejection of a DIFFERENT order that
+    # shares one of these products could otherwise read the same
+    # stock_quantity and lose one of the two increments.
+    for item in sorted(order.items, key=lambda i: str(i.dealer_product_id)):
+        listing = dealer_product_repository.get_by_id_for_update(db, item.dealer_product_id)
         if listing:
             listing.stock_quantity += item.quantity
 
