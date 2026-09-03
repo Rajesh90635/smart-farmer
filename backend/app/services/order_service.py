@@ -115,8 +115,17 @@ def checkout(db: Session, farmer_id: str, order_id: uuid.UUID, payload: Checkout
         raise AppError(error_codes.VALIDATION_ERROR, "This dealer is no longer verified. Please remove these items.", 422)
 
     subtotal = Decimal("0")
-    for item in order.items:
-        listing = dealer_product_repository.get_by_id(db, item.dealer_product_id)
+    # Lock every listing (in a fixed order, to avoid deadlocking against
+    # another checkout that shares some but not all of these products)
+    # before checking stock, so two concurrent checkouts against the same
+    # low-stock listing can't both pass the stock check and oversell -
+    # mirrors offer_service.accept_offer's use of
+    # harvest_repository.get_listing_for_update for the same reason.
+    items_by_listing = sorted(order.items, key=lambda i: str(i.dealer_product_id))
+    locked_listings = {}
+    for item in items_by_listing:
+        listing = dealer_product_repository.get_by_id_for_update(db, item.dealer_product_id)
+        locked_listings[item.dealer_product_id] = listing
         if listing is None or not listing.is_available:
             raise AppError(error_codes.VALIDATION_ERROR, f"'{item.product_name_snapshot}' is no longer available.", 422)
         if listing.stock_quantity < item.quantity:
@@ -162,8 +171,7 @@ def checkout(db: Session, farmer_id: str, order_id: uuid.UUID, payload: Checkout
     order.confirmed_at = datetime.now(timezone.utc)
 
     for item in order.items:
-        listing = dealer_product_repository.get_by_id(db, item.dealer_product_id)
-        listing.stock_quantity -= item.quantity
+        locked_listings[item.dealer_product_id].stock_quantity -= item.quantity
 
     AuditLogger(db).log("ORDER_CONFIRMED", actor_id=farmer_id, actor_role="farmer", entity="order", entity_id=str(order.id))
     db.commit()
