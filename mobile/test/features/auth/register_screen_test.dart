@@ -49,7 +49,7 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Your name'), 'Test Farmer');
     await tester.enterText(find.widgetWithText(TextFormField, 'Phone number'), '9876543210');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'Str0ngPass');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'Str0ngPass!');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Continue'));
     await tester.pumpAndSettle();
 
