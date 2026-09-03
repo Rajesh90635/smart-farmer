@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/locale_sync.dart';
 import '../features/auth/auth_state.dart';
 import '../features/crop_photo/sync_coordinator.dart';
 
@@ -24,6 +25,14 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _decideInitialRoute() async {
     final authState = context.read<AuthState>();
     await authState.restoreSession();
+
+    // Cross-device language sync: apply the farmer's backend-saved
+    // preferred_language_code now, before Home ever renders, so a session
+    // restored on a device that never made its own language choice doesn't
+    // flash English.
+    if (authState.status == AuthStatus.authenticated && mounted) {
+      await syncLocaleFromBackendProfile(context);
+    }
 
     // Offline-first media sync: restore any photos queued before the app
     // was last closed, and start listening for connectivity so they

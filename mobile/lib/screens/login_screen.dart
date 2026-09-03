@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/locale_sync.dart';
 import '../features/auth/auth_state.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/auth/validators.dart';
@@ -44,6 +45,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     if (success) {
+      // Cross-device language sync: this device may never have seen this
+      // farmer before, so apply their backend-saved language now rather
+      // than showing Home in the on-device default (English).
+      await syncLocaleFromBackendProfile(context);
+      if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
