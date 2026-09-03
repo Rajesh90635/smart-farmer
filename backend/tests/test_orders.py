@@ -201,6 +201,49 @@ def test_dealer_rejection_requires_reason_and_restocks(client, registered_farmer
     assert response.json()["rejection_reason"] == "out_of_stock"
 
 
+def test_concurrent_rejections_never_lose_a_restock(client, registered_farmer, another_farmer, verified_dealer, approved_product):
+    """THE MANDATORY CONCURRENCY TEST for restock, mirroring
+    test_concurrent_checkout_never_oversells_stock: this is the mirror-image
+    bug - an unlocked restock (`stock_quantity += item.quantity`) can lose
+    an update instead of overselling. Two DIFFERENT orders against the same
+    listing (2 units and 3 units, out of a stock of 5 remaining after both
+    checkouts) are rejected SIMULTANEOUSLY from two threads. Both
+    restocks must land - the system must NEVER silently drop one of them."""
+    _, farmer_a_tokens = registered_farmer
+    _, farmer_b_tokens = another_farmer
+    dealer_tokens, _ = verified_dealer
+    listing = _listing(client, verified_dealer, approved_product, stock_quantity=10)
+
+    cart_a = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 2}, headers=auth_headers(farmer_a_tokens)).json()
+    order_a = client.post(f"/api/v1/orders/{cart_a['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_a_tokens)).json()
+    client.post(f"/api/v1/orders/{order_a['id']}/pay", headers=auth_headers(farmer_a_tokens))
+    client.post(f"/api/v1/orders/{order_a['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_a_tokens))
+
+    cart_b = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 3}, headers=auth_headers(farmer_b_tokens)).json()
+    order_b = client.post(f"/api/v1/orders/{cart_b['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_b_tokens)).json()
+    client.post(f"/api/v1/orders/{order_b['id']}/pay", headers=auth_headers(farmer_b_tokens))
+    client.post(f"/api/v1/orders/{order_b['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_b_tokens))
+
+    results = {}
+
+    def reject(key, order):
+        resp = client.post(f"/api/v1/dealer/orders/{order['id']}/reject", json={"reason": "out_of_stock"}, headers=auth_headers(dealer_tokens))
+        results[key] = resp.status_code
+
+    t1 = threading.Thread(target=reject, args=("a", order_a))
+    t2 = threading.Thread(target=reject, args=("b", order_b))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    assert results == {"a": 200, "b": 200}, f"Expected both rejections to succeed, got: {results}"
+
+    listings = client.get("/api/v1/dealer-products/me", headers=auth_headers(dealer_tokens)).json()["items"]
+    final_stock = next(item["stock_quantity"] for item in listings if item["id"] == listing["id"])
+    assert final_stock == 10, f"Unexpected final stock: {final_stock} (would indicate a lost restock update)"
+
+
 def test_dispute_can_only_be_filed_after_delivery(client, registered_farmer, verified_dealer, approved_product):
     _, farmer_tokens = registered_farmer
     listing = _listing(client, verified_dealer, approved_product)
