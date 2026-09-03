@@ -67,6 +67,13 @@ class AuthRepository {
     }
   }
 
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    await _apiClient.post('/auth/change-password', body: {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
   Future<void> logout() async {
     final refreshToken = await _tokenStorage.readRefreshToken();
     if (refreshToken != null) {

@@ -174,6 +174,24 @@ abstract class AppLocalizations {
   /// **'New here? Create an account'**
   String get newHereCreateAccountButton;
 
+  /// No description provided for @forgotPasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get forgotPasswordButton;
+
+  /// No description provided for @forgotPasswordDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset your password'**
+  String get forgotPasswordDialogTitle;
+
+  /// No description provided for @forgotPasswordDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We can\'t reset your password automatically yet. Please contact support for help getting back into your account.'**
+  String get forgotPasswordDialogMessage;
+
   /// No description provided for @loginFailedMessage.
   ///
   /// In en, this message translates to:
@@ -275,6 +293,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit profile'**
   String get editProfileButton;
+
+  /// No description provided for @changePasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get changePasswordButton;
+
+  /// No description provided for @changePasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePasswordTitle;
+
+  /// No description provided for @currentPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPasswordLabel;
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPasswordLabel;
+
+  /// No description provided for @confirmNewPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmNewPasswordLabel;
+
+  /// No description provided for @confirmNewPasswordMismatchError.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get confirmNewPasswordMismatchError;
+
+  /// No description provided for @passwordChangedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your password has been changed.'**
+  String get passwordChangedMessage;
+
+  /// No description provided for @incorrectCurrentPasswordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current password is incorrect.'**
+  String get incorrectCurrentPasswordError;
 
   /// No description provided for @logOutButton.
   ///

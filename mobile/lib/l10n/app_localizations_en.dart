@@ -42,6 +42,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newHereCreateAccountButton => 'New here? Create an account';
 
   @override
+  String get forgotPasswordButton => 'Forgot password?';
+
+  @override
+  String get forgotPasswordDialogTitle => 'Reset your password';
+
+  @override
+  String get forgotPasswordDialogMessage =>
+      'We can\'t reset your password automatically yet. Please contact support for help getting back into your account.';
+
+  @override
   String get loginFailedMessage => 'Login failed.';
 
   @override
@@ -91,6 +101,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editProfileButton => 'Edit profile';
+
+  @override
+  String get changePasswordButton => 'Change password';
+
+  @override
+  String get changePasswordTitle => 'Change Password';
+
+  @override
+  String get currentPasswordLabel => 'Current password';
+
+  @override
+  String get newPasswordLabel => 'New password';
+
+  @override
+  String get confirmNewPasswordLabel => 'Confirm new password';
+
+  @override
+  String get confirmNewPasswordMismatchError => 'Passwords do not match.';
+
+  @override
+  String get passwordChangedMessage => 'Your password has been changed.';
+
+  @override
+  String get incorrectCurrentPasswordError =>
+      'Your current password is incorrect.';
 
   @override
   String get logOutButton => 'Log out';

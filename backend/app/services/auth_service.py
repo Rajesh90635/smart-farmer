@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -15,7 +16,14 @@ from app.models.consent_record import REQUIRED_CONSENTS_AT_REGISTRATION, Consent
 from app.models.farmer_profile import FarmerProfile
 from app.models.user import AccountStatus, User
 from app.repositories import refresh_token_repository, user_repository
-from app.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest, TokenResponse
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    LogoutRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from app.services.audit_logger import AuditLogger
 
 settings = get_settings()
@@ -178,6 +186,29 @@ def refresh(db: Session, payload: RefreshRequest) -> TokenResponse:
 
     db.commit()
     return tokens
+
+
+def change_password(db: Session, current_user: CurrentUser, payload: ChangePasswordRequest) -> None:
+    user = user_repository.get_by_id(db, uuid.UUID(current_user.user_id))
+    if user is None:
+        raise AppError(error_codes.UNAUTHORIZED, "This account no longer exists.", 401)
+
+    if not verify_password(payload.current_password, user.password_hash):
+        AuditLogger(db).log(
+            "PASSWORD_CHANGE_FAILED", actor_id=current_user.user_id, actor_role=current_user.role,
+            entity="user", entity_id=current_user.user_id,
+        )
+        db.commit()
+        raise AppError(error_codes.INCORRECT_CURRENT_PASSWORD, "Your current password is incorrect.", 401)
+
+    user.password_hash = hash_password(payload.new_password)
+
+    AuditLogger(db).log(
+        "PASSWORD_CHANGED", actor_id=current_user.user_id, actor_role=current_user.role,
+        entity="user", entity_id=current_user.user_id,
+    )
+
+    db.commit()
 
 
 def logout(db: Session, current_user: CurrentUser, payload: LogoutRequest) -> None:
