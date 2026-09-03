@@ -16,6 +16,15 @@ def get_by_id(db: Session, listing_id: uuid.UUID) -> DealerProduct | None:
     return db.get(DealerProduct, listing_id)
 
 
+def get_by_id_for_update(db: Session, listing_id: uuid.UUID) -> DealerProduct | None:
+    """SELECT ... FOR UPDATE - locks the listing row so a concurrent
+    checkout against the same listing can't read-then-decrement
+    stock_quantity in an overlapping transaction (see harvest_repository's
+    get_listing_for_update for the same pattern). Must be called within an
+    open transaction; the lock is held until commit/rollback."""
+    return db.execute(select(DealerProduct).where(DealerProduct.id == listing_id).with_for_update()).scalar_one_or_none()
+
+
 def get_by_dealer_and_product(db: Session, dealer_id: uuid.UUID, product_id: uuid.UUID) -> DealerProduct | None:
     return db.execute(
         select(DealerProduct).where(DealerProduct.dealer_id == dealer_id, DealerProduct.product_id == product_id)

@@ -1,3 +1,4 @@
+import threading
 import uuid
 
 from tests.conftest import auth_headers
@@ -64,6 +65,43 @@ def test_checkout_fails_on_insufficient_stock(client, registered_farmer, verifie
     cart = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 5}, headers=auth_headers(farmer_tokens)).json()
     response = client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_tokens))
     assert response.status_code == 422
+
+
+def test_concurrent_checkout_never_oversells_stock(client, registered_farmer, another_farmer, verified_dealer, approved_product):
+    """THE MANDATORY CONCURRENCY TEST for checkout, mirroring
+    test_marketplace_offers.test_concurrent_offer_acceptance_never_oversells:
+    a listing has 5 units in stock. Two different farmers each put 4 units
+    in their own cart (separate DRAFT orders) and check out SIMULTANEOUSLY
+    from two threads. Exactly one checkout must succeed and one must fail
+    with insufficient-stock - the system must NEVER sell 8 units from a
+    5-unit listing."""
+    _, farmer_a_tokens = registered_farmer
+    _, farmer_b_tokens = another_farmer
+    listing = _listing(client, verified_dealer, approved_product, stock_quantity=5)
+
+    cart_a = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 4}, headers=auth_headers(farmer_a_tokens)).json()
+    cart_b = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 4}, headers=auth_headers(farmer_b_tokens)).json()
+
+    results = {}
+
+    def checkout(key, cart, tokens):
+        resp = client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(tokens))
+        results[key] = resp.status_code
+
+    t1 = threading.Thread(target=checkout, args=("a", cart_a, farmer_a_tokens))
+    t2 = threading.Thread(target=checkout, args=("b", cart_b, farmer_b_tokens))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    statuses = sorted(results.values())
+    assert statuses == [200, 422], f"Expected exactly one success and one failure, got: {results}"
+
+    dealer_tokens, _ = verified_dealer
+    listings = client.get("/api/v1/dealer-products/me", headers=auth_headers(dealer_tokens)).json()["items"]
+    final_stock = next(item["stock_quantity"] for item in listings if item["id"] == listing["id"])
+    assert final_stock == 1, f"Unexpected remaining stock: {final_stock} (would indicate an oversell)"
 
 
 def test_checkout_fails_if_product_suspended_after_listing_created(client, registered_farmer, verified_dealer, approved_product, admin_tokens):
