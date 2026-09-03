@@ -28,7 +28,7 @@ void main() {
       expect(Validators.password('12345678'), isNotNull);
     });
     test('accepts a strong password', () {
-      expect(Validators.password('Str0ngPass'), isNull);
+      expect(Validators.password('Str0ngPass!'), isNull);
     });
   });
 
