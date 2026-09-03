@@ -37,7 +37,10 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         if not is_strong_password(v):
-            raise ValueError("password must be at least 8 characters and contain a letter and a digit")
+            raise ValueError(
+                "password must be at least 8 characters and contain a letter, a digit, "
+                "an uppercase letter, and a special character"
+            )
         return v
 
     @field_validator("preferred_language_code")
@@ -68,6 +71,29 @@ class LogoutRequest(BaseModel):
     refresh_token: str
 
 
+class ResetPasswordRequest(BaseModel):
+    phone_number: str
+    new_password: str
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        try:
+            return normalize_phone_number(v)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if not is_strong_password(v):
+            raise ValueError(
+                "password must be at least 8 characters and contain a letter, a digit, "
+                "an uppercase letter, and a special character"
+            )
+        return v
+
+
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
@@ -76,7 +102,10 @@ class ChangePasswordRequest(BaseModel):
     @classmethod
     def validate_new_password(cls, v: str) -> str:
         if not is_strong_password(v):
-            raise ValueError("password must be at least 8 characters and contain a letter and a digit")
+            raise ValueError(
+                "password must be at least 8 characters and contain a letter, a digit, "
+                "an uppercase letter, and a special character"
+            )
         return v
 
 

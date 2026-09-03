@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../features/auth/auth_state.dart';
+import '../features/auth/reset_password_screen.dart';
 import '../features/auth/validators.dart';
 import '../l10n/app_localizations.dart';
 
@@ -25,20 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _showForgotPasswordDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.forgotPasswordDialogTitle),
-        content: Text(l10n.forgotPasswordDialogMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
-          ),
-        ],
-      ),
+  void _goToResetPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ResetPasswordScreen(initialPhoneNumber: _phoneController.text)),
     );
   }
 
@@ -101,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _showForgotPasswordDialog,
+                    onPressed: _goToResetPassword,
                     child: Text(l10n.forgotPasswordButton),
                   ),
                 ),

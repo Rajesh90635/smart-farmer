@@ -180,17 +180,23 @@ abstract class AppLocalizations {
   /// **'Forgot password?'**
   String get forgotPasswordButton;
 
-  /// No description provided for @forgotPasswordDialogTitle.
+  /// No description provided for @resetPasswordScreenTitle.
   ///
   /// In en, this message translates to:
   /// **'Reset your password'**
-  String get forgotPasswordDialogTitle;
+  String get resetPasswordScreenTitle;
 
-  /// No description provided for @forgotPasswordDialogMessage.
+  /// No description provided for @resetPasswordButton.
   ///
   /// In en, this message translates to:
-  /// **'We can\'t reset your password automatically yet. Please contact support for help getting back into your account.'**
-  String get forgotPasswordDialogMessage;
+  /// **'Reset password'**
+  String get resetPasswordButton;
+
+  /// No description provided for @resetPasswordFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reset your password. Please check the phone number and try again.'**
+  String get resetPasswordFailedMessage;
 
   /// No description provided for @loginFailedMessage.
   ///

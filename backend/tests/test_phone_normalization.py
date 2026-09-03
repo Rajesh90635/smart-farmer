@@ -15,7 +15,7 @@ from app.core.phone_utils import normalize_phone_number
 from tests.factories import unique_phone
 
 
-def _register(client, phone_number, password="Test1234", full_name="Test Farmer"):
+def _register(client, phone_number, password="Test1234!", full_name="Test Farmer"):
     return client.post(
         "/api/v1/auth/register",
         json={
@@ -31,7 +31,7 @@ def _register(client, phone_number, password="Test1234", full_name="Test Farmer"
     )
 
 
-def _login(client, phone_number, password="Test1234"):
+def _login(client, phone_number, password="Test1234!"):
     return client.post("/api/v1/auth/login", json={"phone_number": phone_number, "password": password})
 
 

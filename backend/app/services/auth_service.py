@@ -22,6 +22,7 @@ from app.schemas.auth import (
     LogoutRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
 )
 from app.services.audit_logger import AuditLogger
@@ -32,6 +33,11 @@ settings = get_settings()
 # app/middleware/rate_limit.py's docstring for why this is explicitly not
 # sufficient once the API runs as more than one process.
 _login_limiter = InMemoryRateLimiter(max_requests=5, window_seconds=300)
+
+# Reset-password has no identity verification (see ResetPasswordRequest) -
+# rate limiting per phone number is the only friction against someone
+# repeatedly hijacking a number they don't own.
+_reset_password_limiter = InMemoryRateLimiter(max_requests=5, window_seconds=300)
 
 
 def _resolve_role(db: Session, user_id) -> str:
@@ -182,6 +188,32 @@ def refresh(db: Session, payload: RefreshRequest) -> TokenResponse:
 
     AuditLogger(db).log(
         "TOKEN_REFRESHED", actor_id=str(user.id), actor_role=role, entity="user", entity_id=str(user.id)
+    )
+
+    db.commit()
+    return tokens
+
+
+def reset_password(db: Session, payload: ResetPasswordRequest) -> TokenResponse:
+    """Sets a new password from phone number alone, with no proof the
+    caller owns the account (no OTP/email channel exists to verify that -
+    see the docstring in api/v1/auth.py). This is a deliberate product
+    trade-off, not an oversight: it means anyone who knows a farmer's
+    phone number can take over their account. Logs the farmer in
+    immediately afterward so they aren't forced through a second step."""
+    if not _reset_password_limiter.allow(payload.phone_number):
+        raise AppError(error_codes.RATE_LIMITED, "Too many attempts. Please try again later.", 429)
+
+    user = user_repository.get_by_phone(db, payload.phone_number)
+    if user is None:
+        raise AppError(error_codes.NOT_FOUND, "No account found with this phone number.", 404)
+
+    user.password_hash = hash_password(payload.new_password)
+    role = _resolve_role(db, user.id)
+    tokens = _issue_tokens(db, user, role)
+
+    AuditLogger(db).log(
+        "PASSWORD_RESET", actor_id=str(user.id), actor_role=role, entity="user", entity_id=str(user.id)
     )
 
     db.commit()

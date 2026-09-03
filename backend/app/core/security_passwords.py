@@ -23,15 +23,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def is_strong_password(password: str) -> bool:
-    """Minimum bar, not a full complexity policy: at least 8 characters,
-    containing at least one letter and one digit. Deliberately not
-    stricter than this — an overly strict policy pushes farmers toward
-    writing passwords down, which is a worse security outcome."""
+    """At least 8 characters, with a letter, a digit, an uppercase letter,
+    and a special (non-alphanumeric) character."""
     if len(password) < _MIN_PASSWORD_LENGTH:
         return False
     has_letter = any(c.isalpha() for c in password)
     has_digit = any(c.isdigit() for c in password)
-    return has_letter and has_digit
+    has_upper = any(c.isupper() for c in password)
+    has_special = any(not c.isalnum() and not c.isspace() for c in password)
+    return has_letter and has_digit and has_upper and has_special
 
 
 # Precomputed once so a login attempt against a non-existent phone number

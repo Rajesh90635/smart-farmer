@@ -13,7 +13,7 @@ def valid_register_payload():
     def _make(**overrides):
         payload = {
             "phone_number": unique_phone(),
-            "password": "Str0ngPass",
+            "password": "Str0ngPass!",
             "full_name": "Test Farmer",
             "preferred_language_code": "en",
             "consents": [

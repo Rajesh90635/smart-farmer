@@ -45,11 +45,14 @@ class AppLocalizationsKn extends AppLocalizations {
   String get forgotPasswordButton => 'ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?';
 
   @override
-  String get forgotPasswordDialogTitle => 'ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ';
+  String get resetPasswordScreenTitle => 'ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ';
 
   @override
-  String get forgotPasswordDialogMessage =>
-      'ನಾವು ಈಗ ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮರುಹೊಂದಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಖಾತೆಗೆ ಮರಳಿ ಪ್ರವೇಶ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಸಹಾಯ ತಂಡವನ್ನು ಸಂಪರ್ಕಿಸಿ.';
+  String get resetPasswordButton => 'ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ';
+
+  @override
+  String get resetPasswordFailedMessage =>
+      'ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಮರುಹೊಂದಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಫೋನ್ ನಂಬರ್ ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 
   @override
   String get loginFailedMessage => 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ.';

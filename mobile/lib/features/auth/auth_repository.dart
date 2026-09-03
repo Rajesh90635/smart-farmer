@@ -67,6 +67,14 @@ class AuthRepository {
     }
   }
 
+  Future<AuthTokens> resetPassword({required String phoneNumber, required String newPassword}) async {
+    final response = await _apiClient.post('/auth/reset-password', body: {
+      'phone_number': phoneNumber,
+      'new_password': newPassword,
+    });
+    return _persistTokens(response);
+  }
+
   Future<void> changePassword({required String currentPassword, required String newPassword}) async {
     await _apiClient.post('/auth/change-password', body: {
       'current_password': currentPassword,

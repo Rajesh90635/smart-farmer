@@ -49,7 +49,7 @@ def test_two_farmers_see_only_their_own_profile(client):
     def register(name):
         payload = {
             "phone_number": "9" + str(uuid_mod.uuid4().int)[:9],
-            "password": "Str0ngPass",
+            "password": "Str0ngPass!",
             "full_name": name,
             "preferred_language_code": "en",
             "consents": [

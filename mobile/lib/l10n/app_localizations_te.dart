@@ -45,11 +45,14 @@ class AppLocalizationsTe extends AppLocalizations {
   String get forgotPasswordButton => 'పాస్‌వర్డ్ మర్చిపోయారా?';
 
   @override
-  String get forgotPasswordDialogTitle => 'పాస్‌వర్డ్ రీసెట్ చేయండి';
+  String get resetPasswordScreenTitle => 'మీ పాస్‌వర్డ్ రీసెట్ చేయండి';
 
   @override
-  String get forgotPasswordDialogMessage =>
-      'మేము ప్రస్తుతం మీ పాస్‌వర్డ్‌ను స్వయంచాలకంగా రీసెట్ చేయలేము. మీ ఖాతాలోకి తిరిగి ప్రవేశించడానికి దయచేసి సపోర్ట్ టీమ్‌ను సంప్రదించండి.';
+  String get resetPasswordButton => 'పాస్‌వర్డ్ రీసెట్ చేయండి';
+
+  @override
+  String get resetPasswordFailedMessage =>
+      'మీ పాస్‌వర్డ్‌ను రీసెట్ చేయలేకపోయాము. దయచేసి ఫోన్ నంబర్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
   String get loginFailedMessage => 'లాగిన్ విఫలమైంది.';

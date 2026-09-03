@@ -6,13 +6,13 @@ def test_change_password_with_correct_current_password_succeeds(client, register
     payload, tokens = registered_farmer
     response = client.post(
         "/api/v1/auth/change-password",
-        json={"current_password": payload["password"], "new_password": "NewPass1"},
+        json={"current_password": payload["password"], "new_password": "NewPass1!"},
         headers=_auth_headers(tokens),
     )
     assert response.status_code == 204
 
     login = client.post(
-        "/api/v1/auth/login", json={"phone_number": payload["phone_number"], "password": "NewPass1"}
+        "/api/v1/auth/login", json={"phone_number": payload["phone_number"], "password": "NewPass1!"}
     )
     assert login.status_code == 200
 
@@ -21,7 +21,7 @@ def test_change_password_with_wrong_current_password_is_rejected(client, registe
     payload, tokens = registered_farmer
     response = client.post(
         "/api/v1/auth/change-password",
-        json={"current_password": "WrongPass1", "new_password": "NewPass1"},
+        json={"current_password": "WrongPass1", "new_password": "NewPass1!"},
         headers=_auth_headers(tokens),
     )
     assert response.status_code == 401
@@ -46,6 +46,6 @@ def test_change_password_rejects_weak_new_password(client, registered_farmer):
 def test_change_password_requires_authentication(client):
     response = client.post(
         "/api/v1/auth/change-password",
-        json={"current_password": "Whatever1", "new_password": "NewPass1"},
+        json={"current_password": "Whatever1", "new_password": "NewPass1!"},
     )
     assert response.status_code == 401

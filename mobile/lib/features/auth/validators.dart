@@ -18,6 +18,10 @@ class Validators {
     final hasLetter = value.contains(RegExp(r'[A-Za-z]'));
     final hasDigit = value.contains(RegExp(r'[0-9]'));
     if (!hasLetter || !hasDigit) return 'Password must contain a letter and a number.';
+    final hasUpper = value.contains(RegExp(r'[A-Z]'));
+    if (!hasUpper) return 'Password must contain an uppercase letter.';
+    final hasSpecial = value.contains(RegExp(r'[^A-Za-z0-9]'));
+    if (!hasSpecial) return 'Password must contain a special character.';
     return null;
   }
 

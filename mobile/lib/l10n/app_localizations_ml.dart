@@ -46,11 +46,14 @@ class AppLocalizationsMl extends AppLocalizations {
   String get forgotPasswordButton => 'പാസ്‌വേഡ് മറന്നോ?';
 
   @override
-  String get forgotPasswordDialogTitle => 'പാസ്‌വേഡ് പുനഃസജ്ജമാക്കുക';
+  String get resetPasswordScreenTitle => 'നിങ്ങളുടെ പാസ്‌വേഡ് പുനഃസജ്ജമാക്കുക';
 
   @override
-  String get forgotPasswordDialogMessage =>
-      'ഇപ്പോൾ ഞങ്ങൾക്ക് നിങ്ങളുടെ പാസ്‌വേഡ് സ്വയമേവ പുനഃസജ്ജമാക്കാൻ കഴിയില്ല. നിങ്ങളുടെ അക്കൗണ്ടിലേക്ക് തിരികെ പ്രവേശിക്കാൻ സഹായത്തിനായി ദയവായി സപ്പോർട്ട് ടീമിനെ ബന്ധപ്പെടുക.';
+  String get resetPasswordButton => 'പാസ്‌വേഡ് പുനഃസജ്ജമാക്കുക';
+
+  @override
+  String get resetPasswordFailedMessage =>
+      'നിങ്ങളുടെ പാസ്‌വേഡ് പുനഃസജ്ജമാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി ഫോൺ നമ്പർ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.';
 
   @override
   String get loginFailedMessage => 'ലോഗിൻ പരാജയപ്പെട്ടു.';

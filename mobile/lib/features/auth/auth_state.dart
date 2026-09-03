@@ -75,6 +75,24 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  Future<bool> resetPassword({required String phoneNumber, required String newPassword}) async {
+    status = AuthStatus.authenticating;
+    lastErrorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.resetPassword(phoneNumber: phoneNumber, newPassword: newPassword);
+      status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      status = AuthStatus.unauthenticated;
+      lastErrorMessage = FriendlyError.from(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> changePassword({required String currentPassword, required String newPassword}) async {
     lastErrorMessage = null;
     try {

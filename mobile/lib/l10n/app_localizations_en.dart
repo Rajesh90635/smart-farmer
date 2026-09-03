@@ -45,11 +45,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get forgotPasswordButton => 'Forgot password?';
 
   @override
-  String get forgotPasswordDialogTitle => 'Reset your password';
+  String get resetPasswordScreenTitle => 'Reset your password';
 
   @override
-  String get forgotPasswordDialogMessage =>
-      'We can\'t reset your password automatically yet. Please contact support for help getting back into your account.';
+  String get resetPasswordButton => 'Reset password';
+
+  @override
+  String get resetPasswordFailedMessage =>
+      'Could not reset your password. Please check the phone number and try again.';
 
   @override
   String get loginFailedMessage => 'Login failed.';

@@ -58,7 +58,7 @@ def test_logout_cannot_revoke_another_users_session(client, registered_farmer):
 
     other_payload = {
         "phone_number": "9" + str(uuid_mod.uuid4().int)[:9],
-        "password": "Str0ngPass",
+        "password": "Str0ngPass!",
         "full_name": "Other Farmer",
         "preferred_language_code": "en",
         "consents": [

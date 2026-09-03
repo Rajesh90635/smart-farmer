@@ -46,11 +46,14 @@ class AppLocalizationsTa extends AppLocalizations {
   String get forgotPasswordButton => 'கடவுச்சொல் மறந்துவிட்டதா?';
 
   @override
-  String get forgotPasswordDialogTitle => 'கடவுச்சொல்லை மீட்டமைக்கவும்';
+  String get resetPasswordScreenTitle => 'உங்கள் கடவுச்சொல்லை மீட்டமைக்கவும்';
 
   @override
-  String get forgotPasswordDialogMessage =>
-      'தற்போது உங்கள் கடவுச்சொல்லை தானாக மீட்டமைக்க முடியாது. உங்கள் கணக்கிற்குத் திரும்பச் செல்ல உதவிக்காக ஆதரவு குழுவைத் தொடர்பு கொள்ளவும்.';
+  String get resetPasswordButton => 'கடவுச்சொல்லை மீட்டமைக்கவும்';
+
+  @override
+  String get resetPasswordFailedMessage =>
+      'உங்கள் கடவுச்சொல்லை மீட்டமைக்க முடியவில்லை. தொலைபேசி எண்ணைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get loginFailedMessage => 'உள்நுழைவு தோல்வியடைந்தது.';

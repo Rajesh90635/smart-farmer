@@ -45,11 +45,14 @@ class AppLocalizationsMr extends AppLocalizations {
   String get forgotPasswordButton => 'पासवर्ड विसरलात?';
 
   @override
-  String get forgotPasswordDialogTitle => 'पासवर्ड रीसेट करा';
+  String get resetPasswordScreenTitle => 'तुमचा पासवर्ड रीसेट करा';
 
   @override
-  String get forgotPasswordDialogMessage =>
-      'आम्ही सध्या तुमचा पासवर्ड आपोआप रीसेट करू शकत नाही. तुमच्या खात्यात परत जाण्यासाठी कृपया सपोर्ट टीमशी संपर्क साधा.';
+  String get resetPasswordButton => 'पासवर्ड रीसेट करा';
+
+  @override
+  String get resetPasswordFailedMessage =>
+      'तुमचा पासवर्ड रीसेट करता आला नाही. कृपया फोन नंबर तपासा आणि पुन्हा प्रयत्न करा.';
 
   @override
   String get loginFailedMessage => 'लॉग इन अयशस्वी झालं.';
