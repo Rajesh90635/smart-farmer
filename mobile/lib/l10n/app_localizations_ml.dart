@@ -43,6 +43,16 @@ class AppLocalizationsMl extends AppLocalizations {
       'പുതിയ ആളാണോ? ഒരു അക്കൗണ്ട് ഉണ്ടാക്കുക';
 
   @override
+  String get forgotPasswordButton => 'പാസ്‌വേഡ് മറന്നോ?';
+
+  @override
+  String get forgotPasswordDialogTitle => 'പാസ്‌വേഡ് പുനഃസജ്ജമാക്കുക';
+
+  @override
+  String get forgotPasswordDialogMessage =>
+      'ഇപ്പോൾ ഞങ്ങൾക്ക് നിങ്ങളുടെ പാസ്‌വേഡ് സ്വയമേവ പുനഃസജ്ജമാക്കാൻ കഴിയില്ല. നിങ്ങളുടെ അക്കൗണ്ടിലേക്ക് തിരികെ പ്രവേശിക്കാൻ സഹായത്തിനായി ദയവായി സപ്പോർട്ട് ടീമിനെ ബന്ധപ്പെടുക.';
+
+  @override
   String get loginFailedMessage => 'ലോഗിൻ പരാജയപ്പെട്ടു.';
 
   @override
@@ -93,6 +103,32 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get editProfileButton => 'പ്രൊഫൈൽ എഡിറ്റ് ചെയ്യുക';
+
+  @override
+  String get changePasswordButton => 'പാസ്‌വേഡ് മാറ്റുക';
+
+  @override
+  String get changePasswordTitle => 'പാസ്‌വേഡ് മാറ്റുക';
+
+  @override
+  String get currentPasswordLabel => 'നിലവിലെ പാസ്‌വേഡ്';
+
+  @override
+  String get newPasswordLabel => 'പുതിയ പാസ്‌വേഡ്';
+
+  @override
+  String get confirmNewPasswordLabel => 'പുതിയ പാസ്‌വേഡ് സ്ഥിരീകരിക്കുക';
+
+  @override
+  String get confirmNewPasswordMismatchError =>
+      'പാസ്‌വേഡുകൾ പൊരുത്തപ്പെടുന്നില്ല.';
+
+  @override
+  String get passwordChangedMessage => 'നിങ്ങളുടെ പാസ്‌വേഡ് മാറ്റിയിട്ടുണ്ട്.';
+
+  @override
+  String get incorrectCurrentPasswordError =>
+      'നിങ്ങളുടെ നിലവിലെ പാസ്‌വേഡ് തെറ്റാണ്.';
 
   @override
   String get logOutButton => 'ലോഗ്ഔട്ട് ചെയ്യുക';

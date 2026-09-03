@@ -42,6 +42,16 @@ class AppLocalizationsKn extends AppLocalizations {
   String get newHereCreateAccountButton => 'ಹೊಸಬರೇ? ಖಾತೆ ರಚಿಸಿ';
 
   @override
+  String get forgotPasswordButton => 'ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?';
+
+  @override
+  String get forgotPasswordDialogTitle => 'ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ';
+
+  @override
+  String get forgotPasswordDialogMessage =>
+      'ನಾವು ಈಗ ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮರುಹೊಂದಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಖಾತೆಗೆ ಮರಳಿ ಪ್ರವೇಶ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಸಹಾಯ ತಂಡವನ್ನು ಸಂಪರ್ಕಿಸಿ.';
+
+  @override
   String get loginFailedMessage => 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ.';
 
   @override
@@ -91,6 +101,32 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get editProfileButton => 'ಪ್ರೊಫೈಲ್ ತಿದ್ದಿ';
+
+  @override
+  String get changePasswordButton => 'ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಿ';
+
+  @override
+  String get changePasswordTitle => 'ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಿ';
+
+  @override
+  String get currentPasswordLabel => 'ಪ್ರಸ್ತುತ ಪಾಸ್‌ವರ್ಡ್';
+
+  @override
+  String get newPasswordLabel => 'ಹೊಸ ಪಾಸ್‌ವರ್ಡ್';
+
+  @override
+  String get confirmNewPasswordLabel => 'ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ಖಚಿತಪಡಿಸಿ';
+
+  @override
+  String get confirmNewPasswordMismatchError =>
+      'ಪಾಸ್‌ವರ್ಡ್‌ಗಳು ಹೊಂದಿಕೆಯಾಗುತ್ತಿಲ್ಲ.';
+
+  @override
+  String get passwordChangedMessage => 'ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಲಾಗಿದೆ.';
+
+  @override
+  String get incorrectCurrentPasswordError =>
+      'ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಪಾಸ್‌ವರ್ಡ್ ತಪ್ಪಾಗಿದೆ.';
 
   @override
   String get logOutButton => 'ಲಾಗ್ ಔಟ್ ಮಾಡಿ';
