@@ -43,16 +43,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get newHereCreateAccountButton => 'புதியவரா? கணக்கு உருவாக்கவும்';
 
   @override
-  String get forgotPasswordButton => 'கடவுச்சொல் மறந்துவிட்டதா?';
-
-  @override
-  String get forgotPasswordDialogTitle => 'கடவுச்சொல்லை மீட்டமைக்கவும்';
-
-  @override
-  String get forgotPasswordDialogMessage =>
-      'தற்போது உங்கள் கடவுச்சொல்லை தானாக மீட்டமைக்க முடியாது. உங்கள் கணக்கிற்குத் திரும்பச் செல்ல உதவிக்காக ஆதரவு குழுவைத் தொடர்பு கொள்ளவும்.';
-
-  @override
   String get loginFailedMessage => 'உள்நுழைவு தோல்வியடைந்தது.';
 
   @override
@@ -104,31 +94,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get editProfileButton => 'சுயவிவரத்தைத் திருத்து';
-
-  @override
-  String get changePasswordButton => 'கடவுச்சொல்லை மாற்று';
-
-  @override
-  String get changePasswordTitle => 'கடவுச்சொல்லை மாற்று';
-
-  @override
-  String get currentPasswordLabel => 'தற்போதைய கடவுச்சொல்';
-
-  @override
-  String get newPasswordLabel => 'புதிய கடவுச்சொல்';
-
-  @override
-  String get confirmNewPasswordLabel => 'புதிய கடவுச்சொல்லை உறுதிப்படுத்தவும்';
-
-  @override
-  String get confirmNewPasswordMismatchError => 'கடவுச்சொற்கள் பொருந்தவில்லை.';
-
-  @override
-  String get passwordChangedMessage => 'உங்கள் கடவுச்சொல் மாற்றப்பட்டது.';
-
-  @override
-  String get incorrectCurrentPasswordError =>
-      'உங்கள் தற்போதைய கடவுச்சொல் தவறானது.';
 
   @override
   String get logOutButton => 'வெளியேறு';

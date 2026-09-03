@@ -14,8 +14,6 @@ class FriendlyError {
           return 'This account is not active. Please contact support.';
         case 'DUPLICATE_ACCOUNT':
           return 'An account with this phone number already exists. Try logging in instead.';
-        case 'INCORRECT_CURRENT_PASSWORD':
-          return 'Your current password is incorrect.';
         case 'VALIDATION_ERROR':
           return 'Please check the information you entered and try again.';
         case 'SESSION_EXPIRED':

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../features/auth/auth_state.dart';
-import '../features/auth/change_password_screen.dart';
 import '../features/auth/farmer_repository.dart';
 import '../features/auth/language_selection_screen.dart';
 import '../core/friendly_error.dart';
@@ -96,12 +95,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _changePassword() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-    );
-  }
-
   Future<void> _logout() async {
     await context.read<AuthState>().logout();
     if (!mounted) return;
@@ -165,8 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(onPressed: _saveName, child: Text(l10n.saveButton))
           else
             ElevatedButton(onPressed: () => setState(() => _editing = true), child: Text(l10n.editProfileButton)),
-          const SizedBox(height: 12),
-          OutlinedButton(onPressed: _changePassword, child: Text(l10n.changePasswordButton)),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: _logout, child: Text(l10n.logOutButton)),
         ],

@@ -75,18 +75,6 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  Future<bool> changePassword({required String currentPassword, required String newPassword}) async {
-    lastErrorMessage = null;
-    try {
-      await _repository.changePassword(currentPassword: currentPassword, newPassword: newPassword);
-      return true;
-    } catch (e) {
-      lastErrorMessage = FriendlyError.from(e);
-      notifyListeners();
-      return false;
-    }
-  }
-
   Future<void> logout() async {
     await _repository.logout();
     status = AuthStatus.unauthenticated;

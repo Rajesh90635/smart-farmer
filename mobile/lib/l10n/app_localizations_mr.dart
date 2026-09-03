@@ -42,16 +42,6 @@ class AppLocalizationsMr extends AppLocalizations {
   String get newHereCreateAccountButton => 'नवीन आहात? खातं तयार करा';
 
   @override
-  String get forgotPasswordButton => 'पासवर्ड विसरलात?';
-
-  @override
-  String get forgotPasswordDialogTitle => 'पासवर्ड रीसेट करा';
-
-  @override
-  String get forgotPasswordDialogMessage =>
-      'आम्ही सध्या तुमचा पासवर्ड आपोआप रीसेट करू शकत नाही. तुमच्या खात्यात परत जाण्यासाठी कृपया सपोर्ट टीमशी संपर्क साधा.';
-
-  @override
   String get loginFailedMessage => 'लॉग इन अयशस्वी झालं.';
 
   @override
@@ -101,31 +91,6 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get editProfileButton => 'प्रोफाइल संपादित करा';
-
-  @override
-  String get changePasswordButton => 'पासवर्ड बदला';
-
-  @override
-  String get changePasswordTitle => 'पासवर्ड बदला';
-
-  @override
-  String get currentPasswordLabel => 'सध्याचा पासवर्ड';
-
-  @override
-  String get newPasswordLabel => 'नवीन पासवर्ड';
-
-  @override
-  String get confirmNewPasswordLabel => 'नवीन पासवर्डची पुष्टी करा';
-
-  @override
-  String get confirmNewPasswordMismatchError => 'पासवर्ड जुळत नाहीत.';
-
-  @override
-  String get passwordChangedMessage => 'तुमचा पासवर्ड बदलण्यात आला आहे.';
-
-  @override
-  String get incorrectCurrentPasswordError =>
-      'तुमचा सध्याचा पासवर्ड चुकीचा आहे.';
 
   @override
   String get logOutButton => 'लॉग आउट करा';

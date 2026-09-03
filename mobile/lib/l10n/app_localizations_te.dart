@@ -42,16 +42,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get newHereCreateAccountButton => 'కొత్తగా వచ్చారా? ఖాతా సృష్టించండి';
 
   @override
-  String get forgotPasswordButton => 'పాస్‌వర్డ్ మర్చిపోయారా?';
-
-  @override
-  String get forgotPasswordDialogTitle => 'పాస్‌వర్డ్ రీసెట్ చేయండి';
-
-  @override
-  String get forgotPasswordDialogMessage =>
-      'మేము ప్రస్తుతం మీ పాస్‌వర్డ్‌ను స్వయంచాలకంగా రీసెట్ చేయలేము. మీ ఖాతాలోకి తిరిగి ప్రవేశించడానికి దయచేసి సపోర్ట్ టీమ్‌ను సంప్రదించండి.';
-
-  @override
   String get loginFailedMessage => 'లాగిన్ విఫలమైంది.';
 
   @override
@@ -104,30 +94,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get editProfileButton => 'ప్రొఫైల్ సవరించండి';
-
-  @override
-  String get changePasswordButton => 'పాస్‌వర్డ్ మార్చండి';
-
-  @override
-  String get changePasswordTitle => 'పాస్‌వర్డ్ మార్చండి';
-
-  @override
-  String get currentPasswordLabel => 'ప్రస్తుత పాస్‌వర్డ్';
-
-  @override
-  String get newPasswordLabel => 'కొత్త పాస్‌వర్డ్';
-
-  @override
-  String get confirmNewPasswordLabel => 'కొత్త పాస్‌వర్డ్‌ను నిర్ధారించండి';
-
-  @override
-  String get confirmNewPasswordMismatchError => 'పాస్‌వర్డ్‌లు సరిపోలలేదు.';
-
-  @override
-  String get passwordChangedMessage => 'మీ పాస్‌వర్డ్ మార్చబడింది.';
-
-  @override
-  String get incorrectCurrentPasswordError => 'మీ ప్రస్తుత పాస్‌వర్డ్ తప్పు.';
 
   @override
   String get logOutButton => 'లాగ్ అవుట్ అవ్వండి';

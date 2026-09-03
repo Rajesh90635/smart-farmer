@@ -25,23 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _showForgotPasswordDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.forgotPasswordDialogTitle),
-        content: Text(l10n.forgotPasswordDialogMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -98,14 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscurePassword,
                   validator: (v) => (v == null || v.isEmpty) ? l10n.passwordRequiredError : null,
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _showForgotPasswordDialog,
-                    child: Text(l10n.forgotPasswordButton),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
                 if (isBusy)
                   const Center(child: CircularProgressIndicator())
                 else
