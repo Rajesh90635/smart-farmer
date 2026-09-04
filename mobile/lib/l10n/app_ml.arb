@@ -660,5 +660,32 @@
   "cropPerformanceTitle": "വിള പ്രകടനം",
   "performanceOverallScoreLabel": "മൊത്തം സ്കോർ",
   "performanceDataCompletenessLabel": "ഡാറ്റാ പൂർണ്ണത: {percent}%",
-  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}}
+  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}},
+
+  "tryAgainButton": "വീണ്ടും ശ്രമിക്കുക",
+  "cancelButton": "റദ്ദാക്കുക",
+  "doneButton": "പൂർത്തിയായി",
+  "removeButton": "നീക്കം ചെയ്യുക",
+  "homeFarmsSummaryLabel": "ഫാമുകൾ",
+  "homeActiveCropsSummaryLabel": "സജീവ വിളകൾ",
+  "homeBuyInputsButton": "ഇൻപുട്ടുകൾ വാങ്ങുക",
+  "homeGoToMyFarmsButton": "എന്റെ ഫാമുകളിലേക്ക് പോകുക",
+
+  "validatorPhoneRequiredError": "ദയവായി നിങ്ങളുടെ ഫോൺ നമ്പർ നൽകുക.",
+  "validatorPhoneInvalidError": "ദയവായി സാധുവായ ഫോൺ നമ്പർ നൽകുക (7-15 അക്കങ്ങൾ).",
+  "validatorPasswordTooShortError": "പാസ്‌വേഡിന് കുറഞ്ഞത് 8 അക്ഷരങ്ങൾ വേണം.",
+  "validatorPasswordNeedsLetterAndNumberError": "പാസ്‌വേഡിൽ ഒരു അക്ഷരവും ഒരു അക്കവും ഉണ്ടായിരിക്കണം.",
+  "validatorPasswordNeedsUppercaseError": "പാസ്‌വേഡിൽ ഒരു വലിയക്ഷരം ഉണ്ടായിരിക്കണം.",
+  "validatorPasswordNeedsSpecialCharError": "പാസ്‌വേഡിൽ ഒരു പ്രത്യേക ചിഹ്നം ഉണ്ടായിരിക്കണം.",
+  "validatorNameRequiredError": "ദയവായി നിങ്ങളുടെ പേര് നൽകുക.",
+  "errorInvalidCredentials": "ഈ ഫോൺ നമ്പറോ പാസ്‌വേഡോ ശരിയല്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
+  "errorAccountDisabled": "ഈ അക്കൗണ്ട് സജീവമല്ല. ദയവായി സപ്പോർട്ടിനെ ബന്ധപ്പെടുക.",
+  "errorDuplicateAccount": "ഈ ഫോൺ നമ്പറുമായി ഇതിനകം ഒരു അക്കൗണ്ട് ഉണ്ട്. പകരം ലോഗിൻ ചെയ്യുക.",
+  "errorIncorrectCurrentPassword": "നിങ്ങളുടെ നിലവിലെ പാസ്‌വേഡ് തെറ്റാണ്.",
+  "errorValidation": "ദയവായി നിങ്ങൾ നൽകിയ വിവരങ്ങൾ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.",
+  "errorSessionExpired": "നിങ്ങളുടെ സെഷൻ അവസാനിച്ചു. ദയവായി വീണ്ടും ലോഗിൻ ചെയ്യുക.",
+  "errorRateLimited": "വളരെയധികം തവണ ശ്രമിച്ചു. ദയവായി കുറച്ച് മിനിറ്റ് കാത്തിരുന്ന് വീണ്ടും ശ്രമിക്കുക.",
+  "errorUnauthorized": "തുടരാൻ നിങ്ങൾ വീണ്ടും ലോഗിൻ ചെയ്യേണ്ടതുണ്ട്.",
+  "errorGeneric": "എന്തോ കുഴപ്പം സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
+  "errorGenericConnection": "എന്തോ കുഴപ്പം സംഭവിച്ചു. ദയവായി നിങ്ങളുടെ കണക്ഷൻ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക."
 }

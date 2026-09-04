@@ -660,5 +660,32 @@
   "cropPerformanceTitle": "పంట పనితీరు",
   "performanceOverallScoreLabel": "మొత్తం స్కోరు",
   "performanceDataCompletenessLabel": "డేటా పూర్తిస్థాయి: {percent}%",
-  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}}
+  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}},
+
+  "tryAgainButton": "మళ్లీ ప్రయత్నించండి",
+  "cancelButton": "రద్దు చేయండి",
+  "doneButton": "పూర్తయింది",
+  "removeButton": "తీసివేయండి",
+  "homeFarmsSummaryLabel": "పొలాలు",
+  "homeActiveCropsSummaryLabel": "క్రియాశీల పంటలు",
+  "homeBuyInputsButton": "ఇన్‌పుట్‌లు కొనండి",
+  "homeGoToMyFarmsButton": "నా పొలాలకు వెళ్లండి",
+
+  "validatorPhoneRequiredError": "దయచేసి మీ ఫోన్ నంబర్ నమోదు చేయండి.",
+  "validatorPhoneInvalidError": "దయచేసి సరైన ఫోన్ నంబర్ నమోదు చేయండి (7-15 అంకెలు).",
+  "validatorPasswordTooShortError": "పాస్‌వర్డ్ కనీసం 8 అక్షరాలు ఉండాలి.",
+  "validatorPasswordNeedsLetterAndNumberError": "పాస్‌వర్డ్‌లో ఒక అక్షరం మరియు ఒక అంకె ఉండాలి.",
+  "validatorPasswordNeedsUppercaseError": "పాస్‌వర్డ్‌లో ఒక పెద్ద అక్షరం ఉండాలి.",
+  "validatorPasswordNeedsSpecialCharError": "పాస్‌వర్డ్‌లో ఒక ప్రత్యేక చిహ్నం ఉండాలి.",
+  "validatorNameRequiredError": "దయచేసి మీ పేరు నమోదు చేయండి.",
+  "errorInvalidCredentials": "ఈ ఫోన్ నంబర్ లేదా పాస్‌వర్డ్ సరైనది కాదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "errorAccountDisabled": "ఈ ఖాతా యాక్టివ్‌గా లేదు. దయచేసి సపోర్ట్‌ను సంప్రదించండి.",
+  "errorDuplicateAccount": "ఈ ఫోన్ నంబర్‌తో ఇప్పటికే ఖాతా ఉంది. బదులుగా లాగిన్ అవ్వండి.",
+  "errorIncorrectCurrentPassword": "మీ ప్రస్తుత పాస్‌వర్డ్ తప్పు.",
+  "errorValidation": "దయచేసి మీరు నమోదు చేసిన సమాచారాన్ని తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.",
+  "errorSessionExpired": "మీ సెషన్ ముగిసింది. దయచేసి మళ్లీ లాగిన్ అవ్వండి.",
+  "errorRateLimited": "చాలా ప్రయత్నాలు జరిగాయి. దయచేసి కొన్ని నిమిషాలు ఆగి మళ్లీ ప్రయత్నించండి.",
+  "errorUnauthorized": "కొనసాగించడానికి మీరు మళ్లీ లాగిన్ అవ్వాలి.",
+  "errorGeneric": "ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "errorGenericConnection": "ఏదో తప్పు జరిగింది. దయచేసి మీ కనెక్షన్‌ని తనిఖీ చేసి మళ్లీ ప్రయత్నించండి."
 }

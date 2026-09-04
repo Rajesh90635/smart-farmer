@@ -660,5 +660,32 @@
   "cropPerformanceTitle": "பயிர் செயல்திறன்",
   "performanceOverallScoreLabel": "மொத்த மதிப்பெண்",
   "performanceDataCompletenessLabel": "தரவு முழுமை: {percent}%",
-  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}}
+  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}},
+
+  "tryAgainButton": "மீண்டும் முயற்சிக்கவும்",
+  "cancelButton": "ரத்து செய்",
+  "doneButton": "முடிந்தது",
+  "removeButton": "அகற்று",
+  "homeFarmsSummaryLabel": "பண்ணைகள்",
+  "homeActiveCropsSummaryLabel": "செயலில் உள்ள பயிர்கள்",
+  "homeBuyInputsButton": "உள்ளீடுகளை வாங்கவும்",
+  "homeGoToMyFarmsButton": "என் பண்ணைகளுக்குச் செல்லவும்",
+
+  "validatorPhoneRequiredError": "தயவுசெய்து உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்.",
+  "validatorPhoneInvalidError": "தயவுசெய்து சரியான தொலைபேசி எண்ணை உள்ளிடவும் (7-15 இலக்கங்கள்).",
+  "validatorPasswordTooShortError": "கடவுச்சொல் குறைந்தது 8 எழுத்துகள் இருக்க வேண்டும்.",
+  "validatorPasswordNeedsLetterAndNumberError": "கடவுச்சொல்லில் ஒரு எழுத்தும் ஒரு எண்ணும் இருக்க வேண்டும்.",
+  "validatorPasswordNeedsUppercaseError": "கடவுச்சொல்லில் ஒரு பெரிய எழுத்து இருக்க வேண்டும்.",
+  "validatorPasswordNeedsSpecialCharError": "கடவுச்சொல்லில் ஒரு சிறப்பு எழுத்து இருக்க வேண்டும்.",
+  "validatorNameRequiredError": "தயவுசெய்து உங்கள் பெயரை உள்ளிடவும்.",
+  "errorInvalidCredentials": "இந்த தொலைபேசி எண் அல்லது கடவுச்சொல் சரியில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
+  "errorAccountDisabled": "இந்த கணக்கு செயலில் இல்லை. தயவுசெய்து ஆதரவைத் தொடர்பு கொள்ளவும்.",
+  "errorDuplicateAccount": "இந்த தொலைபேசி எண்ணுடன் ஏற்கனவே ஒரு கணக்கு உள்ளது. அதற்கு பதிலாக உள்நுழையவும்.",
+  "errorIncorrectCurrentPassword": "உங்கள் தற்போதைய கடவுச்சொல் தவறானது.",
+  "errorValidation": "தயவுசெய்து நீங்கள் உள்ளிட்ட தகவலைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+  "errorSessionExpired": "உங்கள் அமர்வு முடிந்துவிட்டது. தயவுசெய்து மீண்டும் உள்நுழையவும்.",
+  "errorRateLimited": "பல முறை முயற்சிக்கப்பட்டது. தயவுசெய்து சில நிமிடங்கள் காத்திருந்து மீண்டும் முயற்சிக்கவும்.",
+  "errorUnauthorized": "தொடர நீங்கள் மீண்டும் உள்நுழைய வேண்டும்.",
+  "errorGeneric": "ஏதோ தவறு நடந்தது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
+  "errorGenericConnection": "ஏதோ தவறு நடந்தது. தயவுசெய்து உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்."
 }

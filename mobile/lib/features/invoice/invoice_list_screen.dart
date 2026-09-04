@@ -49,7 +49,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -77,7 +77,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -153,7 +153,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invoiceConfirmedMessage)));
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
                   }
                 },
                 child: Text(l10n.confirmAndAddToLedgerButton),
@@ -171,7 +171,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -222,7 +222,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))),
         ],
       );
     }

@@ -67,7 +67,7 @@ class _CropPhotoListScreenState extends State<CropPhotoListScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Center(child: Text(FriendlyError.from(snapshot.error!)));
+              return Center(child: Text(FriendlyError.from(snapshot.error!, AppLocalizations.of(context)!)));
             }
             final photos = snapshot.data ?? [];
             if (photos.isEmpty) {

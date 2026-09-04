@@ -54,7 +54,7 @@ class _CameraScreenState extends State<CameraScreen> {
               return ListView(
                 children: [
                   const SizedBox(height: 80),
-                  Center(child: Text(FriendlyError.from(snapshot.error!))),
+                  Center(child: Text(FriendlyError.from(snapshot.error!, AppLocalizations.of(context)!))),
                   const SizedBox(height: 12),
                   Center(child: ElevatedButton(onPressed: _refresh, child: Text(l10n.genericErrorRetry))),
                 ],

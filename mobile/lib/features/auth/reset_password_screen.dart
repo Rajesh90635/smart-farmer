@@ -55,7 +55,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       final l10n = AppLocalizations.of(context)!;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.lastErrorMessage ?? l10n.resetPasswordFailedMessage)),
+        SnackBar(content: Text(authState.errorMessage(l10n) ?? l10n.resetPasswordFailedMessage)),
       );
     }
   }
@@ -79,7 +79,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  validator: Validators.phoneNumber,
+                  validator: Validators.phoneNumber(l10n),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -92,7 +92,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   obscureText: _obscureNew,
-                  validator: Validators.password,
+                  validator: Validators.password(l10n),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

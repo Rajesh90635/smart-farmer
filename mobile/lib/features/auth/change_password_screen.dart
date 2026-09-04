@@ -56,7 +56,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.lastErrorMessage ?? l10n.incorrectCurrentPasswordError)),
+        SnackBar(content: Text(authState.errorMessage(l10n) ?? l10n.incorrectCurrentPasswordError)),
       );
     }
   }
@@ -98,7 +98,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                   ),
                   obscureText: _obscureNew,
-                  validator: Validators.password,
+                  validator: Validators.password(l10n),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

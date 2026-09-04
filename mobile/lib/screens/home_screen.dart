@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -69,16 +69,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text(l10n.navHome),
         actions: [
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
-                tooltip: 'Notifications',
+                tooltip: l10n.notificationListTitle,
                 onPressed: () async {
                   await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationListScreen()));
                   _loadUnreadNotificationCount();
@@ -116,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))),
         ],
       );
     }
@@ -130,18 +131,18 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (_) => const DailyBriefingScreen()),
           ),
           icon: const Icon(Icons.wb_sunny_outlined),
-          label: const Text("Today's Briefing"),
+          label: Text(l10n.dailyBriefingTitle),
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _SummaryCard(label: 'Farms', value: dashboard.farmCount)),
+            Expanded(child: _SummaryCard(label: l10n.homeFarmsSummaryLabel, value: dashboard.farmCount)),
             const SizedBox(width: 12),
-            Expanded(child: _SummaryCard(label: 'Plots', value: dashboard.plotCount)),
+            Expanded(child: _SummaryCard(label: l10n.farmDetailsPlotsSectionLabel, value: dashboard.plotCount)),
           ],
         ),
         const SizedBox(height: 12),
-        _SummaryCard(label: 'Active crops', value: dashboard.activeCropCycleCount, wide: true),
+        _SummaryCard(label: l10n.homeActiveCropsSummaryLabel, value: dashboard.activeCropCycleCount, wide: true),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => Navigator.of(context).push(
@@ -156,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (_) => const ProductListScreen()),
           ),
           icon: const Icon(Icons.shopping_cart_outlined),
-          label: const Text('Buy Inputs'),
+          label: Text(l10n.homeBuyInputsButton),
         ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
@@ -164,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (_) => const MyFarmsScreen()),
           ),
           icon: const Icon(Icons.grass),
-          label: const Text('Go to My Farms'),
+          label: Text(l10n.homeGoToMyFarmsButton),
         ),
       ],
     );

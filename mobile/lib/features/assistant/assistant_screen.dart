@@ -61,7 +61,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _historyError = FriendlyError.from(e);
+        _historyError = FriendlyError.from(e, AppLocalizations.of(context)!);
         _historyLoading = false;
       });
     }
@@ -87,7 +87,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _sendError = FriendlyError.from(e);
+        _sendError = FriendlyError.from(e, AppLocalizations.of(context)!);
         _sending = false;
       });
     }
@@ -119,7 +119,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.assistantFeedbackThanksMessage)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 

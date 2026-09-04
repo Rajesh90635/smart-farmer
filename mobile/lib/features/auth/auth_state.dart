@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 import 'auth_repository.dart';
 
 enum AuthStatus { unknown, authenticating, authenticated, unauthenticated }
@@ -14,7 +15,13 @@ class AuthState extends ChangeNotifier {
   AuthState({required AuthRepository repository}) : _repository = repository;
 
   AuthStatus status = AuthStatus.unknown;
-  String? lastErrorMessage;
+
+  /// The raw error from the last failed auth call, kept unformatted since
+  /// this class has no BuildContext/AppLocalizations of its own - callers
+  /// format it via [errorMessage] using their own screen's l10n instance.
+  Object? lastError;
+
+  String? errorMessage(AppLocalizations l10n) => lastError == null ? null : FriendlyError.from(lastError!, l10n);
 
   /// Called once at app startup (from the splash screen) to attempt
   /// restoring a previous session before deciding whether to show login.
@@ -29,7 +36,7 @@ class AuthState extends ChangeNotifier {
 
   Future<bool> login({required String phoneNumber, required String password}) async {
     status = AuthStatus.authenticating;
-    lastErrorMessage = null;
+    lastError = null;
     notifyListeners();
 
     try {
@@ -39,7 +46,7 @@ class AuthState extends ChangeNotifier {
       return true;
     } catch (e) {
       status = AuthStatus.unauthenticated;
-      lastErrorMessage = FriendlyError.from(e);
+      lastError = e;
       notifyListeners();
       return false;
     }
@@ -53,7 +60,7 @@ class AuthState extends ChangeNotifier {
     required List<ConsentInput> consents,
   }) async {
     status = AuthStatus.authenticating;
-    lastErrorMessage = null;
+    lastError = null;
     notifyListeners();
 
     try {
@@ -69,7 +76,7 @@ class AuthState extends ChangeNotifier {
       return true;
     } catch (e) {
       status = AuthStatus.unauthenticated;
-      lastErrorMessage = FriendlyError.from(e);
+      lastError = e;
       notifyListeners();
       return false;
     }
@@ -77,7 +84,7 @@ class AuthState extends ChangeNotifier {
 
   Future<bool> resetPassword({required String phoneNumber, required String newPassword}) async {
     status = AuthStatus.authenticating;
-    lastErrorMessage = null;
+    lastError = null;
     notifyListeners();
 
     try {
@@ -87,19 +94,19 @@ class AuthState extends ChangeNotifier {
       return true;
     } catch (e) {
       status = AuthStatus.unauthenticated;
-      lastErrorMessage = FriendlyError.from(e);
+      lastError = e;
       notifyListeners();
       return false;
     }
   }
 
   Future<bool> changePassword({required String currentPassword, required String newPassword}) async {
-    lastErrorMessage = null;
+    lastError = null;
     try {
       await _repository.changePassword(currentPassword: currentPassword, newPassword: newPassword);
       return true;
     } catch (e) {
-      lastErrorMessage = FriendlyError.from(e);
+      lastError = e;
       notifyListeners();
       return false;
     }

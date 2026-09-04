@@ -142,7 +142,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
         setState(() => _state = _CaptureUiState.uploaded);
       }
     } catch (e) {
-      final message = FriendlyError.from(e);
+      final message = FriendlyError.from(e, AppLocalizations.of(context)!);
       await queue.updateStatus(pending.clientUploadId, PendingUploadStatus.failed, errorMessage: message);
       if (!mounted) return;
       setState(() {
@@ -253,7 +253,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
           children: [
             Text(l10n.uploadSuccess, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            ElevatedButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Done')),
+            ElevatedButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.doneButton)),
           ],
         );
       case _CaptureUiState.qualityRejected:

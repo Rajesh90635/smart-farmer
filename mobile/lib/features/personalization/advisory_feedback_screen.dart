@@ -59,7 +59,7 @@ class _AdvisoryFeedbackScreenState extends State<AdvisoryFeedbackScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _message = FriendlyError.from(e);
+        _message = FriendlyError.from(e, AppLocalizations.of(context)!);
         _submitting = false;
       });
     }

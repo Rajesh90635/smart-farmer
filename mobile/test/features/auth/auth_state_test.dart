@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_farmer_mobile/core/api_client.dart';
 import 'package:smart_farmer_mobile/features/auth/auth_repository.dart';
 import 'package:smart_farmer_mobile/features/auth/auth_state.dart';
+import 'package:smart_farmer_mobile/l10n/app_localizations_en.dart';
 
 /// Overrides every network-touching method so AuthState's own logic
 /// (status transitions, error surfacing) can be tested without a real
@@ -42,13 +43,15 @@ class FakeAuthRepository extends AuthRepository {
 }
 
 void main() {
+  final l10n = AppLocalizationsEn();
+
   group('AuthState.login', () {
     test('transitions to authenticated on success', () async {
       final state = AuthState(repository: FakeAuthRepository(shouldSucceed: true));
       final result = await state.login(phoneNumber: '9876543210', password: 'Str0ngPass');
       expect(result, isTrue);
       expect(state.status, AuthStatus.authenticated);
-      expect(state.lastErrorMessage, isNull);
+      expect(state.errorMessage(l10n), isNull);
     });
 
     test('transitions to unauthenticated with a friendly error on failure', () async {
@@ -56,8 +59,8 @@ void main() {
       final result = await state.login(phoneNumber: '9876543210', password: 'wrong');
       expect(result, isFalse);
       expect(state.status, AuthStatus.unauthenticated);
-      expect(state.lastErrorMessage, isNotNull);
-      expect(state.lastErrorMessage!.toLowerCase(), contains('phone number or password'));
+      expect(state.errorMessage(l10n), isNotNull);
+      expect(state.errorMessage(l10n)!.toLowerCase(), contains('phone number or password'));
     });
   });
 
@@ -85,7 +88,7 @@ void main() {
         consents: [ConsentInput('terms_of_service', '1.0'), ConsentInput('privacy_policy', '1.0')],
       );
       expect(result, isFalse);
-      expect(state.lastErrorMessage!.toLowerCase(), contains('already exists'));
+      expect(state.errorMessage(l10n)!.toLowerCase(), contains('already exists'));
     });
   });
 

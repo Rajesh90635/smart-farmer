@@ -2014,4 +2014,94 @@ class AppLocalizationsMl extends AppLocalizations {
   String performanceDataCompletenessLabel(String percent) {
     return 'ഡാറ്റാ പൂർണ്ണത: $percent%';
   }
+
+  @override
+  String get tryAgainButton => 'വീണ്ടും ശ്രമിക്കുക';
+
+  @override
+  String get cancelButton => 'റദ്ദാക്കുക';
+
+  @override
+  String get doneButton => 'പൂർത്തിയായി';
+
+  @override
+  String get removeButton => 'നീക്കം ചെയ്യുക';
+
+  @override
+  String get homeFarmsSummaryLabel => 'ഫാമുകൾ';
+
+  @override
+  String get homeActiveCropsSummaryLabel => 'സജീവ വിളകൾ';
+
+  @override
+  String get homeBuyInputsButton => 'ഇൻപുട്ടുകൾ വാങ്ങുക';
+
+  @override
+  String get homeGoToMyFarmsButton => 'എന്റെ ഫാമുകളിലേക്ക് പോകുക';
+
+  @override
+  String get validatorPhoneRequiredError => 'ദയവായി നിങ്ങളുടെ ഫോൺ നമ്പർ നൽകുക.';
+
+  @override
+  String get validatorPhoneInvalidError =>
+      'ദയവായി സാധുവായ ഫോൺ നമ്പർ നൽകുക (7-15 അക്കങ്ങൾ).';
+
+  @override
+  String get validatorPasswordTooShortError =>
+      'പാസ്‌വേഡിന് കുറഞ്ഞത് 8 അക്ഷരങ്ങൾ വേണം.';
+
+  @override
+  String get validatorPasswordNeedsLetterAndNumberError =>
+      'പാസ്‌വേഡിൽ ഒരു അക്ഷരവും ഒരു അക്കവും ഉണ്ടായിരിക്കണം.';
+
+  @override
+  String get validatorPasswordNeedsUppercaseError =>
+      'പാസ്‌വേഡിൽ ഒരു വലിയക്ഷരം ഉണ്ടായിരിക്കണം.';
+
+  @override
+  String get validatorPasswordNeedsSpecialCharError =>
+      'പാസ്‌വേഡിൽ ഒരു പ്രത്യേക ചിഹ്നം ഉണ്ടായിരിക്കണം.';
+
+  @override
+  String get validatorNameRequiredError => 'ദയവായി നിങ്ങളുടെ പേര് നൽകുക.';
+
+  @override
+  String get errorInvalidCredentials =>
+      'ഈ ഫോൺ നമ്പറോ പാസ്‌വേഡോ ശരിയല്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get errorAccountDisabled =>
+      'ഈ അക്കൗണ്ട് സജീവമല്ല. ദയവായി സപ്പോർട്ടിനെ ബന്ധപ്പെടുക.';
+
+  @override
+  String get errorDuplicateAccount =>
+      'ഈ ഫോൺ നമ്പറുമായി ഇതിനകം ഒരു അക്കൗണ്ട് ഉണ്ട്. പകരം ലോഗിൻ ചെയ്യുക.';
+
+  @override
+  String get errorIncorrectCurrentPassword =>
+      'നിങ്ങളുടെ നിലവിലെ പാസ്‌വേഡ് തെറ്റാണ്.';
+
+  @override
+  String get errorValidation =>
+      'ദയവായി നിങ്ങൾ നൽകിയ വിവരങ്ങൾ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get errorSessionExpired =>
+      'നിങ്ങളുടെ സെഷൻ അവസാനിച്ചു. ദയവായി വീണ്ടും ലോഗിൻ ചെയ്യുക.';
+
+  @override
+  String get errorRateLimited =>
+      'വളരെയധികം തവണ ശ്രമിച്ചു. ദയവായി കുറച്ച് മിനിറ്റ് കാത്തിരുന്ന് വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get errorUnauthorized =>
+      'തുടരാൻ നിങ്ങൾ വീണ്ടും ലോഗിൻ ചെയ്യേണ്ടതുണ്ട്.';
+
+  @override
+  String get errorGeneric =>
+      'എന്തോ കുഴപ്പം സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get errorGenericConnection =>
+      'എന്തോ കുഴപ്പം സംഭവിച്ചു. ദയവായി നിങ്ങളുടെ കണക്ഷൻ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.';
 }
