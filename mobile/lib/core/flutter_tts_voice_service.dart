@@ -18,20 +18,30 @@ const Map<String, String> _languageCodeToLocale = {
 
 class FlutterTtsVoiceService implements VoiceService {
   final FlutterTts _tts;
-  bool? _cachedAvailability;
+  bool _cachedAvailability = false;
 
   FlutterTtsVoiceService({FlutterTts? tts}) : _tts = tts ?? FlutterTts();
 
   @override
   Future<bool> isAvailable() async {
-    if (_cachedAvailability != null) return _cachedAvailability!;
+    // Only a positive result is ever cached. On web, the underlying
+    // speechSynthesis.getVoices() is a well-known race: it often reports
+    // zero voices immediately after page load and only populates them a
+    // moment later (confirmed: 0 voices at load, 3 after ~1.5s in this
+    // browser). Caching a negative result here would permanently disable
+    // voice for the rest of the session on every screen after just one
+    // unlucky early check - so a false result is never remembered, and
+    // the next speak() attempt (any screen) gets a fresh, usually
+    // successful, check instead.
+    if (_cachedAvailability) return true;
     try {
       final languages = await _tts.getLanguages;
-      _cachedAvailability = languages is List && languages.isNotEmpty;
+      final available = languages is List && languages.isNotEmpty;
+      if (available) _cachedAvailability = true;
+      return available;
     } catch (_) {
-      _cachedAvailability = false;
+      return false;
     }
-    return _cachedAvailability!;
   }
 
   @override
