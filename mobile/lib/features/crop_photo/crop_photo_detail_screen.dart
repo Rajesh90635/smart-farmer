@@ -200,9 +200,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
     final voice = context.read<VoiceService>();
     final started = await voice.speak(text, languageCode: languageCode);
     if (!mounted) return;
-    if (!started) {
-      setState(() => _voiceUnavailableMessageShown = true);
-    }
+    setState(() => _voiceUnavailableMessageShown = !started);
   }
 
   @override
