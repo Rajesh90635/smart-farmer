@@ -660,5 +660,32 @@
   "cropPerformanceTitle": "Crop Performance",
   "performanceOverallScoreLabel": "Overall Score",
   "performanceDataCompletenessLabel": "Data completeness: {percent}%",
-  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}}
+  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}},
+
+  "tryAgainButton": "Try again",
+  "cancelButton": "Cancel",
+  "doneButton": "Done",
+  "removeButton": "Remove",
+  "homeFarmsSummaryLabel": "Farms",
+  "homeActiveCropsSummaryLabel": "Active crops",
+  "homeBuyInputsButton": "Buy Inputs",
+  "homeGoToMyFarmsButton": "Go to My Farms",
+
+  "validatorPhoneRequiredError": "Please enter your phone number.",
+  "validatorPhoneInvalidError": "Please enter a valid phone number (7-15 digits).",
+  "validatorPasswordTooShortError": "Password must be at least 8 characters.",
+  "validatorPasswordNeedsLetterAndNumberError": "Password must contain a letter and a number.",
+  "validatorPasswordNeedsUppercaseError": "Password must contain an uppercase letter.",
+  "validatorPasswordNeedsSpecialCharError": "Password must contain a special character.",
+  "validatorNameRequiredError": "Please enter your name.",
+  "errorInvalidCredentials": "That phone number or password isn't right. Please try again.",
+  "errorAccountDisabled": "This account is not active. Please contact support.",
+  "errorDuplicateAccount": "An account with this phone number already exists. Try logging in instead.",
+  "errorIncorrectCurrentPassword": "Your current password is incorrect.",
+  "errorValidation": "Please check the information you entered and try again.",
+  "errorSessionExpired": "Your session has ended. Please log in again.",
+  "errorRateLimited": "Too many attempts. Please wait a few minutes and try again.",
+  "errorUnauthorized": "You need to log in again to continue.",
+  "errorGeneric": "Something went wrong. Please try again.",
+  "errorGenericConnection": "Something went wrong. Please check your connection and try again."
 }

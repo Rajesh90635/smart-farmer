@@ -41,7 +41,7 @@ class _IrrigationIntelligenceScreenState extends State<IrrigationIntelligenceScr
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }

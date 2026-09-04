@@ -44,7 +44,7 @@ class _PlotDetailsScreenState extends State<PlotDetailsScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -75,7 +75,7 @@ class _PlotDetailsScreenState extends State<PlotDetailsScreen> {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))],
         ),
       );
     }

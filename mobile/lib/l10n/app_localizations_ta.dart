@@ -2021,4 +2021,95 @@ class AppLocalizationsTa extends AppLocalizations {
   String performanceDataCompletenessLabel(String percent) {
     return 'தரவு முழுமை: $percent%';
   }
+
+  @override
+  String get tryAgainButton => 'மீண்டும் முயற்சிக்கவும்';
+
+  @override
+  String get cancelButton => 'ரத்து செய்';
+
+  @override
+  String get doneButton => 'முடிந்தது';
+
+  @override
+  String get removeButton => 'அகற்று';
+
+  @override
+  String get homeFarmsSummaryLabel => 'பண்ணைகள்';
+
+  @override
+  String get homeActiveCropsSummaryLabel => 'செயலில் உள்ள பயிர்கள்';
+
+  @override
+  String get homeBuyInputsButton => 'உள்ளீடுகளை வாங்கவும்';
+
+  @override
+  String get homeGoToMyFarmsButton => 'என் பண்ணைகளுக்குச் செல்லவும்';
+
+  @override
+  String get validatorPhoneRequiredError =>
+      'தயவுசெய்து உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்.';
+
+  @override
+  String get validatorPhoneInvalidError =>
+      'தயவுசெய்து சரியான தொலைபேசி எண்ணை உள்ளிடவும் (7-15 இலக்கங்கள்).';
+
+  @override
+  String get validatorPasswordTooShortError =>
+      'கடவுச்சொல் குறைந்தது 8 எழுத்துகள் இருக்க வேண்டும்.';
+
+  @override
+  String get validatorPasswordNeedsLetterAndNumberError =>
+      'கடவுச்சொல்லில் ஒரு எழுத்தும் ஒரு எண்ணும் இருக்க வேண்டும்.';
+
+  @override
+  String get validatorPasswordNeedsUppercaseError =>
+      'கடவுச்சொல்லில் ஒரு பெரிய எழுத்து இருக்க வேண்டும்.';
+
+  @override
+  String get validatorPasswordNeedsSpecialCharError =>
+      'கடவுச்சொல்லில் ஒரு சிறப்பு எழுத்து இருக்க வேண்டும்.';
+
+  @override
+  String get validatorNameRequiredError =>
+      'தயவுசெய்து உங்கள் பெயரை உள்ளிடவும்.';
+
+  @override
+  String get errorInvalidCredentials =>
+      'இந்த தொலைபேசி எண் அல்லது கடவுச்சொல் சரியில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get errorAccountDisabled =>
+      'இந்த கணக்கு செயலில் இல்லை. தயவுசெய்து ஆதரவைத் தொடர்பு கொள்ளவும்.';
+
+  @override
+  String get errorDuplicateAccount =>
+      'இந்த தொலைபேசி எண்ணுடன் ஏற்கனவே ஒரு கணக்கு உள்ளது. அதற்கு பதிலாக உள்நுழையவும்.';
+
+  @override
+  String get errorIncorrectCurrentPassword =>
+      'உங்கள் தற்போதைய கடவுச்சொல் தவறானது.';
+
+  @override
+  String get errorValidation =>
+      'தயவுசெய்து நீங்கள் உள்ளிட்ட தகவலைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get errorSessionExpired =>
+      'உங்கள் அமர்வு முடிந்துவிட்டது. தயவுசெய்து மீண்டும் உள்நுழையவும்.';
+
+  @override
+  String get errorRateLimited =>
+      'பல முறை முயற்சிக்கப்பட்டது. தயவுசெய்து சில நிமிடங்கள் காத்திருந்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get errorUnauthorized => 'தொடர நீங்கள் மீண்டும் உள்நுழைய வேண்டும்.';
+
+  @override
+  String get errorGeneric =>
+      'ஏதோ தவறு நடந்தது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get errorGenericConnection =>
+      'ஏதோ தவறு நடந்தது. தயவுசெய்து உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
 }

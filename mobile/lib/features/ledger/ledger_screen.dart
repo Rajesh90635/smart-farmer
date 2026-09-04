@@ -48,7 +48,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -65,7 +65,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _importing = false);
     }
@@ -77,7 +77,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -161,7 +161,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     await _load();
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
                   }
                 },
                 child: Text(l10n.saveEntryButton),
@@ -204,7 +204,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))),
         ],
       );
     }

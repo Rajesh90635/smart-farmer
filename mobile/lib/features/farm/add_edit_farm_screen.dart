@@ -219,7 +219,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
       await _autoFillLocationFromGps(position.latitude, position.longitude, l10n);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _detectingLocation = false);
     }
@@ -328,7 +328,7 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

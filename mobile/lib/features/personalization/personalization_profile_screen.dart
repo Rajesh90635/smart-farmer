@@ -43,7 +43,7 @@ class _PersonalizationProfileScreenState extends State<PersonalizationProfileScr
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }

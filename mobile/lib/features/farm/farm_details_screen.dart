@@ -46,7 +46,7 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -72,7 +72,7 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -130,7 +130,7 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))],
         ),
       );
     }

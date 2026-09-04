@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.lastErrorMessage ?? l10n.loginFailedMessage)),
+        SnackBar(content: Text(authState.errorMessage(l10n) ?? l10n.loginFailedMessage)),
       );
     }
   }
@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  validator: Validators.phoneNumber,
+                  validator: Validators.phoneNumber(l10n),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

@@ -109,7 +109,7 @@ class _MyHarvestsTabState extends State<_MyHarvestsTab> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -127,7 +127,7 @@ class _MyHarvestsTabState extends State<_MyHarvestsTab> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))),
         ],
       );
     }
@@ -197,7 +197,7 @@ class _MyListingsTabState extends State<_MyListingsTab> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -215,7 +215,7 @@ class _MyListingsTabState extends State<_MyListingsTab> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))),
         ],
       );
     }

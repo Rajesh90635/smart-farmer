@@ -84,7 +84,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -102,7 +102,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -119,7 +119,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -144,7 +144,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -157,7 +157,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -173,7 +173,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -188,7 +188,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -233,7 +233,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     await _load();
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
                   } finally {
                     if (mounted) setState(() => _acting = false);
                   }

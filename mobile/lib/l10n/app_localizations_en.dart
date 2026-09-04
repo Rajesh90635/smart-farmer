@@ -1987,4 +1987,92 @@ class AppLocalizationsEn extends AppLocalizations {
   String performanceDataCompletenessLabel(String percent) {
     return 'Data completeness: $percent%';
   }
+
+  @override
+  String get tryAgainButton => 'Try again';
+
+  @override
+  String get cancelButton => 'Cancel';
+
+  @override
+  String get doneButton => 'Done';
+
+  @override
+  String get removeButton => 'Remove';
+
+  @override
+  String get homeFarmsSummaryLabel => 'Farms';
+
+  @override
+  String get homeActiveCropsSummaryLabel => 'Active crops';
+
+  @override
+  String get homeBuyInputsButton => 'Buy Inputs';
+
+  @override
+  String get homeGoToMyFarmsButton => 'Go to My Farms';
+
+  @override
+  String get validatorPhoneRequiredError => 'Please enter your phone number.';
+
+  @override
+  String get validatorPhoneInvalidError =>
+      'Please enter a valid phone number (7-15 digits).';
+
+  @override
+  String get validatorPasswordTooShortError =>
+      'Password must be at least 8 characters.';
+
+  @override
+  String get validatorPasswordNeedsLetterAndNumberError =>
+      'Password must contain a letter and a number.';
+
+  @override
+  String get validatorPasswordNeedsUppercaseError =>
+      'Password must contain an uppercase letter.';
+
+  @override
+  String get validatorPasswordNeedsSpecialCharError =>
+      'Password must contain a special character.';
+
+  @override
+  String get validatorNameRequiredError => 'Please enter your name.';
+
+  @override
+  String get errorInvalidCredentials =>
+      'That phone number or password isn\'t right. Please try again.';
+
+  @override
+  String get errorAccountDisabled =>
+      'This account is not active. Please contact support.';
+
+  @override
+  String get errorDuplicateAccount =>
+      'An account with this phone number already exists. Try logging in instead.';
+
+  @override
+  String get errorIncorrectCurrentPassword =>
+      'Your current password is incorrect.';
+
+  @override
+  String get errorValidation =>
+      'Please check the information you entered and try again.';
+
+  @override
+  String get errorSessionExpired =>
+      'Your session has ended. Please log in again.';
+
+  @override
+  String get errorRateLimited =>
+      'Too many attempts. Please wait a few minutes and try again.';
+
+  @override
+  String get errorUnauthorized => 'You need to log in again to continue.';
+
+  @override
+  String get errorGeneric => 'Something went wrong. Please try again.';
+
+  @override
+  String get errorGenericConnection =>
+      'Something went wrong. Please check your connection and try again.';
 }

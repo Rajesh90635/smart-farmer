@@ -79,7 +79,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -93,7 +93,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -105,7 +105,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -175,7 +175,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                     await _load();
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
                   }
                 },
                 child: Text(l10n.cancelSaleButton),
@@ -225,7 +225,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                     await _load();
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
                   }
                 },
                 child: Text(l10n.submitDisputeButton),
@@ -276,7 +276,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.feedbackSubmittedMessage)));
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
                   }
                 },
                 child: Text(l10n.submitFeedbackButton),
@@ -305,7 +305,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
           const SizedBox(height: 80),
           Center(child: Text(_error!)),
           const SizedBox(height: 12),
-          Center(child: ElevatedButton(onPressed: _load, child: const Text('Try again'))),
+          Center(child: ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))),
         ],
       );
     }

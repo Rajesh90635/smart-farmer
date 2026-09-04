@@ -1992,4 +1992,92 @@ class AppLocalizationsHi extends AppLocalizations {
   String performanceDataCompletenessLabel(String percent) {
     return 'डेटा पूर्णता: $percent%';
   }
+
+  @override
+  String get tryAgainButton => 'पुनः प्रयास करें';
+
+  @override
+  String get cancelButton => 'रद्द करें';
+
+  @override
+  String get doneButton => 'पूर्ण';
+
+  @override
+  String get removeButton => 'हटाएं';
+
+  @override
+  String get homeFarmsSummaryLabel => 'खेत';
+
+  @override
+  String get homeActiveCropsSummaryLabel => 'सक्रिय फसलें';
+
+  @override
+  String get homeBuyInputsButton => 'इनपुट खरीदें';
+
+  @override
+  String get homeGoToMyFarmsButton => 'मेरे खेतों पर जाएं';
+
+  @override
+  String get validatorPhoneRequiredError => 'कृपया अपना फोन नंबर डालें।';
+
+  @override
+  String get validatorPhoneInvalidError =>
+      'कृपया एक मान्य फोन नंबर डालें (7-15 अंक)।';
+
+  @override
+  String get validatorPasswordTooShortError =>
+      'पासवर्ड कम से कम 8 अक्षर का होना चाहिए।';
+
+  @override
+  String get validatorPasswordNeedsLetterAndNumberError =>
+      'पासवर्ड में एक अक्षर और एक अंक होना चाहिए।';
+
+  @override
+  String get validatorPasswordNeedsUppercaseError =>
+      'पासवर्ड में एक बड़ा अक्षर (कैपिटल) होना चाहिए।';
+
+  @override
+  String get validatorPasswordNeedsSpecialCharError =>
+      'पासवर्ड में एक विशेष चिह्न होना चाहिए।';
+
+  @override
+  String get validatorNameRequiredError => 'कृपया अपना नाम डालें।';
+
+  @override
+  String get errorInvalidCredentials =>
+      'यह फोन नंबर या पासवर्ड सही नहीं है। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get errorAccountDisabled =>
+      'यह खाता सक्रिय नहीं है। कृपया सहायता से संपर्क करें।';
+
+  @override
+  String get errorDuplicateAccount =>
+      'इस फोन नंबर से पहले से एक खाता मौजूद है। इसके बजाय लॉग इन करें।';
+
+  @override
+  String get errorIncorrectCurrentPassword => 'आपका मौजूदा पासवर्ड गलत है।';
+
+  @override
+  String get errorValidation =>
+      'कृपया दी गई जानकारी जांचें और पुनः प्रयास करें।';
+
+  @override
+  String get errorSessionExpired =>
+      'आपका सत्र समाप्त हो गया है। कृपया फिर से लॉग इन करें।';
+
+  @override
+  String get errorRateLimited =>
+      'बहुत अधिक प्रयास हो गए। कृपया कुछ मिनट बाद पुनः प्रयास करें।';
+
+  @override
+  String get errorUnauthorized =>
+      'जारी रखने के लिए आपको फिर से लॉग इन करना होगा।';
+
+  @override
+  String get errorGeneric => 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get errorGenericConnection =>
+      'कुछ गलत हो गया। कृपया अपना कनेक्शन जांचें और पुनः प्रयास करें।';
 }

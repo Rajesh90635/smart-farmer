@@ -69,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authState.lastErrorMessage ?? l10n.registrationFailedMessage)),
+        SnackBar(content: Text(authState.errorMessage(l10n) ?? l10n.registrationFailedMessage)),
       );
     }
   }
@@ -94,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _nameController,
                   decoration: InputDecoration(labelText: l10n.yourNameLabel),
                   textInputAction: TextInputAction.next,
-                  validator: Validators.fullName,
+                  validator: Validators.fullName(l10n),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -102,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  validator: Validators.phoneNumber,
+                  validator: Validators.phoneNumber(l10n),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -115,7 +115,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   obscureText: _obscurePassword,
-                  validator: Validators.password,
+                  validator: Validators.password(l10n),
                 ),
                 const SizedBox(height: 32),
                 if (isBusy)

@@ -47,7 +47,7 @@ class _CropAssistantScreenState extends State<CropAssistantScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }

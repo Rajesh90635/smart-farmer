@@ -660,5 +660,32 @@
   "cropPerformanceTitle": "ಬೆಳೆ ಕಾರ್ಯಕ್ಷಮತೆ",
   "performanceOverallScoreLabel": "ಒಟ್ಟಾರೆ ಸ್ಕೋರ್",
   "performanceDataCompletenessLabel": "ಮಾಹಿತಿ ಸಂಪೂರ್ಣತೆ: {percent}%",
-  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}}
+  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}},
+
+  "tryAgainButton": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  "cancelButton": "ರದ್ದುಮಾಡಿ",
+  "doneButton": "ಮುಗಿದಿದೆ",
+  "removeButton": "ತೆಗೆದುಹಾಕಿ",
+  "homeFarmsSummaryLabel": "ಹೊಲಗಳು",
+  "homeActiveCropsSummaryLabel": "ಸಕ್ರಿಯ ಬೆಳೆಗಳು",
+  "homeBuyInputsButton": "ಇನ್‌ಪುಟ್‌ಗಳನ್ನು ಖರೀದಿಸಿ",
+  "homeGoToMyFarmsButton": "ನನ್ನ ಹೊಲಗಳಿಗೆ ಹೋಗಿ",
+
+  "validatorPhoneRequiredError": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಫೋನ್ ನಂಬರ್ ನಮೂದಿಸಿ.",
+  "validatorPhoneInvalidError": "ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಫೋನ್ ನಂಬರ್ ನಮೂದಿಸಿ (7-15 ಅಂಕೆಗಳು).",
+  "validatorPasswordTooShortError": "ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 8 ಅಕ್ಷರಗಳಿರಬೇಕು.",
+  "validatorPasswordNeedsLetterAndNumberError": "ಪಾಸ್‌ವರ್ಡ್‌ನಲ್ಲಿ ಒಂದು ಅಕ್ಷರ ಮತ್ತು ಒಂದು ಅಂಕೆ ಇರಬೇಕು.",
+  "validatorPasswordNeedsUppercaseError": "ಪಾಸ್‌ವರ್ಡ್‌ನಲ್ಲಿ ಒಂದು ದೊಡ್ಡಕ್ಷರ ಇರಬೇಕು.",
+  "validatorPasswordNeedsSpecialCharError": "ಪಾಸ್‌ವರ್ಡ್‌ನಲ್ಲಿ ಒಂದು ವಿಶೇಷ ಚಿಹ್ನೆ ಇರಬೇಕು.",
+  "validatorNameRequiredError": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.",
+  "errorInvalidCredentials": "ಈ ಫೋನ್ ನಂಬರ್ ಅಥವಾ ಪಾಸ್‌ವರ್ಡ್ ಸರಿಯಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "errorAccountDisabled": "ಈ ಖಾತೆ ಸಕ್ರಿಯವಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+  "errorDuplicateAccount": "ಈ ಫೋನ್ ನಂಬರ್‌ನೊಂದಿಗೆ ಈಗಾಗಲೇ ಖಾತೆ ಇದೆ. ಬದಲಿಗೆ ಲಾಗಿನ್ ಮಾಡಿ.",
+  "errorIncorrectCurrentPassword": "ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಪಾಸ್‌ವರ್ಡ್ ತಪ್ಪಾಗಿದೆ.",
+  "errorValidation": "ದಯವಿಟ್ಟು ನೀವು ನಮೂದಿಸಿದ ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "errorSessionExpired": "ನಿಮ್ಮ ಸೆಷನ್ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಲಾಗಿನ್ ಮಾಡಿ.",
+  "errorRateLimited": "ಹಲವು ಬಾರಿ ಪ್ರಯತ್ನಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಕೆಲವು ನಿಮಿಷ ಕಾದು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "errorUnauthorized": "ಮುಂದುವರಿಯಲು ನೀವು ಮತ್ತೆ ಲಾಗಿನ್ ಮಾಡಬೇಕು.",
+  "errorGeneric": "ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "errorGenericConnection": "ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
 }

@@ -106,13 +106,14 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(FriendlyError.from(error)),
+          Text(FriendlyError.from(error, AppLocalizations.of(context)!)),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
+          ElevatedButton(onPressed: onRetry, child: Text(l10n.tryAgainButton)),
         ],
       ),
     );

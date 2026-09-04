@@ -3849,6 +3849,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Data completeness: {percent}%'**
   String performanceDataCompletenessLabel(String percent);
+
+  /// No description provided for @tryAgainButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tryAgainButton;
+
+  /// No description provided for @cancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelButton;
+
+  /// No description provided for @doneButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get doneButton;
+
+  /// No description provided for @removeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeButton;
+
+  /// No description provided for @homeFarmsSummaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Farms'**
+  String get homeFarmsSummaryLabel;
+
+  /// No description provided for @homeActiveCropsSummaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active crops'**
+  String get homeActiveCropsSummaryLabel;
+
+  /// No description provided for @homeBuyInputsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Inputs'**
+  String get homeBuyInputsButton;
+
+  /// No description provided for @homeGoToMyFarmsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to My Farms'**
+  String get homeGoToMyFarmsButton;
+
+  /// No description provided for @validatorPhoneRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your phone number.'**
+  String get validatorPhoneRequiredError;
+
+  /// No description provided for @validatorPhoneInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid phone number (7-15 digits).'**
+  String get validatorPhoneInvalidError;
+
+  /// No description provided for @validatorPasswordTooShortError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters.'**
+  String get validatorPasswordTooShortError;
+
+  /// No description provided for @validatorPasswordNeedsLetterAndNumberError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain a letter and a number.'**
+  String get validatorPasswordNeedsLetterAndNumberError;
+
+  /// No description provided for @validatorPasswordNeedsUppercaseError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain an uppercase letter.'**
+  String get validatorPasswordNeedsUppercaseError;
+
+  /// No description provided for @validatorPasswordNeedsSpecialCharError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must contain a special character.'**
+  String get validatorPasswordNeedsSpecialCharError;
+
+  /// No description provided for @validatorNameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your name.'**
+  String get validatorNameRequiredError;
+
+  /// No description provided for @errorInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'That phone number or password isn\'t right. Please try again.'**
+  String get errorInvalidCredentials;
+
+  /// No description provided for @errorAccountDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This account is not active. Please contact support.'**
+  String get errorAccountDisabled;
+
+  /// No description provided for @errorDuplicateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this phone number already exists. Try logging in instead.'**
+  String get errorDuplicateAccount;
+
+  /// No description provided for @errorIncorrectCurrentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current password is incorrect.'**
+  String get errorIncorrectCurrentPassword;
+
+  /// No description provided for @errorValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check the information you entered and try again.'**
+  String get errorValidation;
+
+  /// No description provided for @errorSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has ended. Please log in again.'**
+  String get errorSessionExpired;
+
+  /// No description provided for @errorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please wait a few minutes and try again.'**
+  String get errorRateLimited;
+
+  /// No description provided for @errorUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to log in again to continue.'**
+  String get errorUnauthorized;
+
+  /// No description provided for @errorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get errorGeneric;
+
+  /// No description provided for @errorGenericConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please check your connection and try again.'**
+  String get errorGenericConnection;
 }
 
 class _AppLocalizationsDelegate

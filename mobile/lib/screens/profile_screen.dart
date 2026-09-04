@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -69,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _profile = updated);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 

@@ -67,7 +67,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       if (cycle.varietyId != null) await _loadVarietyName(repository, cycle.crop.id, cycle.varietyId!);
     } catch (e) {
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -95,7 +95,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       setState(() => _cycle = updated);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _updating = false);
     }
@@ -121,7 +121,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.cropDetailsMarkedHarvestedMessage)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     } finally {
       if (mounted) setState(() => _updating = false);
     }
@@ -289,7 +289,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))],
         ),
       );
     }

@@ -57,7 +57,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = FriendlyError.from(e);
+        _error = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loading = false;
       });
     }
@@ -93,7 +93,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _analysisError = FriendlyError.from(e);
+        _analysisError = FriendlyError.from(e, AppLocalizations.of(context)!);
         _analyzing = false;
       });
     }
@@ -135,7 +135,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _caseError = FriendlyError.from(e);
+        _caseError = FriendlyError.from(e, AppLocalizations.of(context)!);
         _requestingCase = false;
       });
     }
@@ -159,7 +159,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _caseError = FriendlyError.from(e);
+        _caseError = FriendlyError.from(e, AppLocalizations.of(context)!);
         _loadingCaseStatus = false;
       });
     }
@@ -172,8 +172,8 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
       builder: (_) => AlertDialog(
         title: Text(l10n.deletePhotoConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Remove')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.cancelButton)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.removeButton)),
         ],
       ),
     );
@@ -186,7 +186,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
     }
   }
 
@@ -225,7 +225,7 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: const Text('Try again'))],
+          children: [Text(_error!), const SizedBox(height: 12), ElevatedButton(onPressed: _load, child: Text(l10n.tryAgainButton))],
         ),
       );
     }

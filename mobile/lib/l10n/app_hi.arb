@@ -660,5 +660,32 @@
   "cropPerformanceTitle": "फसल प्रदर्शन",
   "performanceOverallScoreLabel": "कुल स्कोर",
   "performanceDataCompletenessLabel": "डेटा पूर्णता: {percent}%",
-  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}}
+  "@performanceDataCompletenessLabel": {"placeholders": {"percent": {"type": "String"}}},
+
+  "tryAgainButton": "पुनः प्रयास करें",
+  "cancelButton": "रद्द करें",
+  "doneButton": "पूर्ण",
+  "removeButton": "हटाएं",
+  "homeFarmsSummaryLabel": "खेत",
+  "homeActiveCropsSummaryLabel": "सक्रिय फसलें",
+  "homeBuyInputsButton": "इनपुट खरीदें",
+  "homeGoToMyFarmsButton": "मेरे खेतों पर जाएं",
+
+  "validatorPhoneRequiredError": "कृपया अपना फोन नंबर डालें।",
+  "validatorPhoneInvalidError": "कृपया एक मान्य फोन नंबर डालें (7-15 अंक)।",
+  "validatorPasswordTooShortError": "पासवर्ड कम से कम 8 अक्षर का होना चाहिए।",
+  "validatorPasswordNeedsLetterAndNumberError": "पासवर्ड में एक अक्षर और एक अंक होना चाहिए।",
+  "validatorPasswordNeedsUppercaseError": "पासवर्ड में एक बड़ा अक्षर (कैपिटल) होना चाहिए।",
+  "validatorPasswordNeedsSpecialCharError": "पासवर्ड में एक विशेष चिह्न होना चाहिए।",
+  "validatorNameRequiredError": "कृपया अपना नाम डालें।",
+  "errorInvalidCredentials": "यह फोन नंबर या पासवर्ड सही नहीं है। कृपया पुनः प्रयास करें।",
+  "errorAccountDisabled": "यह खाता सक्रिय नहीं है। कृपया सहायता से संपर्क करें।",
+  "errorDuplicateAccount": "इस फोन नंबर से पहले से एक खाता मौजूद है। इसके बजाय लॉग इन करें।",
+  "errorIncorrectCurrentPassword": "आपका मौजूदा पासवर्ड गलत है।",
+  "errorValidation": "कृपया दी गई जानकारी जांचें और पुनः प्रयास करें।",
+  "errorSessionExpired": "आपका सत्र समाप्त हो गया है। कृपया फिर से लॉग इन करें।",
+  "errorRateLimited": "बहुत अधिक प्रयास हो गए। कृपया कुछ मिनट बाद पुनः प्रयास करें।",
+  "errorUnauthorized": "जारी रखने के लिए आपको फिर से लॉग इन करना होगा।",
+  "errorGeneric": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
+  "errorGenericConnection": "कुछ गलत हो गया। कृपया अपना कनेक्शन जांचें और पुनः प्रयास करें।"
 }
