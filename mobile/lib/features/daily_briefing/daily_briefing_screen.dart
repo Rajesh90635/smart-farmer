@@ -62,7 +62,7 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
     final voice = context.read<VoiceService>();
     final started = await voice.speak(briefing.audioText, languageCode: briefing.languageCode);
     if (!mounted) return;
-    if (!started) setState(() => _voiceUnavailableMessageShown = true);
+    setState(() => _voiceUnavailableMessageShown = !started);
   }
 
   @override

@@ -82,7 +82,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
     final voice = context.read<VoiceService>();
     final started = await voice.speak(parts.join(' '), languageCode: 'en');
     if (!mounted) return;
-    if (!started) setState(() => _voiceUnavailableMessageShown = true);
+    setState(() => _voiceUnavailableMessageShown = !started);
   }
 
   @override

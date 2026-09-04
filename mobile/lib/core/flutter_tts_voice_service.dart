@@ -57,8 +57,18 @@ class FlutterTtsVoiceService implements VoiceService {
       final setResult = await _tts.setLanguage(locale);
       if (setResult != 1) return false;
 
-      final speakResult = await _tts.speak(text);
-      return speakResult == 1;
+      // Not `speakResult == 1`: flutter_tts's web implementation only
+      // returns 1 for setLanguage/stop/etc. - for `speak` specifically, its
+      // 'speak' case calls the browser's speechSynthesis and just `break`s
+      // without ever awaiting or returning anything (returns null), unless
+      // awaitSpeakCompletion is enabled, in which case it resolves the
+      // completer with no value on success (still not 1). So `== 1` is
+      // permanently false on web even when speech genuinely plays - here,
+      // completing without throwing IS the success signal (a real failure
+      // surfaces as an exception, already handled by the catch below),
+      // matching this method's documented contract.
+      await _tts.speak(text);
+      return true;
     } catch (_) {
       return false;
     }

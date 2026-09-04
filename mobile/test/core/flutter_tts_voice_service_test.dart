@@ -28,8 +28,33 @@ class _FlakyFirstCallTts extends FlutterTts {
   Future<dynamic> speak(String text, {bool focus = false}) async => 1;
 }
 
+/// Matches flutter_tts's ACTUAL web implementation (flutter_tts_web.dart):
+/// its 'speak' method-channel case calls the browser's speechSynthesis and
+/// `break`s without ever returning a value, unless awaitSpeakCompletion is
+/// enabled - and even then the completer resolves with no value on
+/// success. So `speak()` returns null on web, never the `1` that mobile's
+/// platform channel returns on success.
+class _WebLikeTts extends FlutterTts {
+  @override
+  Future<dynamic> get getLanguages async => <String>['en-US'];
+
+  @override
+  Future<dynamic> setLanguage(String language) async => 1;
+
+  @override
+  Future<dynamic> speak(String text, {bool focus = false}) async => null;
+}
+
 void main() {
   _ensureBinding();
+
+  group('FlutterTtsVoiceService.speak() success detection', () {
+    test('a null speak() result (the real web behavior) still counts as started', () async {
+      final voice = FlutterTtsVoiceService(tts: _WebLikeTts());
+      final started = await voice.speak('Weather update.', languageCode: 'en');
+      expect(started, isTrue);
+    });
+  });
 
   group('FlutterTtsVoiceService availability caching', () {
     test('a losing first race does not permanently disable voice for the session', () async {
