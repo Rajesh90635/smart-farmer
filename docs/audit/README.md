@@ -171,3 +171,71 @@ real decisions only the product owner can make (which payment provider,
 whether to pursue insurance/eNAM/satellite integration, whether to build
 a Machinery/Labour marketplace, etc.) — those will be brought back as a
 prioritized list for explicit sign-off rather than built speculatively.
+
+## Second pass (2026-09-05): Expert SLA automation (P0 cluster)
+
+Per that prioritized-list plan, the priority columns across all 13 files
+were mechanically re-extracted and normalized (the 13 sub-agents had used
+inconsistent P0-P3 vs. Critical/High/Medium/Low labels). After
+normalization, only **8 scenarios were genuine P0/CRITICAL** (safety,
+data-loss, security, or financial-correctness class) — everything else in
+the 318 MISSING / 119 PARTIAL backlog was Medium/Low/P2/P3, or one of the
+six entirely-absent domains (Govt Schemes, Crop Insurance, Satellite,
+IoT, live eNAM bidding, real Machinery/Labour/Community marketplaces)
+that the product owner explicitly chose to leave FUTURE/OUT_OF_SCOPE
+rather than build interface-only stubs for in this pass.
+
+All 8 P0 items traced to **one root cause: no scheduler/background-job
+system existed anywhere in the project** (the same gap this README's
+"Cross-cutting architectural findings" section already flagged for
+weather push and Expert SLA timeouts). That gap is now closed:
+`backend/app/services/scheduler.py` (APScheduler, MIT license, in-process
+— see docs/LICENSE_REGISTER.md) runs `case_sla_service.run_case_sla_sweep`
+on a 5-minute interval (configurable, disabled in the `testing`
+environment). Per-scenario evidence (all in `c06_expert_network.md`
+unless noted):
+
+| ID | Scenario | Was | Now | Evidence |
+|---|---|---|---|---|
+| D34-03 | Reassignment (timeout path) | PARTIAL — only decline-triggered reassignment worked | VERIFIED | `case_sla_service._expire_reassign_or_escalate` re-invokes `case_service._try_auto_assign`, excluding the non-responder (`case_repository.get_excluded_professional_ids` already excluded EXPIRED). `tests/test_case_sla_service.py::test_sweep_expires_stale_assignment_and_reassigns_excluding_the_non_responder` |
+| D35-02 | SLA monitoring | MISSING — no background job of any kind | VERIFIED | `scheduler.py` + `case_sla_service.run_case_sla_sweep` read `CaseAssignment.expires_at` every tick |
+| D35-03 | Reminder | MISSING | VERIFIED | `case_sla_service._send_expiry_reminders`, `CASE_ASSIGNMENT_REMINDER` message key (`farmer_messages.py`), deduplicated per-assignment. `test_sweep_sends_one_reminder_before_expiry_and_never_duplicates` |
+| D35-04 | Escalation on SLA breach | MISSING | VERIFIED | After `case_sla_max_reassignment_attempts` (default 2) timeouts, case → `ESCALATED`, `CASE_SLA_BREACH_ESCALATED` audit entry, CRITICAL notification. `test_sweep_escalates_after_repeated_timeouts_with_critical_notification` |
+| D35-05 | Expert unavailable | PARTIAL — no automatic detection | VERIFIED (case-level scope) | A non-responding professional is detected via expiry and permanently excluded from that case's reassignment pool; a project-wide `availability_status` flip was deliberately NOT added — a professional-facing side effect like that needs its own confirmation/appeal path, out of scope for this pass |
+| D38-06 | Follow-up escalation | MISSING | VERIFIED | `case_service.escalate_case_for_worsened_treatment` (`treatment_service.py`'s `get_effectiveness`), idempotent, CRITICAL notification. `tests/test_treatments.py::test_worsened_outcome_with_linked_case_auto_escalates`, `::test_worsened_outcome_escalation_is_idempotent` |
+| D39-07 | Reinspection → expert escalation | MISSING | VERIFIED (same fix as D38-06) | Same evidence; when no case is linked yet, `recommended_action="request_expert_review"` guides the farmer to the existing consent-gated `POST /cases` flow rather than a case being silently created. `test_worsened_outcome_with_no_linked_case_recommends_expert_review` |
+| D80-01 (`c12_notifications_offline_sync.md`) | CRITICAL notification priority reachable | PARTIAL — mechanism implemented but unreachable | VERIFIED | Both escalation paths above use `NotificationPriority.CRITICAL`; verified by asserting `priority == "critical"` in the treatment and SLA sweep tests |
+
+Full backend suite after this pass: **633/633 passed** (was 611 at the
+first audit's snapshot date — the difference includes these new tests
+plus unrelated work between the two dates). `docs/CASE_MANAGEMENT.md` and
+`docs/NOTIFICATION_ARCHITECTURE.md` were updated in place (not as a
+frozen snapshot, since they are living architecture docs, not audit
+tables) to remove the now-stale "no background scheduler" disclosures.
+
+**Delta against the original totals table above:** 8 rows move to
+VERIFIED (5 previously MISSING: D35-02/03/04, D38-06, D39-07; 3
+previously PARTIAL: D34-03, D35-05, D80-01). This addendum does NOT
+re-publish a corrected 798-row reconciliation — a second, independent
+mechanical extraction pass (done to find and normalize the P0/High/Medium
+priority labels for this session) produced slightly different MISSING/
+PARTIAL counts (318/123) than the table above (321/119) even before any
+code changed, which means the original per-file tables likely already
+had 2-4 rows whose status text didn't cleanly match a single bucket on
+re-parse (e.g. compound cells like "MISSING (feature itself); ... IMPLEMENTED").
+That pre-existing small discrepancy is disclosed here rather than papered
+over with new arithmetic; the 8 VERIFIED-now rows above are each
+individually citation- and test-backed regardless of it. A follow-up pass
+should re-run the ORIGINAL per-file mechanical parser against the
+now-updated files before the next scope decision, to restore one
+authoritative total.
+
+**Scope explicitly not attempted this pass** (by the product owner's own
+choice, not oversight): the ~82 remaining High/P1-tagged scenarios across
+the other 12 clusters, and the six FUTURE/OUT_OF_SCOPE domains (Govt
+Schemes, Crop Insurance, Satellite, IoT, live eNAM bidding, real
+Machinery/Labour/Community marketplaces). No mobile/Flutter changes were
+made this pass — the Expert SLA and treatment-escalation notifications
+surface through the existing generic in-app notification list, which
+already renders arbitrary categories/priorities; no crop-photo-effectiveness
+UI (e.g. surfacing `recommended_action`) was added.

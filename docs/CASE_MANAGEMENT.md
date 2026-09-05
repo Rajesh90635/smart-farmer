@@ -55,16 +55,40 @@ configurable. Requesting one re-opens matching (WAITING_FOR_ASSIGNMENT)
 and increments CropHealthCase.second_opinion_count. Verified by test that
 a second request beyond the limit returns 409.
 
-## Assignment timeout
+## Assignment timeout (Expert SLA sweep)
 
 CaseAssignment.expires_at is set to 24 hours after assignment
-(_ASSIGNMENT_TIMEOUT_HOURS, configurable) - the field exists and is
-populated, but no background job actually expires stale PENDING
-assignments yet (disclosed limitation, consistent with this project's
-repeated "no background scheduler yet" pattern from the Weather phase). A
-professional who never responds will show as PENDING indefinitely until
-either they act or an admin intervenes - automatic timeout-driven
-reassignment is future work using the same _try_auto_assign function.
+(_ASSIGNMENT_TIMEOUT_HOURS, configurable). **This is now actively
+enforced**, closing the previously-disclosed "no background job expires
+stale PENDING assignments" gap: `app/services/scheduler.py` runs an
+in-process APScheduler job (`case_sla_sweep_interval_seconds`, default
+5 minutes; disabled in the `testing` environment) that calls
+`app/services/case_sla_service.run_case_sla_sweep()`:
+
+1. **Reminder** - a PENDING assignment within `case_sla_reminder_before_hours`
+   (default 4h) of expiring sends the professional one reminder
+   notification (`CASE_ASSIGNMENT_REMINDER`, HIGH priority; deduplicated
+   per-assignment so it is sent exactly once).
+2. **Expire** - a PENDING assignment past `expires_at` is marked EXPIRED
+   and audit-logged (`CASE_ASSIGNMENT_EXPIRED`) - this is also the
+   "professional unavailable" detection signal: a non-responsive
+   professional is never re-offered the same case
+   (`case_repository.get_excluded_professional_ids` already excludes
+   EXPIRED, same mechanism as a DECLINE).
+3. **Reassign** - if the case has had at most `case_sla_max_reassignment_attempts`
+   (default 2) total EXPIRED assignments, the same `_try_auto_assign`
+   used for decline-triggered reassignment re-runs, excluding every
+   professional already tried; the farmer is notified (`CASE_REASSIGNED`).
+4. **Escalate** - beyond that many timeouts with no professional ever
+   accepting, the case moves to `ESCALATED` (`CASE_SLA_BREACH_ESCALATED`
+   audit entry) and the farmer gets a CRITICAL-priority notification -
+   the only place CRITICAL is currently used (see
+   docs/NOTIFICATION_ARCHITECTURE.md).
+
+Verified by `tests/test_case_sla_service.py` (reminder dedup, timeout
+reassignment excluding the non-responder, breach escalation with a
+CRITICAL notification, and that a farmer-closed case is never resurrected
+by a late-expiring assignment).
 
 ## Audit trail: reused, not duplicated
 

@@ -20,9 +20,10 @@ from app.models.case_assignment import AssignmentStatus, CaseAssignment
 from app.models.case_consent import CaseConsent
 from app.models.case_review import EXPERT_OUTCOMES, FIELD_AGENT_OUTCOMES, CaseReview, ReviewerRole
 from app.models.crop_health_case import CasePriority, CaseStatus, CropHealthCase
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.photo_access_grant import PhotoAccessGrant
 from app.models.professional_feedback import ProfessionalFeedback
-from app.repositories import case_repository, crop_cycle_repository, professional_repository
+from app.repositories import case_repository, crop_cycle_repository, professional_repository, user_repository
 from app.schemas.case import (
     CaseAssignmentResponse,
     CaseCreateRequest,
@@ -36,6 +37,7 @@ from app.schemas.case import (
 from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.nearby_professional_service import MatchCriteria, find_ranked_candidates
+from app.services.weather_alert_rules import AlertCandidate
 
 _MAX_SECOND_OPINIONS = 1
 _ASSIGNMENT_TIMEOUT_HOURS = 24
@@ -92,7 +94,16 @@ def create_case(db: Session, farmer_id: str, payload: CaseCreateRequest, setting
     return CaseResponse.model_validate(case)
 
 
-def _try_auto_assign(db: Session, case: CropHealthCase, settings: Settings) -> None:
+def _try_auto_assign(db: Session, case: CropHealthCase, settings: Settings) -> CaseAssignment | None:
+    """Returns the new PENDING CaseAssignment, or None if the case was
+    left/returned to WAITING_FOR_ASSIGNMENT (no eligible candidate). Used
+    by callers (decline, second opinion, and the Expert SLA sweep's
+    timeout-driven reassignment) both to decide whether the case actually
+    has someone new working on it, and to key a farmer-facing
+    CASE_REASSIGNED notification's dedup_suffix on the NEW assignment's id
+    - keying it on case_id alone would collide across a case that gets
+    reassigned more than once, silently swallowing every notification
+    after the first (the DB dedup constraint returns None, not an error)."""
     excluded = case_repository.get_excluded_professional_ids(db, case.id)
     criteria = MatchCriteria(role=case.requested_professional_role, exclude_professional_ids=frozenset(excluded))
     ranked = find_ranked_candidates(db, criteria, settings)
@@ -100,7 +111,7 @@ def _try_auto_assign(db: Session, case: CropHealthCase, settings: Settings) -> N
     if not ranked:
         case.status = CaseStatus.WAITING_FOR_ASSIGNMENT
         db.commit()
-        return
+        return None
 
     best = ranked[0].professional
     assignment = CaseAssignment(
@@ -127,6 +138,7 @@ def _try_auto_assign(db: Session, case: CropHealthCase, settings: Settings) -> N
     db.commit()
 
     _notify_case_event(db, case, "CASE_ASSIGNED", professional_user_id=best.user_id)
+    return assignment
 
 
 def get_my_case(db: Session, farmer_id: str, case_id: uuid.UUID) -> CaseResponse:
@@ -186,7 +198,12 @@ def decline_case(db: Session, user_id: str, case_id: uuid.UUID, settings: Settin
     AuditLogger(db).log("CASE_ASSIGNMENT_DECLINED", actor_id=user_id, actor_role=professional.role, entity="crop_health_case", entity_id=str(case.id))
     db.commit()
 
-    _try_auto_assign(db, case, settings)
+    new_assignment = _try_auto_assign(db, case, settings)
+    if new_assignment is not None:
+        _notify_case_event(
+            db, case, "CASE_REASSIGNED", farmer_id=case.farmer_id,
+            dedup_suffix=f"CASE_REASSIGNED:{new_assignment.id}",
+        )
 
     db.refresh(assignment)
     return CaseAssignmentResponse.model_validate(assignment)
@@ -305,13 +322,22 @@ def submit_feedback(db: Session, farmer_id: str, case_id: uuid.UUID, payload: Fe
     db.commit()
 
 
-def _notify_case_event(db: Session, case: CropHealthCase, message_key: str, *, farmer_id=None, professional_user_id=None) -> None:
+def _notify_case_event(
+    db: Session,
+    case: CropHealthCase,
+    message_key: str,
+    *,
+    farmer_id=None,
+    professional_user_id=None,
+    priority: NotificationPriority = NotificationPriority.MEDIUM,
+    dedup_suffix: str | None = None,
+) -> None:
     """Reuses Prompt 7's NotificationService entirely - no new
-    notification infrastructure."""
-    from app.models.notification import NotificationCategory, NotificationPriority
-    from app.repositories import user_repository
-    from app.services.weather_alert_rules import AlertCandidate
-
+    notification infrastructure. `priority` defaults to MEDIUM (routine
+    case-lifecycle updates); callers pass CRITICAL only for a genuine SLA
+    breach or a worsened-outcome escalation (see case_sla_service.py,
+    escalate_case_for_worsened_treatment below) - CRITICAL bypasses quiet
+    hours, so it must never become the routine default."""
     target_user_id = farmer_id or professional_user_id
     if target_user_id is None:
         return
@@ -323,12 +349,41 @@ def _notify_case_event(db: Session, case: CropHealthCase, message_key: str, *, f
 
     candidate = AlertCandidate(
         category=NotificationCategory.CROP_ALERT,
-        priority=NotificationPriority.MEDIUM,
+        priority=priority,
         message_key=message_key,
         message_params={},
-        dedup_suffix=f"{message_key}:{case.id}",
+        dedup_suffix=dedup_suffix or f"{message_key}:{case.id}",
     )
     notification_service.create_alert_notification(
         db, str(target_user_id), candidate, dedup_scope=f"case:{case.id}", language_code=language_code,
         related_entity_type="crop_health_case", related_entity_id=str(case.id),
     )
+
+
+def escalate_case_for_worsened_treatment(db: Session, case_id: uuid.UUID) -> bool:
+    """Auto-escalates an EXISTING, already-consented case when a
+    follow-up shows the treated crop went healthy -> disease (D38-06/
+    D39-07 in docs/audit/c06_expert_network.md: "a worsening outcome
+    never automatically triggers any escalation"). Idempotent by design:
+    a case that is already ESCALATED/CLOSED/CANCELLED is left alone, so
+    repeatedly calling GET .../treatments/{id}/effectiveness never
+    re-escalates or re-notifies (the Notification dedup_key would also
+    block a duplicate row, but the status guard avoids a needless write
+    and audit entry too). Returns True only when this call performed the
+    escalation."""
+    case = case_repository.get_case_by_id(db, case_id)
+    if case is None or case.status in (CaseStatus.ESCALATED, CaseStatus.CLOSED, CaseStatus.CANCELLED):
+        return False
+
+    case.status = CaseStatus.ESCALATED
+    AuditLogger(db).log(
+        "CASE_ESCALATED_WORSENED_TREATMENT", actor_id=None, actor_role="automation_service",
+        entity="crop_health_case", entity_id=str(case.id),
+    )
+    db.commit()
+
+    _notify_case_event(
+        db, case, "CASE_ESCALATED", farmer_id=case.farmer_id,
+        priority=NotificationPriority.CRITICAL, dedup_suffix=f"worsened_treatment_escalation:{case.id}",
+    )
+    return True

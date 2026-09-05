@@ -31,6 +31,7 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "spray_condition_warning": {"en": "Weather conditions may not be suitable for spraying right now."},
     "weather_unavailable": {"en": "Weather information is temporarily unavailable."},
     "weather_stale": {"en": "Showing the last available weather update."},
+    "CASE_ASSIGNMENT_REMINDER": {"en": "A crop health case assigned to you is awaiting your response."},
     "CASE_CREATED": {"en": "Your request for professional help has been received."},
     "CASE_ASSIGNED": {"en": "A verified professional has been assigned to your case."},
     "CASE_ACCEPTED": {"en": "The professional has accepted your case and will review it soon."},

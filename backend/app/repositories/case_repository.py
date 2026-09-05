@@ -97,6 +97,33 @@ def get_excluded_professional_ids(db: Session, case_id: uuid.UUID) -> set:
     return {r[0] for r in rows}
 
 
+def get_pending_assignments_in_expiry_window(
+    db: Session, *, expires_before: datetime, expires_after: datetime | None = None
+) -> list[CaseAssignment]:
+    """PENDING assignments expiring in a given window - used by the Expert
+    SLA sweep (case_sla_service.py) for both the "send a reminder before
+    expiry" query (expires_after=now, expires_before=now+reminder_window)
+    and the "already past due" query (expires_before=now, expires_after
+    left None)."""
+    conditions = [
+        CaseAssignment.status == AssignmentStatus.PENDING,
+        CaseAssignment.expires_at.isnot(None),
+        CaseAssignment.expires_at <= expires_before,
+    ]
+    if expires_after is not None:
+        conditions.append(CaseAssignment.expires_at > expires_after)
+    return list(db.execute(select(CaseAssignment).where(*conditions)).scalars().all())
+
+
+def count_expired_assignments_for_case(db: Session, case_id: uuid.UUID) -> int:
+    return db.execute(
+        select(func.count()).select_from(CaseAssignment).where(
+            CaseAssignment.case_id == case_id,
+            CaseAssignment.status == AssignmentStatus.EXPIRED,
+        )
+    ).scalar_one()
+
+
 def count_active_assignments_for_professional(db: Session, professional_id: uuid.UUID) -> int:
     return db.execute(
         select(func.count()).select_from(CaseAssignment).where(

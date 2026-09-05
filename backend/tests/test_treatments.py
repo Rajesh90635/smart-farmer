@@ -4,6 +4,7 @@ import uuid
 from tests.conftest import auth_headers, override_model_provider
 from tests.fake_model_provider import FakeModelProvider
 from tests.photo_factories import make_test_jpeg, valid_photo_session_payload
+from tests.professional_factories import valid_case_payload
 from app.services.ai.model_provider import TopKPrediction
 
 
@@ -220,6 +221,94 @@ def test_unauthenticated_request_is_rejected(client, farmer_with_crop_cycle):
     _, crop_cycle_id = farmer_with_crop_cycle
     response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/treatments")
     assert response.status_code == 401
+
+
+def test_worsened_outcome_with_no_linked_case_recommends_expert_review(client, farmer_with_crop_cycle):
+    """D38-06/D39-07: a worsening outcome must not be a passive label -
+    when no expert case is linked yet, the farmer gets an explicit,
+    actionable recommendation rather than a silently-created case."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    _analyze(client, tokens, crop_cycle_id, [TopKPrediction("healthy", 0.95)])
+    treatment = _create_treatment(client, tokens, crop_cycle_id).json()
+    assert treatment["case_id"] is None
+
+    after_analysis = _analyze(client, tokens, crop_cycle_id, [TopKPrediction("Early Blight", 0.92)]).json()
+    client.post(
+        f"/api/v1/treatments/{treatment['id']}/follow-ups",
+        json={"after_analysis_id": after_analysis["id"], "observation_date": "2026-01-10"},
+        headers=auth_headers(tokens),
+    )
+
+    response = client.get(f"/api/v1/treatments/{treatment['id']}/effectiveness", headers=auth_headers(tokens))
+    body = response.json()
+    assert body["result"] == "worsened"
+    assert body["recommended_action"] == "request_expert_review"
+
+
+def test_worsened_outcome_with_linked_case_auto_escalates(client, farmer_with_crop_cycle):
+    """D38-06/D39-07: when the treatment IS linked to an existing,
+    already-consented expert case, a worsening outcome automatically
+    escalates that case and sends a CRITICAL notification - no new case
+    is fabricated, and no new consent is required since it already exists
+    for this case."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(tokens)).json()
+
+    _analyze(client, tokens, crop_cycle_id, [TopKPrediction("healthy", 0.95)])
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"case_id": case["id"], "application_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    ).json()
+
+    after_analysis = _analyze(client, tokens, crop_cycle_id, [TopKPrediction("Early Blight", 0.92)]).json()
+    client.post(
+        f"/api/v1/treatments/{treatment['id']}/follow-ups",
+        json={"after_analysis_id": after_analysis["id"], "observation_date": "2026-01-10"},
+        headers=auth_headers(tokens),
+    )
+
+    response = client.get(f"/api/v1/treatments/{treatment['id']}/effectiveness", headers=auth_headers(tokens))
+    body = response.json()
+    assert body["result"] == "worsened"
+    assert body["recommended_action"] == "case_escalated"
+
+    case_after = client.get(f"/api/v1/cases/{case['id']}", headers=auth_headers(tokens)).json()
+    assert case_after["status"] == "escalated"
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    critical = [n for n in notifications if n["priority"] == "critical"]
+    assert len(critical) == 1
+
+
+def test_worsened_outcome_escalation_is_idempotent(client, farmer_with_crop_cycle):
+    """Re-fetching effectiveness after the case is already escalated must
+    not re-escalate or send a second CRITICAL notification - guards
+    against a farmer/UI polling the effectiveness endpoint repeatedly."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(tokens)).json()
+
+    _analyze(client, tokens, crop_cycle_id, [TopKPrediction("healthy", 0.95)])
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"case_id": case["id"], "application_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    ).json()
+
+    after_analysis = _analyze(client, tokens, crop_cycle_id, [TopKPrediction("Early Blight", 0.92)]).json()
+    client.post(
+        f"/api/v1/treatments/{treatment['id']}/follow-ups",
+        json={"after_analysis_id": after_analysis["id"], "observation_date": "2026-01-10"},
+        headers=auth_headers(tokens),
+    )
+
+    client.get(f"/api/v1/treatments/{treatment['id']}/effectiveness", headers=auth_headers(tokens))
+    second = client.get(f"/api/v1/treatments/{treatment['id']}/effectiveness", headers=auth_headers(tokens))
+    assert second.json()["recommended_action"] == "case_escalated"
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    critical = [n for n in notifications if n["priority"] == "critical"]
+    assert len(critical) == 1
 
 
 def test_list_follow_ups_for_treatment(client, farmer_with_crop_cycle):

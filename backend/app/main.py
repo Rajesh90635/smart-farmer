@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.core.logging_config import configure_logging, get_logger
 from app.middleware.error_handling import register_exception_handlers
 from app.middleware.request_logging import RequestLoggingMiddleware
+from app.services.scheduler import shutdown_scheduler, start_scheduler
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -23,7 +24,9 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     configure_logging(level="DEBUG" if settings.environment == "development" else "INFO")
     logger.info("Starting %s in %s mode", settings.app_name, settings.environment)
+    start_scheduler(settings)
     yield
+    shutdown_scheduler()
     logger.info("Shutting down %s", settings.app_name)
 
 

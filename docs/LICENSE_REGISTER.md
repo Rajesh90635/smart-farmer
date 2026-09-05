@@ -22,6 +22,7 @@ the development rules.
 | python-jose[cryptography] | 3.3.0 | MIT | PyPI | JWT encode/decode | Yes |
 | passlib | 1.7.4 | BSD-3-Clause | PyPI | Password hashing framework | Yes |
 | bcrypt | 4.0.1 | Apache-2.0 | PyPI | bcrypt hashing backend (pinned — see note below) | Yes |
+| apscheduler | 3.10.4 | MIT | PyPI | In-process background scheduler for the Expert SLA sweep (reminders, timeout reassignment, breach escalation) — no external broker (Redis/Celery) required | Yes |
 | pytest | 8.3.3 | MIT | PyPI | Testing | Yes (dev-only) |
 | pytest-asyncio | 0.24.0 | Apache-2.0 | PyPI | Async test support | Yes (dev-only) |
 | httpx | 0.27.2 | BSD-3-Clause | PyPI | Test client transport | Yes (dev-only) |

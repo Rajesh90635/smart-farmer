@@ -54,3 +54,10 @@ class EffectivenessResponse(BaseModel):
     before_result_status: str | None
     after_result_status: str | None
     has_follow_up: bool
+    # Only set when result == "worsened" (D38-06/D39-07): "case_escalated"
+    # means an existing expert case linked to this treatment was just
+    # auto-escalated (or already was); "request_expert_review" means no
+    # case is linked yet, so escalation requires the farmer's own explicit
+    # action (POST /cases with reason=farmer_requested) rather than one
+    # being created silently on their behalf.
+    recommended_action: str | None = None

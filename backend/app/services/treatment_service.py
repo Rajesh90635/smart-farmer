@@ -22,9 +22,11 @@ from sqlalchemy.orm import Session
 from app.core import error_codes
 from app.core.errors import AppError
 from app.models.ai_analysis import ResultStatus
+from app.models.crop_health_case import CaseStatus
 from app.models.treatment_follow_up import TreatmentFollowUp
 from app.models.treatment_record import TreatmentRecord
-from app.repositories import ai_analysis_repository, crop_cycle_repository, treatment_repository
+from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, treatment_repository
+from app.services import case_service
 from app.schemas.treatment import (
     EffectivenessResponse,
     FollowUpCreateRequest,
@@ -136,6 +138,16 @@ def get_effectiveness(db: Session, farmer_id: str, treatment_id: uuid.UUID) -> E
     else:
         result, basis = "no_significant_change", "The follow-up analysis shows the same health category as before treatment."
 
+    recommended_action = None
+    if result == "worsened":
+        if treatment.case_id is not None:
+            case_service.escalate_case_for_worsened_treatment(db, treatment.case_id)
+            case = case_repository.get_case_by_id(db, treatment.case_id)
+            if case is not None and case.status == CaseStatus.ESCALATED:
+                recommended_action = "case_escalated"
+        else:
+            recommended_action = "request_expert_review"
+
     return EffectivenessResponse(
         treatment_id=treatment_id,
         result=result,
@@ -143,6 +155,7 @@ def get_effectiveness(db: Session, farmer_id: str, treatment_id: uuid.UUID) -> E
         before_result_status=before_status.value if before_status else None,
         after_result_status=after_status.value if after_status else None,
         has_follow_up=most_recent_follow_up is not None,
+        recommended_action=recommended_action,
     )
 
 

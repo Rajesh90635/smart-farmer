@@ -36,6 +36,12 @@ bcrypt==4.0.1
 
 # --- CORS / security headers come from FastAPI/Starlette itself (no extra package) ---
 
+# --- Background scheduler (Expert SLA sweep: reminders, timeout
+# reassignment, breach escalation) - in-process, no external broker
+# (Redis/Celery) needed, consistent with "no complicated distributed
+# architecture unnecessarily" ---
+apscheduler==3.10.4
+
 # --- Testing ---
 pytest==8.3.3
 pytest-asyncio==0.24.0

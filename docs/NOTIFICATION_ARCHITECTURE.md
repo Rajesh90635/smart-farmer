@@ -21,27 +21,30 @@ Notification (rendered, stored, ready to read)
 Farmer
 ```
 
-## Trigger model: pull-based, not push-based (a disclosed limitation)
+## Trigger model: weather is still pull-based; case SLA is now push-based
 
-Alerts are generated **when the farmer's weather is fetched**
-(`GET /farms/{id}/weather` also runs alert evaluation as a best-effort side
-effect — see `app/services/weather_alert_orchestration_service.py`), not
-by a background scheduler proactively checking weather for every farmer
-on a timer. This means:
+Weather alerts are still generated **when the farmer's weather is
+fetched** (`GET /farms/{id}/weather` also runs alert evaluation as a
+best-effort side effect — see `app/services/weather_alert_orchestration_service.py`),
+not by a background scheduler proactively checking weather for every
+farmer on a timer. This remains a disclosed limitation:
 - A farmer who never opens the weather screen for a farm won't get alerts
   for it, even if dangerous weather is happening.
 - There is no push notification delivery — a notification exists in the
   database and is visible in-app once created, but nothing proactively
-  wakes the farmer's device.
+  wakes the farmer's device (this applies project-wide, including the
+  scheduler-driven notifications below — they land in-app, not as a
+  device push).
 
-This is a **deliberate scope decision**, not an oversight: building a
-background scheduler + push delivery is real infrastructure (a
-queue/worker, a push provider) that the "do not introduce a complicated
-distributed architecture unnecessarily" instruction argues against
-building before it's clearly needed. The `NotificationService` and
-`AlertCandidate` interfaces are designed so a future scheduler can call
-the exact same functions this phase's weather endpoint calls — no
-redesign needed, only a new caller.
+A background scheduler now DOES exist, though (`app/services/scheduler.py`,
+APScheduler, in-process) — see docs/CASE_MANAGEMENT.md's "Assignment
+timeout (Expert SLA sweep)". It proactively drives Expert case reminders,
+timeout-reassignment, and breach-escalation notifications without
+requiring the farmer or professional to open any screen first. Extending
+weather alerts to the same proactive model is straightforward future work
+(add a per-farm weather-check job calling the exact same
+`weather_alert_orchestration_service` functions the endpoint already
+calls) but was not in scope for this pass.
 
 ## Notification categories (Requirement 24 — only currently supported types)
 
@@ -60,10 +63,14 @@ is straightforward future work using the same `NotificationService`.
 ## Priority levels
 
 `LOW` (routine rain reminder), `MEDIUM` (extreme temperature, crop+weather
-combined alert), `HIGH` (heavy rain, high wind), `CRITICAL` (reserved,
-never used this phase — no weather scenario in this project's rule set
-was judged to warrant it; CRITICAL alerts also bypass quiet-hours
-suppression, so assigning it needs real justification, not routine use).
+combined alert, routine case-lifecycle updates), `HIGH` (heavy rain, high
+wind, an Expert SLA reminder before an assignment expires), `CRITICAL`
+(now used — real justification required since it bypasses quiet-hours
+suppression: an Expert case escalated after repeated professional
+timeouts, or a treatment follow-up showing the crop went healthy ->
+disease, see `case_service.escalate_case_for_worsened_treatment` and
+`case_sla_service._expire_reassign_or_escalate`. No weather scenario uses
+CRITICAL yet — that judgment hasn't changed).
 
 ## Deduplication (Requirement 27)
 
@@ -91,11 +98,15 @@ should be configurable and respectful" instruction.
 `is_within_quiet_hours()` is a pure predicate supporting both same-day
 ranges (e.g. 13:00–14:00) and overnight-wrapping ranges (e.g. 22:00–06:00),
 verified by test for both cases. Applied only to non-`CRITICAL` alerts.
-**Limitation** (see "Trigger model" above): since there's no background
-scheduler, a suppressed alert during quiet hours is not automatically
-retried once quiet hours end — it's simply not created for that check
-cycle. If the farmer checks weather again after quiet hours end, a fresh
-evaluation happens normally.
+**Limitation** (weather only — see "Trigger model" above): a
+weather-triggered alert suppressed during quiet hours is not
+automatically retried once quiet hours end — it's simply not created for
+that check cycle, since the weather trigger itself is still pull-based.
+If the farmer checks weather again after quiet hours end, a fresh
+evaluation happens normally. This limitation does not apply to the
+scheduler-driven Expert SLA notifications, which are re-evaluated on
+every sweep tick regardless of quiet hours (and CRITICAL escalations
+bypass quiet hours entirely).
 
 ## Offline notifications (Requirement 30)
 

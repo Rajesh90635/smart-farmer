@@ -115,6 +115,17 @@ class Settings(BaseSettings):
     # --- Rate limiting (design values; enforcement wired in Security foundation) ---
     rate_limit_requests_per_minute: int = 60
 
+    # --- Background scheduler (Expert SLA automation) ---
+    # Closes the long-disclosed "no background scheduler yet" gap (see
+    # docs/CASE_MANAGEMENT.md's old "Assignment timeout" section,
+    # docs/NOTIFICATION_ARCHITECTURE.md's "Trigger model"). Disabled
+    # automatically in the test environment (see scheduler.py) so
+    # background ticks never race against test transactions.
+    scheduler_enabled: bool = True
+    case_sla_sweep_interval_seconds: int = 300
+    case_sla_reminder_before_hours: float = 4.0
+    case_sla_max_reassignment_attempts: int = 2
+
     def is_production(self) -> bool:
         return self.environment == "production"
 
