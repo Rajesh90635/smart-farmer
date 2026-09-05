@@ -7,6 +7,7 @@ import uuid
 from datetime import date, timedelta
 
 from app.core.config import get_settings
+from app.models.input_inventory import InputInventoryItem
 from app.services.input_inventory_service import run_expiry_check_sweep
 from tests.conftest import auth_headers
 
@@ -156,12 +157,17 @@ def test_expiry_sweep_alerts_once_for_soon_expiring_stock(client, registered_far
         headers=auth_headers(tokens),
     ).json()
 
+    # run_expiry_check_sweep's return value is a global sweep-wide count,
+    # not scoped to this test's own item - the shared test database can
+    # have other still-unalerted near-expiry items sitting around from
+    # other test runs, which would inflate an exact count. Assert on this
+    # item's own alerted state and this farmer's own notifications instead.
     settings = get_settings()
-    alerted_first = run_expiry_check_sweep(db_session, settings)
-    assert alerted_first == 1
+    run_expiry_check_sweep(db_session, settings)
+    stored_item = db_session.get(InputInventoryItem, uuid.UUID(item["id"]))
+    assert stored_item.expiry_alerted_at is not None
 
-    alerted_second = run_expiry_check_sweep(db_session, settings)
-    assert alerted_second == 0  # already alerted for this item - no duplicate
+    run_expiry_check_sweep(db_session, settings)  # must never duplicate
 
     notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
     stock_alerts = [n for n in notifications if n["category"] == "stock_alert"]
@@ -179,21 +185,23 @@ def test_expiry_sweep_ignores_a_fully_consumed_item(client, registered_farmer, d
     client.post(f"/api/v1/input-inventory/{item['id']}/usage", json={"quantity_used": "10"}, headers=auth_headers(tokens))
 
     settings = get_settings()
-    alerted = run_expiry_check_sweep(db_session, settings)
-    assert alerted == 0
+    run_expiry_check_sweep(db_session, settings)
+    stored_item = db_session.get(InputInventoryItem, uuid.UUID(item["id"]))
+    assert stored_item.expiry_alerted_at is None
 
 
 def test_expiry_sweep_ignores_stock_expiring_far_in_the_future(client, registered_farmer, db_session):
     _, tokens = registered_farmer
-    client.post(
+    item = client.post(
         "/api/v1/input-inventory",
         json=_valid_payload(quantity="10", expiry_date=(date.today() + timedelta(days=365)).isoformat()),
         headers=auth_headers(tokens),
-    )
+    ).json()
 
     settings = get_settings()
-    alerted = run_expiry_check_sweep(db_session, settings)
-    assert alerted == 0
+    run_expiry_check_sweep(db_session, settings)
+    stored_item = db_session.get(InputInventoryItem, uuid.UUID(item["id"]))
+    assert stored_item.expiry_alerted_at is None
 
 
 def test_unauthenticated_request_is_rejected(client):
