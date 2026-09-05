@@ -23,7 +23,7 @@ from app.models.crop_health_case import CasePriority, CaseStatus, CropHealthCase
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.photo_access_grant import PhotoAccessGrant
 from app.models.professional_feedback import ProfessionalFeedback
-from app.repositories import case_repository, crop_cycle_repository, professional_repository, user_repository
+from app.repositories import case_repository, crop_cycle_repository, farm_repository, location_repository, professional_repository, user_repository
 from app.schemas.case import (
     CaseAssignmentResponse,
     CaseCreateRequest,
@@ -94,6 +94,48 @@ def create_case(db: Session, farmer_id: str, payload: CaseCreateRequest, setting
     return CaseResponse.model_validate(case)
 
 
+def _build_match_criteria(db: Session, case: CropHealthCase) -> MatchCriteria:
+    """D33-02 (docs/audit/c06_expert_network.md, docs/CASE_ROUTING.md):
+    previously only role + exclusion were ever populated, so the
+    crop/language/service-area scoring in nearby_professional_service.py
+    was dead weight - real fields existed on MatchCriteria but nothing
+    ever filled them in from the case's actual context. `disease_category`
+    is deliberately left unpopulated: AIAnalysis has no category taxonomy
+    (only a free-text `predicted_class`), and guessing a category from
+    that string would be a fabrication, not a real signal."""
+    excluded = case_repository.get_excluded_professional_ids(db, case.id)
+
+    crop_id = None
+    crop_cycle = crop_cycle_repository.get_owned(db, case.crop_cycle_id, case.farmer_id)
+    if crop_cycle is not None:
+        crop_id = crop_cycle.crop_id
+
+    language_code = None
+    farmer = user_repository.get_by_id(db, case.farmer_id)
+    if farmer and getattr(farmer, "farmer_profile", None):
+        language_code = farmer.farmer_profile.preferred_language_code
+
+    state = None
+    district = None
+    farm = farm_repository.get_owned(db, case.farm_id, case.farmer_id)
+    if farm is not None:
+        if farm.state_id is not None:
+            state_row = location_repository.get_state(db, farm.state_id)
+            state = state_row.name if state_row else None
+        if farm.district_id is not None:
+            district_row = location_repository.get_district(db, farm.district_id)
+            district = district_row.name if district_row else None
+
+    return MatchCriteria(
+        role=case.requested_professional_role,
+        crop_id=crop_id,
+        language_code=language_code,
+        state=state,
+        district=district,
+        exclude_professional_ids=frozenset(excluded),
+    )
+
+
 def _try_auto_assign(db: Session, case: CropHealthCase, settings: Settings) -> CaseAssignment | None:
     """Returns the new PENDING CaseAssignment, or None if the case was
     left/returned to WAITING_FOR_ASSIGNMENT (no eligible candidate). Used
@@ -104,8 +146,7 @@ def _try_auto_assign(db: Session, case: CropHealthCase, settings: Settings) -> C
     - keying it on case_id alone would collide across a case that gets
     reassigned more than once, silently swallowing every notification
     after the first (the DB dedup constraint returns None, not an error)."""
-    excluded = case_repository.get_excluded_professional_ids(db, case.id)
-    criteria = MatchCriteria(role=case.requested_professional_role, exclude_professional_ids=frozenset(excluded))
+    criteria = _build_match_criteria(db, case)
     ranked = find_ranked_candidates(db, criteria, settings)
 
     if not ranked:
@@ -145,7 +186,12 @@ def get_my_case(db: Session, farmer_id: str, case_id: uuid.UUID) -> CaseResponse
     case = case_repository.get_case_owned_by_farmer(db, case_id, uuid.UUID(farmer_id))
     if case is None:
         raise AppError(error_codes.NOT_FOUND, "Case not found.", 404)
-    return CaseResponse.model_validate(case)
+
+    response = CaseResponse.model_validate(case)
+    reviews = case_repository.list_reviews_for_case(db, case_id)
+    if reviews:
+        response.latest_review_notes = reviews[-1].notes
+    return response
 
 
 def list_my_cases(db: Session, farmer_id: str, *, limit: int = 50, offset: int = 0) -> CaseListResponse:
@@ -248,11 +294,28 @@ def submit_review(db: Session, user_id: str, case_id: uuid.UUID, payload: CaseRe
     assignment.status = AssignmentStatus.COMPLETED
     assignment.completed_at = datetime.now(timezone.utc)
 
-    AuditLogger(db).log("CASE_REVIEW_SUBMITTED", actor_id=user_id, actor_role=professional.role, entity="crop_health_case", entity_id=str(case.id))
+    audit = AuditLogger(db)
+    audit.log("CASE_REVIEW_SUBMITTED", actor_id=user_id, actor_role=professional.role, entity="crop_health_case", entity_id=str(case.id))
+    escalated = case.status == CaseStatus.ESCALATED
+    if escalated:
+        # D33-06 (docs/audit/c06_expert_network.md): previously the ONLY
+        # effect of a field_visit_required outcome was this status label -
+        # no distinct audit action, no distinct notification. Real
+        # auto-reassignment to a different/senior professional is
+        # deliberately NOT added here - what that would even mean is
+        # undesigned (the same professional may still be the one who
+        # performs the field visit), so this is not invented.
+        audit.log("CASE_ESCALATED", actor_id=user_id, actor_role=professional.role, entity="crop_health_case", entity_id=str(case.id))
     db.commit()
     db.refresh(review)
 
-    _notify_case_event(db, case, "CASE_REVIEWED", farmer_id=case.farmer_id)
+    if escalated:
+        _notify_case_event(
+            db, case, "CASE_ESCALATED", farmer_id=case.farmer_id, priority=NotificationPriority.HIGH,
+            dedup_suffix=f"review_escalation:{review.id}",
+        )
+    else:
+        _notify_case_event(db, case, "CASE_REVIEWED", farmer_id=case.farmer_id)
 
     return CaseReviewResponse.model_validate(review)
 

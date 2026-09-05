@@ -22,6 +22,9 @@ mechanism.
 | CASE_CLOSED | Farmer closes the case |
 | CASE_SECOND_OPINION_REQUESTED | Farmer requests a second opinion |
 | CASE_PHOTO_ACCESSED | A professional fetches the authorized photo (see docs/PHOTO_SHARING_PRIVACY.md) |
+| CASE_ASSIGNMENT_EXPIRED | Expert SLA sweep expires a stale PENDING assignment (docs/CASE_MANAGEMENT.md) |
+| CASE_SLA_BREACH_ESCALATED | Expert SLA sweep escalates after repeated timeouts |
+| CASE_ESCALATED | A field-agent review outcome of `field_visit_required` (distinct from the status change itself), or a worsened-treatment auto-escalation (`CASE_ESCALATED_WORSENED_TREATMENT` on the treatment side) |
 | PROFESSIONAL_REGISTERED / PROFESSIONAL_VERIFY / PROFESSIONAL_REJECT / PROFESSIONAL_SUSPEND / PROFESSIONAL_REACTIVATE | Professional lifecycle events |
 
 **Not yet logged as distinct events** (disclosed gap): `CASE_REASSIGNED`

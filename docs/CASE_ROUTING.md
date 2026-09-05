@@ -8,42 +8,28 @@ returns VERIFIED professionals (a hard filter at the repository query
 level, not a post-hoc check). There is no code path in this phase that
 assigns a case to a professional without going through this function.
 
-## Routing inputs (as implemented this phase)
+## Routing inputs
 
 | Input | Used? | Notes |
 |---|---|---|
 | Requested professional role (field_agent vs expert) | Yes | Farmer's explicit choice |
-| Crop specialization | Partial | Scored in the matching algorithm, but not currently populated from the case context - see limitation below |
-| Disease category | Partial | Same as above |
-| Farmer language | No | Not wired into MatchCriteria from case creation this phase |
-| Service area | No | Not wired from the farm's location this phase |
-| Availability | Yes | Scored |
+| Crop specialization | Yes | `_build_match_criteria` (case_service.py) resolves the case's crop_cycle -> crop_id |
+| Disease category | No | Deliberately NOT populated - `AIAnalysis` has no category taxonomy, only a free-text `predicted_class`; guessing a category from that string would be a fabrication, not a real signal (see docs/audit/README.md's "Third pass" for the reasoning) |
+| Farmer language | Yes | Resolved from the farmer's `FarmerProfile.preferred_language_code` |
+| Service area | Yes | Resolved from the farm's `state_id`/`district_id` -> `State`/`District` name, matched against the professional's free-text `service_area` |
+| Availability | Yes | AVAILABLE/BUSY scored; **OFFLINE is a hard exclusion**, not just a zero score (D34-01 - an OFFLINE professional can never be auto-assigned a new case) |
 | Workload | Yes | Hard exclusion at max, scored otherwise |
 | Reputation | Yes | Scored, capped contribution |
 
-## Known limitation, disclosed plainly
+Disease category remains the one genuinely unpopulated field, and is
+expected to stay that way until AIAnalysis (or a future model) carries a
+real category-level signal - it is not a "next step," it is a boundary
+against inventing a mapping that doesn't exist.
 
-`_try_auto_assign` currently only passes `role` and
-`exclude_professional_ids` to `MatchCriteria` - crop, disease category,
-language, and service area are NOT populated from the case's actual
-context (crop cycle's crop, farmer's language, farm's district) even
-though the matching algorithm and data model both support all of them.
-This means the routing (finding SOME verified professional of the right
-role) works and is tested, but the "smart" part of the routing example
-(crop + language + service-area combined routing) is not fully connected
-yet.
+## Absolute rules fully enforced
 
-Why this is disclosed rather than silently shipped as "done": the
-underlying matching algorithm was built and tested in isolation
-(nearby_professional_service tests pass with crop/language/area
-criteria), but wiring case_service.create_case to actually populate those
-criteria from the case's farmer/crop/farm context was not completed in
-this pass - a straightforward next step, not a redesign.
-
-## Absolute rules still fully enforced regardless of the above gap
-
-- Only VERIFIED professionals are ever candidates - unaffected by which
-  criteria are populated.
+- Only VERIFIED professionals are ever candidates.
+- OFFLINE professionals are never candidates either, regardless of score.
 - A declined professional is never re-offered the same case.
 - Suspended/unverified professionals never receive cases.
 - Workload limits are always respected.

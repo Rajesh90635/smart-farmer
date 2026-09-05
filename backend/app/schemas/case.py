@@ -29,6 +29,12 @@ class CaseResponse(BaseModel):
     final_verified_class: str | None
     final_verification_source: str | None
     second_opinion_count: int
+    # D36-02 (docs/audit/c06_expert_network.md): the professional's free-text
+    # explanation, previously stored (CaseReview.notes) but never surfaced
+    # to the farmer's own case-detail view. Only set by get_my_case (the
+    # single-case detail endpoint) - list_my_cases/create_case leave it
+    # None to avoid an extra query per row in a list.
+    latest_review_notes: str | None = None
     created_at: datetime
     closed_at: datetime | None
 

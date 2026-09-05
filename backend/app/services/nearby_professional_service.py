@@ -47,6 +47,15 @@ def find_ranked_candidates(db: Session, criteria: MatchCriteria, settings: Setti
         if professional.id in criteria.exclude_professional_ids:
             continue
 
+        # D34-01 (docs/audit/c06_expert_network.md): OFFLINE was
+        # previously only soft-scored (0 points), so an OFFLINE
+        # professional could still win and be auto-assigned a case if
+        # ranked highest/sole candidate. A professional who has
+        # explicitly signaled they're unavailable must never be handed a
+        # new case automatically.
+        if professional.availability_status == AvailabilityStatus.OFFLINE:
+            continue
+
         active_count = count_active_assignments_for_professional(db, professional.id)
         if active_count >= professional.max_active_cases:
             continue

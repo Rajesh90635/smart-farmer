@@ -396,3 +396,76 @@ auto-inferring "disease" from a recent AI diagnosis rather than the
 farmer selecting it) - `failure_reason` is farmer-selected only; and no
 notification is sent for the recovery recommendation (it's a synchronous
 response field on the report-failure call, not a proactive alert).
+
+### Batch 5 — Expert case routing/escalation (4 of 11 rows, `c06_expert_network.md`)
+
+D33-02, D34-01, D33-06, D36-02 fixed. Three rows deliberately NOT
+"fixed," with reasoning (not silently skipped):
+
+- **D31-05/D32-05 (AI low-confidence/unknown should auto-open a case):**
+  on inspection this is the CORRECT existing design, not a gap - creating
+  a case shares the farmer's photo with a professional, and this
+  project's own `CaseConsent`-before-sharing rule means that requires the
+  farmer's explicit action. The farmer IS already proactively prompted
+  (`ai_next_action_review` message, wired via `ai_result_localization_service.py`) -
+  automating the case-creation step itself would remove a real consent
+  boundary, not close a gap. Left as PARTIAL-by-design.
+- **D28-03/D28-04/D29-05 (pest detection):** confirmed the model provider
+  abstraction has no pest/disease distinction at all (`predict_disease`
+  returns arbitrary `class_name` strings with no category signal) -
+  building this would mean guessing which class names are "pest" via a
+  hardcoded lookup table, which is fabricating a distinction the model
+  itself doesn't make. Left MISSING, requires a real model capability
+  this project doesn't have, not an oversight.
+- **D37-01/D37-02/D37-04 (Recommendation -> Task) and D38-01/D38-02
+  (scheduled follow-up date + reminder):** genuinely buildable, but each
+  is its own small feature (Task needs a `case_id`/`treatment_id` FK it
+  doesn't have; a scheduled-follow-up date is a new concept distinct from
+  `observation_date`) - deferred to a future batch rather than rushed
+  into this one.
+- **D34-04 (no professional-facing mobile UI):** out of scope for this
+  backend-only pass, as previously established.
+
+Fixes:
+- **D33-02:** `case_service._build_match_criteria` now actually resolves
+  crop_id (from the case's crop cycle), farmer language, and state/district
+  (from the farm's location) into `MatchCriteria` - previously only
+  `role` + exclusions were ever populated, so real scoring logic in
+  `nearby_professional_service.py` was dead weight. `disease_category` is
+  deliberately still unpopulated (same reasoning as the pest-detection
+  item above - no real taxonomy exists on `AIAnalysis` to draw from).
+- **D34-01:** OFFLINE professionals are now a hard exclusion in
+  `find_ranked_candidates`, not just a zero score - previously an OFFLINE
+  professional could still win and be auto-assigned if ranked
+  highest/sole candidate.
+- **D33-06:** a `field_visit_required` review outcome now logs a distinct
+  `CASE_ESCALATED` audit action and sends a distinct HIGH-priority
+  notification, instead of silently reusing the generic `CASE_REVIEWED`
+  path. Real auto-reassignment to a different/senior professional was
+  deliberately NOT added - what that would concretely mean is undesigned.
+- **D36-02:** `GET /cases/{id}` (the single-case farmer detail view) now
+  returns `latest_review_notes` - previously the farmer-facing
+  `CaseResponse` had no field to surface a professional's explanation at
+  all, despite it being stored (`CaseReview.notes`).
+
+**A real test-contamination bug found and fixed while writing tests for
+this batch:** the test database is a real, persistent Postgres instance
+- rows are never rolled back, not between tests, and not between
+separate `pytest` invocations. An early draft of
+`test_crop_specialization_match_is_preferred` gave a test professional a
+permanent crop-match scoring advantage for Tomato (`sample_crop_id`,
+the crop nearly every test in this suite uses) and left it AVAILABLE -
+this silently hijacked auto-assignment away from unrelated tests'
+own fixture-created professionals across the whole suite, breaking 10
+tests in `test_cases.py` that assumed their own professional would be
+the one auto-assigned. Fixed two ways: (1) every test professional that
+could bias future routing now flips itself OFFLINE in a `finally` block
+before the test ends (harmless afterward, per D34-01's hard exclusion);
+(2) the shared test database itself was directly remediated (7 leftover
+"specialist" rows and 4 leftover available `field_agent` rows from this
+debugging process, set OFFLINE) since code fixes alone don't undo rows
+already committed by earlier interrupted runs. Verified stable across
+two repeated full runs of the affected files after the fix.
+
+New test file `tests/test_case_routing_and_escalation.py` (9 tests). Full
+suite: **666 passed, 0 failed.**
