@@ -113,9 +113,34 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
     final isoDate =
         '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
 
+    final lessonsController = TextEditingController();
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.cropDetailsMarkAsHarvestedButton),
+        content: TextField(
+          controller: lessonsController,
+          maxLength: 2000,
+          maxLines: 4,
+          decoration: InputDecoration(labelText: l10n.lessonsLearnedLabel),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancelButton)),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: Text(l10n.saveButton)),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final lessonsLearned = lessonsController.text.trim();
+
     setState(() => _updating = true);
     try {
-      final updated = await context.read<CropRepository>().closeCropCycle(widget.cropCycleId, isoDate);
+      final updated = await context.read<CropRepository>().closeCropCycle(
+            widget.cropCycleId,
+            isoDate,
+            lessonsLearned: lessonsLearned.isEmpty ? null : lessonsLearned,
+          );
       setState(() => _cycle = updated);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.cropDetailsMarkedHarvestedMessage)));
@@ -313,6 +338,8 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           ListTile(title: Text(l10n.cropDetailsExpectedHarvestLabel), subtitle: Text(cycle.expectedHarvestDate!)),
         if (cycle.actualHarvestDate != null)
           ListTile(title: Text(l10n.cropDetailsHarvestedOnLabel), subtitle: Text(cycle.actualHarvestDate!)),
+        if (cycle.lessonsLearned != null)
+          ListTile(title: Text(l10n.cropDetailsLessonsLearnedLabel), subtitle: Text(cycle.lessonsLearned!)),
         if (cycle.season != null) ListTile(title: Text(l10n.cropDetailsSeasonLabel), subtitle: Text(cycle.season!)),
         if (_varietyName != null) ListTile(title: Text(l10n.cropDetailsVarietyLabel), subtitle: Text(_varietyName!)),
         if (cycle.seedVariety != null) ListTile(title: Text(l10n.cropDetailsSeedVarietyLabel), subtitle: Text(cycle.seedVariety!)),

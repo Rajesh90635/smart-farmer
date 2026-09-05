@@ -35,6 +35,12 @@ class Task {
   final String? completedAt;
   final String createdAt;
   final WeatherAdvisory? weatherAdvisory;
+  final String? dependsOnTaskId;
+  // null when dependsOnTaskId is null; otherwise whether that dependency
+  // is currently completed - lets the UI show a blocked/waiting state
+  // without a second lookup.
+  final bool? dependencyCompleted;
+  final int? repeatIntervalDays;
 
   Task({
     required this.id,
@@ -48,11 +54,15 @@ class Task {
     this.completedAt,
     required this.createdAt,
     this.weatherAdvisory,
+    this.dependsOnTaskId,
+    this.dependencyCompleted,
+    this.repeatIntervalDays,
   });
 
   bool get isOverdue => displayStatus == 'overdue';
   bool get isCompleted => displayStatus == 'completed';
   bool get isCancelled => displayStatus == 'cancelled';
+  bool get isBlockedByDependency => dependsOnTaskId != null && dependencyCompleted == false;
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
         id: json['id'] as String,
@@ -66,6 +76,9 @@ class Task {
         completedAt: json['completed_at'] as String?,
         createdAt: json['created_at'] as String,
         weatherAdvisory: json['weather_advisory'] != null ? WeatherAdvisory.fromJson(json['weather_advisory'] as Map<String, dynamic>) : null,
+        dependsOnTaskId: json['depends_on_task_id'] as String?,
+        dependencyCompleted: json['dependency_completed'] as bool?,
+        repeatIntervalDays: json['repeat_interval_days'] as int?,
       );
 }
 

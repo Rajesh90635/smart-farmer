@@ -127,6 +127,35 @@ void main() {
       });
       expect(cycle.varietyId, 'v1');
     });
+
+    test('lessonsLearned parses through unchanged, null before closure - D97-10 (docs/FINAL_GAP_REPORT.md)', () {
+      final open = CropCycle.fromJson({
+        'id': 'c1',
+        'plot_id': 'p1',
+        'crop': {'id': 'crop1', 'name': 'Tomato', 'category': 'vegetable'},
+        'season': 'kharif',
+        'sowing_date': '2026-06-01',
+        'expected_harvest_date': '2026-09-01',
+        'actual_harvest_date': null,
+        'cultivation_status': 'planned',
+        'seed_variety': null,
+      });
+      expect(open.lessonsLearned, isNull);
+
+      final closed = CropCycle.fromJson({
+        'id': 'c1',
+        'plot_id': 'p1',
+        'crop': {'id': 'crop1', 'name': 'Tomato', 'category': 'vegetable'},
+        'season': 'kharif',
+        'sowing_date': '2026-06-01',
+        'expected_harvest_date': '2026-09-01',
+        'actual_harvest_date': '2026-09-05',
+        'cultivation_status': 'harvested',
+        'seed_variety': null,
+        'lessons_learned': 'Should have staked the plants earlier.',
+      });
+      expect(closed.lessonsLearned, 'Should have staked the plants earlier.');
+    });
   });
 
   group('CropVariety.fromJson', () {

@@ -51,13 +51,23 @@ release-readiness view.
 
 ## Mobile
 
-- **`flutter analyze`: 40 issues, 0 errors** — all info-level (deprecated Flutter API
-  usage: `value:`→`initialValue`, `withOpacity`→`withValues`, `RadioGroup` migration; and
-  `use_build_context_synchronously` lints across async gaps). Run live this session;
-  Flutter 3.44.6 is confirmed available in this environment (an earlier `PROJECT_STATUS.md`
-  note claiming "no Flutter SDK" was stale and is superseded by this session's direct
-  verification).
-- **`flutter test`: 257 passed, 0 failed** — run live this session, full suite.
+- **`flutter analyze`: 41 issues, 0 errors** — all info-level, same kinds as before (one
+  more `value:`→`initialValue` instance from the new task-dependency dropdown, not a new
+  kind of issue). Flutter 3.44.6 confirmed available in this environment.
+- **`flutter test`: 263 passed, 0 failed** — 257 plus 6 new tests for the fields below, run
+  live this session, full suite.
+- Mobile now surfaces the 6 of 7 backend-only session's gap-report resolutions that have a
+  farmer-facing UI surface at all (see `docs/FINAL_GAP_REPORT.md`): task dependencies
+  (blocked-state indicator, disabled Complete button, a dependency picker in the create-task
+  sheet) and recurrence (a repeat-interval field) in `task_list_screen.dart`; per-acre
+  cost/revenue/profit in `crop_financial_summary_screen.dart`; a lessons-learned prompt at
+  crop-cycle close and its display in `crop_details_screen.dart`. The post-storm inspection
+  prompt (D16-11) needed no mobile change — it's a notification-text change already rendered
+  generically. `Notification.rule_version` (D89-08) was deliberately NOT added to the mobile
+  model — there is no debug/details view for it to appear in, and adding an unused field
+  would be dead code. All new strings translated across all 7 languages, matching the
+  existing localization discipline (verified via `flutter gen-l10n` + a fresh
+  `flutter analyze`/`flutter test` pass).
 - Runtime verification: individual cluster audits additionally ran targeted live sessions
   this cycle (Telugu E2E login→language-switch→Daily-Briefing→Listen; location dropdown
   cascade verified against real seeded village data end-to-end including a direct DB

@@ -6,6 +6,9 @@ Map<String, dynamic> _taskJson({
   required String displayStatus,
   String? dueDate,
   Map<String, dynamic>? weatherAdvisory,
+  String? dependsOnTaskId,
+  bool? dependencyCompleted,
+  int? repeatIntervalDays,
 }) =>
     {
       'id': 'task-1',
@@ -19,6 +22,9 @@ Map<String, dynamic> _taskJson({
       'completed_at': null,
       'created_at': '2026-01-01T00:00:00Z',
       'weather_advisory': weatherAdvisory,
+      'depends_on_task_id': dependsOnTaskId,
+      'dependency_completed': dependencyCompleted,
+      'repeat_interval_days': repeatIntervalDays,
     };
 
 void main() {
@@ -53,6 +59,35 @@ void main() {
       expect(task.dueDate, isNull);
       expect(task.completedAt, isNull);
       expect(task.weatherAdvisory, isNull);
+      expect(task.dependsOnTaskId, isNull);
+      expect(task.dependencyCompleted, isNull);
+      expect(task.repeatIntervalDays, isNull);
+      expect(task.isBlockedByDependency, isFalse);
+    });
+
+    test('a task with an incomplete dependency is blocked - D8-07 (docs/FINAL_GAP_REPORT.md)', () {
+      final task = Task.fromJson(_taskJson(
+        status: 'pending',
+        displayStatus: 'pending',
+        dependsOnTaskId: 'task-0',
+        dependencyCompleted: false,
+      ));
+      expect(task.isBlockedByDependency, isTrue);
+    });
+
+    test('a task whose dependency is already completed is not blocked', () {
+      final task = Task.fromJson(_taskJson(
+        status: 'pending',
+        displayStatus: 'pending',
+        dependsOnTaskId: 'task-0',
+        dependencyCompleted: true,
+      ));
+      expect(task.isBlockedByDependency, isFalse);
+    });
+
+    test('repeatIntervalDays parses through unchanged - D8-08 (docs/FINAL_GAP_REPORT.md)', () {
+      final task = Task.fromJson(_taskJson(status: 'pending', displayStatus: 'pending', repeatIntervalDays: 7));
+      expect(task.repeatIntervalDays, 7);
     });
 
     test('weather advisory parses the exact three real backend fields - reused from Step 15, nothing invented', () {

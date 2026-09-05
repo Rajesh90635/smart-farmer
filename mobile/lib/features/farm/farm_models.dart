@@ -115,6 +115,8 @@ class CropCycle {
   final String cultivationStatus;
   final String? seedVariety;
   final String? varietyId;
+  // Only ever set by close_my_crop_cycle() - never editable afterward.
+  final String? lessonsLearned;
 
   CropCycle({
     required this.id,
@@ -127,6 +129,7 @@ class CropCycle {
     required this.cultivationStatus,
     this.seedVariety,
     this.varietyId,
+    this.lessonsLearned,
   });
 
   factory CropCycle.fromJson(Map<String, dynamic> json) => CropCycle(
@@ -140,6 +143,7 @@ class CropCycle {
         cultivationStatus: json['cultivation_status'] as String,
         seedVariety: json['seed_variety'] as String?,
         varietyId: json['variety_id'] as String?,
+        lessonsLearned: json['lessons_learned'] as String?,
       );
 }
 

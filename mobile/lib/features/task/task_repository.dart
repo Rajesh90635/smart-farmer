@@ -11,12 +11,16 @@ class TaskRepository {
     required String title,
     String? description,
     String? dueDate,
+    String? dependsOnTaskId,
+    int? repeatIntervalDays,
   }) async {
     final response = await _apiClient.post('/crop-cycles/$cropCycleId/tasks', body: {
       'task_type': taskType,
       'title': title,
       if (description != null) 'description': description,
       if (dueDate != null) 'due_date': dueDate,
+      if (dependsOnTaskId != null) 'depends_on_task_id': dependsOnTaskId,
+      if (repeatIntervalDays != null) 'repeat_interval_days': repeatIntervalDays,
     });
     return Task.fromJson(response);
   }

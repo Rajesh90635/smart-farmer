@@ -396,6 +396,20 @@ class AppLocalizationsMl extends AppLocalizations {
   String get cancelTaskButton => 'റദ്ദാക്കുക';
 
   @override
+  String get dependsOnLabel => 'ഇതിനെ ആശ്രയിക്കുന്നു (ഐച്ഛികം)';
+
+  @override
+  String get noDependencyOption => 'ഒന്നുമില്ല';
+
+  @override
+  String get repeatIntervalDaysLabel =>
+      'എല്ലാ (ദിവസങ്ങളിലും) ആവർത്തിക്കുക (ഐച്ഛികം)';
+
+  @override
+  String get taskBlockedByDependencyLabel =>
+      'ആദ്യം മറ്റൊരു ജോലി പൂർത്തിയാകാൻ കാത്തിരിക്കുന്നു';
+
+  @override
   String get ledgerTitle => 'സാമ്പത്തിക കണക്ക്';
 
   @override
@@ -527,6 +541,9 @@ class AppLocalizationsMl extends AppLocalizations {
   String get costVarianceLabel => 'ചെലവിലെ വ്യത്യാസം';
 
   @override
+  String get costPerAcreLabel => 'ഏക്കറിന് ചെലവ്';
+
+  @override
   String get revenueAndProfitLabel => 'വരുമാനവും ലാഭവും';
 
   @override
@@ -540,6 +557,12 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get actualProfitLossLabel => 'യഥാർത്ഥ ലാഭം/നഷ്ടം';
+
+  @override
+  String get revenuePerAcreLabel => 'ഏക്കറിന് വരുമാനം';
+
+  @override
+  String get profitLossPerAcreLabel => 'ഏക്കറിന് ലാഭം/നഷ്ടം';
 
   @override
   String get noRevenueYetHint =>
@@ -1856,6 +1879,9 @@ class AppLocalizationsMl extends AppLocalizations {
   String get cropDetailsHarvestedOnLabel => 'വിളവെടുത്ത തീയതി';
 
   @override
+  String get cropDetailsLessonsLearnedLabel => 'പഠിച്ച പാഠങ്ങൾ';
+
+  @override
   String get cropDetailsSeasonLabel => 'സീസൺ';
 
   @override
@@ -1867,6 +1893,9 @@ class AppLocalizationsMl extends AppLocalizations {
   @override
   String get cropDetailsMarkAsHarvestedButton =>
       'വിളവെടുത്തതായി അടയാളപ്പെടുത്തുക';
+
+  @override
+  String get lessonsLearnedLabel => 'പഠിച്ച പാഠങ്ങൾ (ഐച്ഛികം)';
 
   @override
   String cropDetailsAdvanceToButton(String status) {

@@ -840,6 +840,30 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get cancelTaskButton;
 
+  /// No description provided for @dependsOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Depends on (optional)'**
+  String get dependsOnLabel;
+
+  /// No description provided for @noDependencyOption.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get noDependencyOption;
+
+  /// No description provided for @repeatIntervalDaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat every (days, optional)'**
+  String get repeatIntervalDaysLabel;
+
+  /// No description provided for @taskBlockedByDependencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for another task to finish first'**
+  String get taskBlockedByDependencyLabel;
+
   /// No description provided for @ledgerTitle.
   ///
   /// In en, this message translates to:
@@ -1086,6 +1110,12 @@ abstract class AppLocalizations {
   /// **'Cost Variance'**
   String get costVarianceLabel;
 
+  /// No description provided for @costPerAcreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost per acre'**
+  String get costPerAcreLabel;
+
   /// No description provided for @revenueAndProfitLabel.
   ///
   /// In en, this message translates to:
@@ -1115,6 +1145,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Actual Profit/Loss'**
   String get actualProfitLossLabel;
+
+  /// No description provided for @revenuePerAcreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue per acre'**
+  String get revenuePerAcreLabel;
+
+  /// No description provided for @profitLossPerAcreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profit/Loss per acre'**
+  String get profitLossPerAcreLabel;
 
   /// No description provided for @noRevenueYetHint.
   ///
@@ -3580,6 +3622,12 @@ abstract class AppLocalizations {
   /// **'Harvested on'**
   String get cropDetailsHarvestedOnLabel;
 
+  /// No description provided for @cropDetailsLessonsLearnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lessons learned'**
+  String get cropDetailsLessonsLearnedLabel;
+
   /// No description provided for @cropDetailsSeasonLabel.
   ///
   /// In en, this message translates to:
@@ -3603,6 +3651,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark as harvested'**
   String get cropDetailsMarkAsHarvestedButton;
+
+  /// No description provided for @lessonsLearnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lessons learned (optional)'**
+  String get lessonsLearnedLabel;
 
   /// No description provided for @cropDetailsAdvanceToButton.
   ///

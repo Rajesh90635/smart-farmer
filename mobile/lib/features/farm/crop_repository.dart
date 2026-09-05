@@ -63,9 +63,11 @@ class CropRepository {
     return CropCycle.fromJson(response);
   }
 
-  Future<CropCycle> closeCropCycle(String cropCycleId, String actualHarvestDate) async {
-    final response =
-        await _apiClient.post('/crops/$cropCycleId/close', body: {'actual_harvest_date': actualHarvestDate});
+  Future<CropCycle> closeCropCycle(String cropCycleId, String actualHarvestDate, {String? lessonsLearned}) async {
+    final response = await _apiClient.post('/crops/$cropCycleId/close', body: {
+      'actual_harvest_date': actualHarvestDate,
+      if (lessonsLearned != null) 'lessons_learned': lessonsLearned,
+    });
     return CropCycle.fromJson(response);
   }
 }

@@ -390,6 +390,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancelTaskButton => 'Cancel';
 
   @override
+  String get dependsOnLabel => 'Depends on (optional)';
+
+  @override
+  String get noDependencyOption => 'None';
+
+  @override
+  String get repeatIntervalDaysLabel => 'Repeat every (days, optional)';
+
+  @override
+  String get taskBlockedByDependencyLabel =>
+      'Waiting for another task to finish first';
+
+  @override
   String get ledgerTitle => 'Financial Ledger';
 
   @override
@@ -518,6 +531,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get costVarianceLabel => 'Cost Variance';
 
   @override
+  String get costPerAcreLabel => 'Cost per acre';
+
+  @override
   String get revenueAndProfitLabel => 'Revenue and Profit';
 
   @override
@@ -531,6 +547,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actualProfitLossLabel => 'Actual Profit/Loss';
+
+  @override
+  String get revenuePerAcreLabel => 'Revenue per acre';
+
+  @override
+  String get profitLossPerAcreLabel => 'Profit/Loss per acre';
 
   @override
   String get noRevenueYetHint =>
@@ -1830,6 +1852,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cropDetailsHarvestedOnLabel => 'Harvested on';
 
   @override
+  String get cropDetailsLessonsLearnedLabel => 'Lessons learned';
+
+  @override
   String get cropDetailsSeasonLabel => 'Season';
 
   @override
@@ -1840,6 +1865,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cropDetailsMarkAsHarvestedButton => 'Mark as harvested';
+
+  @override
+  String get lessonsLearnedLabel => 'Lessons learned (optional)';
 
   @override
   String cropDetailsAdvanceToButton(String status) {

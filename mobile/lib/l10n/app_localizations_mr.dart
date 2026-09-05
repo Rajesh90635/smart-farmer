@@ -389,6 +389,19 @@ class AppLocalizationsMr extends AppLocalizations {
   String get cancelTaskButton => 'रद्द करा';
 
   @override
+  String get dependsOnLabel => 'यावर अवलंबून (ऐच्छिक)';
+
+  @override
+  String get noDependencyOption => 'काहीही नाही';
+
+  @override
+  String get repeatIntervalDaysLabel => 'दर (दिवसांनी) पुन्हा करा (ऐच्छिक)';
+
+  @override
+  String get taskBlockedByDependencyLabel =>
+      'आधी दुसरे काम पूर्ण होण्याची वाट पाहत आहे';
+
+  @override
   String get ledgerTitle => 'आर्थिक हिशोब';
 
   @override
@@ -519,6 +532,9 @@ class AppLocalizationsMr extends AppLocalizations {
   String get costVarianceLabel => 'खर्चातील फरक';
 
   @override
+  String get costPerAcreLabel => 'प्रति एकर खर्च';
+
+  @override
   String get revenueAndProfitLabel => 'उत्पन्न आणि नफा';
 
   @override
@@ -532,6 +548,12 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get actualProfitLossLabel => 'प्रत्यक्ष नफा/तोटा';
+
+  @override
+  String get revenuePerAcreLabel => 'प्रति एकर उत्पन्न';
+
+  @override
+  String get profitLossPerAcreLabel => 'प्रति एकर नफा/तोटा';
 
   @override
   String get noRevenueYetHint =>
@@ -1833,6 +1855,9 @@ class AppLocalizationsMr extends AppLocalizations {
   String get cropDetailsHarvestedOnLabel => 'कापणीची तारीख';
 
   @override
+  String get cropDetailsLessonsLearnedLabel => 'शिकलेले धडे';
+
+  @override
   String get cropDetailsSeasonLabel => 'हंगाम';
 
   @override
@@ -1844,6 +1869,9 @@ class AppLocalizationsMr extends AppLocalizations {
   @override
   String get cropDetailsMarkAsHarvestedButton =>
       'कापणी झाली म्हणून चिन्हांकित करा';
+
+  @override
+  String get lessonsLearnedLabel => 'शिकलेले धडे (ऐच्छिक)';
 
   @override
   String cropDetailsAdvanceToButton(String status) {

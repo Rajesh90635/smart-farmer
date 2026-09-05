@@ -9,6 +9,9 @@ Map<String, dynamic> _summaryJson({
   required String actualProfitLoss,
   required bool hasAnyActualRevenue,
   List<Map<String, dynamic>> stageSummaries = const [],
+  String? costPerAcre,
+  String? revenuePerAcre,
+  String? profitLossPerAcre,
 }) =>
     {
       'crop_cycle_id': 'cycle-1',
@@ -24,6 +27,9 @@ Map<String, dynamic> _summaryJson({
       'revenue_to_cost_ratio': null,
       'has_any_actual_revenue': hasAnyActualRevenue,
       'stage_summaries': stageSummaries,
+      'cost_per_acre': costPerAcre,
+      'revenue_per_acre': revenuePerAcre,
+      'profit_loss_per_acre': profitLossPerAcre,
     };
 
 void main() {
@@ -94,6 +100,31 @@ void main() {
         _summaryJson(estimatedCost: null, actualCost: '0', actualRevenue: '0', actualProfitLoss: '0', hasAnyActualRevenue: false),
       );
       expect(summary.stageSummaries, isEmpty);
+    });
+
+    test('per-acre fields parse through unchanged - D72-04/05/06 (docs/FINAL_GAP_REPORT.md)', () {
+      final summary = CropFinancialSummary.fromJson(_summaryJson(
+        estimatedCost: null,
+        actualCost: '1000.00',
+        actualRevenue: '1600.00',
+        actualProfitLoss: '600.00',
+        hasAnyActualRevenue: true,
+        costPerAcre: '500.00',
+        revenuePerAcre: '800.00',
+        profitLossPerAcre: '300.00',
+      ));
+      expect(summary.costPerAcre, '500.00');
+      expect(summary.revenuePerAcre, '800.00');
+      expect(summary.profitLossPerAcre, '300.00');
+    });
+
+    test('per-acre fields are null (never a fabricated value) when the plot could not be resolved', () {
+      final summary = CropFinancialSummary.fromJson(
+        _summaryJson(estimatedCost: null, actualCost: '400.00', actualRevenue: '0', actualProfitLoss: '-400.00', hasAnyActualRevenue: false),
+      );
+      expect(summary.costPerAcre, isNull);
+      expect(summary.revenuePerAcre, isNull);
+      expect(summary.profitLossPerAcre, isNull);
     });
   });
 

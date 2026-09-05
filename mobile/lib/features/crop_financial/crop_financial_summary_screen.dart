@@ -179,6 +179,7 @@ class _CropFinancialSummaryScreenState extends State<CropFinancialSummaryScreen>
             _metricRow(l10n.estimatedCostLabel, s.estimatedCost, l10n),
             _metricRow(l10n.actualCostLabel, s.actualCost, l10n),
             _metricRow(l10n.costVarianceLabel, s.costVariance, l10n, highlightSign: true),
+            _metricRow(l10n.costPerAcreLabel, s.costPerAcre, l10n),
           ],
         ),
       ),
@@ -198,6 +199,8 @@ class _CropFinancialSummaryScreenState extends State<CropFinancialSummaryScreen>
             _metricRow(l10n.actualRevenueLabel, s.actualRevenue, l10n),
             _metricRow(l10n.estimatedProfitLabel, s.estimatedProfit, l10n),
             _metricRow(l10n.actualProfitLossLabel, s.actualProfitLoss, l10n, highlightSign: true),
+            _metricRow(l10n.revenuePerAcreLabel, s.revenuePerAcre, l10n),
+            _metricRow(l10n.profitLossPerAcreLabel, s.profitLossPerAcre, l10n, highlightSign: true),
             if (!s.hasAnyActualRevenue)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

@@ -393,6 +393,20 @@ class AppLocalizationsTe extends AppLocalizations {
   String get cancelTaskButton => 'రద్దు చేయండి';
 
   @override
+  String get dependsOnLabel => 'దీనిపై ఆధారపడి ఉంది (ఐచ్ఛికం)';
+
+  @override
+  String get noDependencyOption => 'ఏదీ లేదు';
+
+  @override
+  String get repeatIntervalDaysLabel =>
+      'ప్రతి (రోజులకు) పునరావృతం చేయండి (ఐచ్ఛికం)';
+
+  @override
+  String get taskBlockedByDependencyLabel =>
+      'మొదట మరో పని పూర్తవ్వాలని వేచి ఉంది';
+
+  @override
   String get ledgerTitle => 'ఆర్థిక లెడ్జర్';
 
   @override
@@ -523,6 +537,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get costVarianceLabel => 'ఖర్చు వ్యత్యాసం';
 
   @override
+  String get costPerAcreLabel => 'ఎకరాకు ఖర్చు';
+
+  @override
   String get revenueAndProfitLabel => 'ఆదాయం మరియు లాభం';
 
   @override
@@ -536,6 +553,12 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get actualProfitLossLabel => 'వాస్తవ లాభం/నష్టం';
+
+  @override
+  String get revenuePerAcreLabel => 'ఎకరాకు ఆదాయం';
+
+  @override
+  String get profitLossPerAcreLabel => 'ఎకరాకు లాభం/నష్టం';
 
   @override
   String get noRevenueYetHint =>
@@ -1840,6 +1863,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get cropDetailsHarvestedOnLabel => 'కోసిన తేదీ';
 
   @override
+  String get cropDetailsLessonsLearnedLabel => 'నేర్చుకున్న పాఠాలు';
+
+  @override
   String get cropDetailsSeasonLabel => 'సీజన్';
 
   @override
@@ -1850,6 +1876,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get cropDetailsMarkAsHarvestedButton => 'కోసినట్లు గుర్తించండి';
+
+  @override
+  String get lessonsLearnedLabel => 'నేర్చుకున్న పాఠాలు (ఐచ్ఛికం)';
 
   @override
   String cropDetailsAdvanceToButton(String status) {

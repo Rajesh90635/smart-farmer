@@ -143,6 +143,10 @@ class CropFinancialSummary {
   final bool hasAnyActualRevenue;
   final List<StageFinancialSummary> stageSummaries;
 
+  final String? costPerAcre;
+  final String? revenuePerAcre;
+  final String? profitLossPerAcre;
+
   CropFinancialSummary({
     required this.cropCycleId,
     this.estimatedCost,
@@ -157,6 +161,9 @@ class CropFinancialSummary {
     this.revenueToCostRatio,
     required this.hasAnyActualRevenue,
     required this.stageSummaries,
+    this.costPerAcre,
+    this.revenuePerAcre,
+    this.profitLossPerAcre,
   });
 
   factory CropFinancialSummary.fromJson(Map<String, dynamic> json) => CropFinancialSummary(
@@ -173,5 +180,8 @@ class CropFinancialSummary {
         revenueToCostRatio: json['revenue_to_cost_ratio'] as String?,
         hasAnyActualRevenue: json['has_any_actual_revenue'] as bool,
         stageSummaries: (json['stage_summaries'] as List).map((e) => StageFinancialSummary.fromJson(e as Map<String, dynamic>)).toList(),
+        costPerAcre: json['cost_per_acre'] as String?,
+        revenuePerAcre: json['revenue_per_acre'] as String?,
+        profitLossPerAcre: json['profit_loss_per_acre'] as String?,
       );
 }

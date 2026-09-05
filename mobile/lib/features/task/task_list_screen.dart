@@ -77,8 +77,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   Future<void> _showAddTaskSheet(AppLocalizations l10n) async {
     final titleController = TextEditingController();
+    final repeatIntervalController = TextEditingController();
     String selectedType = 'general';
     DateTime? selectedDate;
+    // Only non-cancelled tasks are meaningful dependency targets - a
+    // cancelled task can never become COMPLETED, so depending on one
+    // would permanently block the new task.
+    final dependencyOptions = _tasks.where((t) => !t.isCancelled).toList();
+    String? selectedDependencyId;
 
     await showModalBottomSheet(
       context: context,
@@ -113,10 +119,29 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 },
                 child: Text(selectedDate == null ? l10n.pickDueDateButton : selectedDate!.toIso8601String().split('T').first),
               ),
+              if (dependencyOptions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  value: selectedDependencyId,
+                  items: [
+                    DropdownMenuItem<String?>(value: null, child: Text(l10n.noDependencyOption)),
+                    ...dependencyOptions.map((t) => DropdownMenuItem<String?>(value: t.id, child: Text(t.title))),
+                  ],
+                  onChanged: (v) => setSheetState(() => selectedDependencyId = v),
+                  decoration: InputDecoration(labelText: l10n.dependsOnLabel),
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: repeatIntervalController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: l10n.repeatIntervalDaysLabel),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
                   if (titleController.text.trim().isEmpty) return;
+                  final repeatIntervalDays = int.tryParse(repeatIntervalController.text.trim());
                   Navigator.of(sheetContext).pop();
                   try {
                     await context.read<TaskRepository>().createTask(
@@ -124,6 +149,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           taskType: selectedType,
                           title: titleController.text.trim(),
                           dueDate: selectedDate?.toIso8601String().split('T').first,
+                          dependsOnTaskId: selectedDependencyId,
+                          repeatIntervalDays: repeatIntervalDays,
                         );
                     await _load();
                   } catch (e) {
@@ -255,12 +282,26 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   ],
                 ),
               ),
+            if (task.isBlockedByDependency)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_clock, color: Colors.grey, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(child: Text(l10n.taskBlockedByDependencyLabel, style: const TextStyle(fontSize: 12, color: Colors.grey))),
+                  ],
+                ),
+              ),
             if (task.status == 'pending')
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(onPressed: () => _cancelTask(task), child: Text(l10n.cancelTaskButton)),
-                  TextButton(onPressed: () => _completeTask(task), child: Text(l10n.completeTaskButton)),
+                  TextButton(
+                    onPressed: task.isBlockedByDependency ? null : () => _completeTask(task),
+                    child: Text(l10n.completeTaskButton),
+                  ),
                 ],
               ),
           ],
