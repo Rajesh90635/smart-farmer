@@ -238,6 +238,32 @@ def test_full_sale_lifecycle_to_completion(client, farmer_with_crop_cycle, verif
     assert sale_after["status"] == "paid"
 
 
+def test_farmer_is_notified_when_buyers_sale_payment_fails(client, farmer_with_crop_cycle, verified_buyer):
+    """D64-06/D66-04: the FARMER (not the buyer, who is the one calling
+    this endpoint) must be notified - they have no other way to find out
+    synchronously that the buyer's payment failed."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id)
+
+    offer = client.post(f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(), headers=auth_headers(buyer_tokens)).json()
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens)).json()
+
+    client.post(f"/api/v1/marketplace/sales/{sale['id']}/accept", headers=auth_headers(farmer_tokens))
+    for status in ["preparing", "ready_for_collection", "collected", "in_transit", "delivered"]:
+        client.post(f"/api/v1/marketplace/sales/{sale['id']}/advance?target_status={status}", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/marketplace/purchases/{sale['id']}/confirm-delivery", headers=auth_headers(buyer_tokens))
+    client.post(f"/api/v1/marketplace/purchases/{sale['id']}/pay", headers=auth_headers(buyer_tokens))
+
+    failed = client.post(f"/api/v1/marketplace/purchases/{sale['id']}/pay/complete?succeed=false", headers=auth_headers(buyer_tokens))
+    assert failed.status_code == 200
+    assert failed.json()["status"] == "failed"
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(farmer_tokens)).json()["items"]
+    payment_alerts = [n for n in notifications if n["category"] == "payment_alert"]
+    assert len(payment_alerts) == 1
+
+
 def test_cancellation_restores_listing_quantity(client, farmer_with_crop_cycle, verified_buyer):
     farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
     buyer_tokens, _ = verified_buyer

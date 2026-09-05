@@ -53,7 +53,12 @@ open any screen first.
 ## Notification categories (only currently supported types)
 
 `WEATHER_ALERT`, `RAIN_ALERT`, `HEAVY_RAIN_ALERT`, `CROP_ALERT`,
-`DISEASE_ALERT`, `HARVEST_ALERT`, `STOCK_ALERT`. `ORDER_ALERT`/`MARKET_ALERT`
+`DISEASE_ALERT`, `HARVEST_ALERT`, `STOCK_ALERT`, `PAYMENT_ALERT`.
+`PAYMENT_ALERT` (D64-06/D66-04) fires when a payment fails - both
+`payment_service.complete_payment` (dealer-order, farmer is the payer)
+and `sale_order_service.complete_payment` (marketplace sale, the BUYER
+pays and the FARMER is notified - genuinely new information for them,
+since they weren't the one calling the endpoint). `ORDER_ALERT`/`MARKET_ALERT`
 are **not** in the enum — they belong to future marketplace phases and
 were deliberately excluded rather than added as unused placeholders (this
 exclusion was deliberately respected, not overridden, when a later audit

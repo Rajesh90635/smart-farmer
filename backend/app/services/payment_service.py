@@ -13,12 +13,15 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.order import OrderStatus
 from app.models.payment import Payment, PaymentProvider, PaymentStatus
-from app.repositories import order_repository
+from app.repositories import order_repository, user_repository
 from app.schemas.order import PaymentCompleteRequest, PaymentInitiateResponse
+from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.order_transitions import apply_transition
+from app.services.weather_alert_rules import AlertCandidate
 
 
 def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID) -> PaymentInitiateResponse:
@@ -78,5 +81,27 @@ def complete_payment(db: Session, farmer_id: str, order_id: uuid.UUID, payload: 
         AuditLogger(db).log("PAYMENT_FAILED", actor_id=farmer_id, actor_role="farmer", entity="order", entity_id=str(order.id))
 
     db.commit()
+    if not payload.succeed:
+        # D64-06/D66-04 (docs/audit/c10_payments_finance.md): previously
+        # only an audit log entry, never farmer-visible - a real gap once
+        # a real gateway's asynchronous webhook replaces this sandbox
+        # callback (the farmer wouldn't be watching the response then).
+        _notify_payment_failed(db, farmer_id, payment)
     db.refresh(payment)
     return PaymentInitiateResponse.model_validate(payment)
+
+
+def _notify_payment_failed(db: Session, farmer_id: str, payment: Payment) -> None:
+    user = user_repository.get_by_id(db, uuid.UUID(farmer_id))
+    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+    candidate = AlertCandidate(
+        category=NotificationCategory.PAYMENT_ALERT,
+        priority=NotificationPriority.HIGH,
+        message_key="PAYMENT_FAILED",
+        message_params={"amount": str(payment.amount)},
+        dedup_suffix=f"payment_failed:{payment.id}",
+    )
+    notification_service.create_alert_notification(
+        db, farmer_id, candidate, dedup_scope=f"farmer:{farmer_id}", language_code=language_code,
+        related_entity_type="payment", related_entity_id=str(payment.id),
+    )

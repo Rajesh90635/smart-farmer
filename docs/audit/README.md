@@ -551,3 +551,25 @@ buildable fix using the same `notification_service` pattern as this
 batch, simply not reached this pass).
 
 Full suite: **675 passed, 0 failed.**
+
+### Batch 8 — Payment failure notifications (2 rows, `c10_payments_finance.md`)
+
+D64-06/D66-04: a failed payment previously produced only an audit log
+entry, never a farmer-visible notification. Fixed in both payment paths:
+
+- `payment_service.complete_payment` (dealer-order purchase) - the
+  farmer is the payer, so this matters mainly once a real gateway's
+  asynchronous webhook replaces the current sandbox callback (today the
+  farmer is watching the response anyway).
+- `sale_order_service.complete_payment` (marketplace sale) - here the
+  BUYER pays and the FARMER is notified, which is genuinely new
+  information today, not just future-proofing - the farmer has no other
+  synchronous way to learn the buyer's payment failed.
+
+New `NotificationCategory.PAYMENT_ALERT` (migration `b8069da2cd90`).
+Confirmed via `docs/PAYMENT_ARCHITECTURE.md`/`docs/PAYMENT_AND_SETTLEMENT.md`
+that (unlike `MARKET_ALERT`) no prior decision had explicitly deferred
+payment notifications - this was a genuine oversight, not a boundary to
+respect.
+
+Full suite: **676 passed, 0 failed.**

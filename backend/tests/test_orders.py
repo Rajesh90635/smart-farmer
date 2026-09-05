@@ -186,6 +186,11 @@ def test_payment_failure_does_not_mark_order_paid(client, registered_farmer, ver
     assert order_after["status"] != "paid"
     assert order_after["status"] == "payment_pending"
 
+    # D64-06/D66-04: previously only an audit log entry existed for this.
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(farmer_tokens)).json()["items"]
+    payment_alerts = [n for n in notifications if n["category"] == "payment_alert"]
+    assert len(payment_alerts) == 1
+
 
 def test_dealer_rejection_requires_reason_and_restocks(client, registered_farmer, verified_dealer, approved_product):
     _, farmer_tokens = registered_farmer

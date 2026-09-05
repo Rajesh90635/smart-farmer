@@ -14,10 +14,13 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.payment import Payment, PaymentProvider, PaymentStatus
 from app.models.sale_dispute import QualityDispute, SaleDispute, SaleDisputeStatus, SaleFeedback
 from app.models.sale_order import ALLOWED_SALE_ORDER_TRANSITIONS, CANCELLATION_REASONS, SaleOrder, SaleOrderStatus
-from app.repositories import harvest_repository, order_repository, professional_repository, sale_order_repository
+from app.repositories import harvest_repository, order_repository, professional_repository, sale_order_repository, user_repository
+from app.services import notification_service
+from app.services.weather_alert_rules import AlertCandidate
 from app.schemas.marketplace import (
     QualityDisputeCreateRequest,
     SaleCancelRequest,
@@ -139,8 +142,31 @@ def complete_payment(db: Session, user_id: str, sale_id: uuid.UUID, succeed: boo
         AuditLogger(db).log("SALE_PAYMENT_FAILED", actor_id=user_id, actor_role="buyer", entity="sale_order", entity_id=str(sale.id))
 
     db.commit()
+    if not succeed:
+        # D64-06/D66-04 (docs/audit/c10_payments_finance.md): here the
+        # FARMER is not the one calling this endpoint (the buyer is) - so
+        # unlike payment_service.py's own-payment case, this is genuinely
+        # new information the farmer has no other way to find out
+        # synchronously.
+        _notify_farmer_of_sale_payment_failure(db, sale, payment)
     db.refresh(payment)
     return payment
+
+
+def _notify_farmer_of_sale_payment_failure(db: Session, sale: SaleOrder, payment: Payment) -> None:
+    user = user_repository.get_by_id(db, sale.farmer_id)
+    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+    candidate = AlertCandidate(
+        category=NotificationCategory.PAYMENT_ALERT,
+        priority=NotificationPriority.HIGH,
+        message_key="SALE_PAYMENT_FAILED",
+        message_params={"amount": str(payment.amount)},
+        dedup_suffix=f"sale_payment_failed:{payment.id}",
+    )
+    notification_service.create_alert_notification(
+        db, str(sale.farmer_id), candidate, dedup_scope=f"sale_order:{sale.id}", language_code=language_code,
+        related_entity_type="sale_order", related_entity_id=str(sale.id),
+    )
 
 
 def cancel_sale(db: Session, user_id: str, sale_id: uuid.UUID, payload: SaleCancelRequest, role: str) -> SaleOrderResponse:
