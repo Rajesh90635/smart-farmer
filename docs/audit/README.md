@@ -660,3 +660,41 @@ its SERVICE (the repository returns bare ORM rows with no resolved
 
 688/689 backend tests pass (the same pre-existing flaky
 `test_products.py` failure, unrelated).
+
+### Batch 11 — Payment gateway provider abstraction (D90-10, `c13_governance_farmbrain_security.md`)
+
+Tackled at the product owner's explicit request (previously deferred in
+batch 9 as "a pure internal refactor with no farmer-facing behavior
+change" - lower priority, not a business-decision block).
+
+New `app/services/payment/` package: `PaymentGatewayProvider` ABC (named
+to avoid shadowing the existing `app.models.payment.PaymentProvider` DB
+enum), `SandboxPaymentGatewayProvider` (the only adapter actually
+implemented - extracted from what `payment_service.py`/
+`sale_order_service.py` already did inline, same behavior), and
+`NotConfiguredPaymentGatewayProvider` (fail-honest default, mirrors
+`NotConfiguredWeatherProvider`). New `Settings.payment_gateway_provider`
+(default `"sandbox"`, preserving exact prior behavior) + a FastAPI
+dependency mirroring `weather_provider_dependency.py`.
+
+The one real structural addition beyond "the same thing behind an
+interface": `is_sandbox_completable` - a real gateway adapter must report
+`False`, and both `payment_service.complete_payment`/
+`sale_order_service.complete_payment` now refuse (409) to run at all
+unless the configured provider reports `True`. This turns "a real
+deployment must replace the sandbox test-completion endpoint before real
+money is involved" from a documentation warning
+(`docs/PAYMENT_ARCHITECTURE.md`) into something the code itself would
+refuse to do against a misconfigured production deployment. Also: both
+`initiate_payment` paths now fail honestly (503) rather than silently
+proceeding when `payment_provider.initiate_payment(...)` reports
+unavailable - previously impossible to even express, since sandbox was
+hardcoded and always "available."
+
+Zero behavior change for the existing sandbox flow (default setting
+reproduces it exactly) - all existing payment/order/marketplace tests
+pass unmodified. 4 new tests for the two new guarantees (unavailable
+provider, non-sandbox-completable refusal) across both payment paths
+(dealer order + marketplace sale).
+
+692/692 backend tests pass.

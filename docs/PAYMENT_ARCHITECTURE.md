@@ -1,20 +1,43 @@
 # Payment Architecture
 
-## SANDBOX ONLY this phase - stated plainly
+## Provider abstraction (D90-10)
 
-No real payment gateway is integrated. `PaymentProvider.SANDBOX` is the
-only value ever actually used by `payment_service.py`; `UPI`, `CARD`,
-`NET_BANKING`, `CASH_ON_DELIVERY` exist in the enum as the abstraction's
-documented future surface, not as working integrations.
+`app/services/payment/payment_gateway_provider.py` - the same "real
+business logic depends on an interface, not a specific vendor" pattern
+already used for `WeatherProvider`/`ModelProvider`. Named
+`PaymentGatewayProvider`, not `PaymentProvider` - that name is already
+`app.models.payment.PaymentProvider`, the DB enum recording which
+provider a `Payment` row used (SANDBOX/UPI/CARD/NET_BANKING/CASH_ON_DELIVERY).
+
+**Still SANDBOX ONLY - the abstraction doesn't change that.**
+`SandboxPaymentGatewayProvider` is the only adapter actually implemented;
+`Settings.payment_gateway_provider` (default `"sandbox"`) is the one
+switch point - naming a real gateway with no adapter class falls back to
+`NotConfiguredPaymentGatewayProvider` (always `available=False`, never a
+fabricated reference), the same fail-honest pattern as
+`NotConfiguredWeatherProvider`/the SMS provider dependency. `UPI`, `CARD`,
+`NET_BANKING`, `CASH_ON_DELIVERY` remain enum-only documented future
+surface, not working integrations.
+
+`PaymentGatewayProvider.is_sandbox_completable` is the structural guard:
+only a provider whose completion can legitimately be driven by a direct,
+synchronous, farmer-callable call reports `True`. A real gateway adapter
+must report `False`, and `payment_service.complete_payment`/
+`sale_order_service.complete_payment` now REFUSE to run at all (409) when
+the configured provider isn't sandbox-completable - not a new business
+rule, just moving the same "this must be replaced before real money is
+involved" guarantee from documentation-only into code that would
+actually stop a misconfigured production deployment.
 
 ## The flow as built
 
 ```
 POST /orders/{id}/pay
-   -> Order: PAYMENT_PENDING
-   -> Payment row created: PENDING, provider=SANDBOX, a fake external_reference
+   -> payment_gateway_provider.initiate_payment(...) - real amount, provider decides the reference
+   -> unavailable -> 503, order never enters PAYMENT_PENDING (no fake payment state)
+   -> available   -> Order: PAYMENT_PENDING, Payment row created: PENDING, provider-issued external_reference
 
-POST /orders/{id}/pay/complete   <- TEST-ONLY, see below
+POST /orders/{id}/pay/complete   <- TEST-ONLY, refused (409) unless is_sandbox_completable
    -> simulates what a real gateway's webhook would report
    -> succeed=true  -> Payment: SUCCESS, Order: PAID
    -> succeed=false -> Payment: FAILED, Order stays PAYMENT_PENDING (never PAID)
@@ -23,17 +46,19 @@ POST /orders/{id}/pay/complete   <- TEST-ONLY, see below
 Verified by test that a failed payment genuinely leaves the order
 un-paid (`test_payment_failure_does_not_mark_order_paid`) - there is no
 code path that marks an order `PAID` without a `Payment` row actually
-reaching `SUCCESS` status first.
+reaching `SUCCESS` status first. The marketplace-sale payment path
+(`sale_order_service.py`, `/marketplace/purchases/{id}/pay...`) goes
+through the exact same `PaymentGatewayProvider` interface.
 
-## `POST /orders/{id}/pay/complete` is a sandbox test hook, not a production endpoint
+## `POST .../pay/complete` is a sandbox test hook, not a production endpoint
 
-A real deployment would replace this with a webhook receiver from an
-actual gateway (Razorpay, PayU, etc. - none integrated here) that the
-gateway calls, not the farmer's own client. Shipping this endpoint to
-production as-is would let a farmer mark their own payment successful
-without actually paying - **this must be replaced, not merely left in
-place, before any real money is involved.** Flagged explicitly here so it
-isn't mistaken for a finished payment integration.
+A real deployment would replace the sandbox adapter with a real gateway
+adapter (Razorpay, PayU, etc. - none integrated here) plus a webhook
+receiver that THE GATEWAY calls, not the farmer's own client -
+`is_sandbox_completable=False` on that adapter is what makes shipping
+this test hook to production impossible to trigger for a real gateway,
+not just a documentation warning. Flagged here so it isn't mistaken for
+a finished payment integration.
 
 ## Payment security - structurally enforced, not just policy
 

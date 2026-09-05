@@ -409,6 +409,28 @@ def test_farmer_a_cannot_see_farmer_bs_sale(client, farmer_with_crop_cycle, veri
     assert response.status_code == 404
 
 
+def test_sale_payment_fails_honestly_when_no_gateway_is_configured(client, farmer_with_crop_cycle, verified_buyer):
+    """D90-10: same provider-abstraction guarantee as the dealer-order
+    payment path (tests/test_payments.py), for marketplace sales."""
+    from app.services.payment.not_configured_payment_gateway_provider import NotConfiguredPaymentGatewayProvider
+    from tests.conftest import override_payment_gateway_provider
+
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id)
+    offer = client.post(f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(), headers=auth_headers(buyer_tokens)).json()
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens)).json()
+
+    client.post(f"/api/v1/marketplace/sales/{sale['id']}/accept", headers=auth_headers(farmer_tokens))
+    for status in ["preparing", "ready_for_collection", "collected", "in_transit", "delivered"]:
+        client.post(f"/api/v1/marketplace/sales/{sale['id']}/advance?target_status={status}", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/marketplace/purchases/{sale['id']}/confirm-delivery", headers=auth_headers(buyer_tokens))
+
+    with override_payment_gateway_provider(NotConfiguredPaymentGatewayProvider()):
+        response = client.post(f"/api/v1/marketplace/purchases/{sale['id']}/pay", headers=auth_headers(buyer_tokens))
+    assert response.status_code == 503
+
+
 def test_unverified_buyer_cannot_make_an_offer(client, farmer_with_crop_cycle):
     from tests.test_professionals import _register_professional_user
 

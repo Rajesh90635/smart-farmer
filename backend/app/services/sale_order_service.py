@@ -20,6 +20,7 @@ from app.models.sale_dispute import QualityDispute, SaleDispute, SaleDisputeStat
 from app.models.sale_order import ALLOWED_SALE_ORDER_TRANSITIONS, CANCELLATION_REASONS, SaleOrder, SaleOrderStatus
 from app.repositories import harvest_repository, order_repository, professional_repository, sale_order_repository, user_repository
 from app.services import notification_service
+from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
 from app.services.weather_alert_rules import AlertCandidate
 from app.schemas.marketplace import (
     QualityDisputeCreateRequest,
@@ -108,12 +109,19 @@ def buyer_confirm_delivery(db: Session, user_id: str, sale_id: uuid.UUID) -> Sal
     return SaleOrderResponse.model_validate(sale)
 
 
-def initiate_payment(db: Session, user_id: str, sale_id: uuid.UUID) -> Payment:
+_PROVIDER_NAME_TO_ENUM = {"sandbox": PaymentProvider.SANDBOX}
+
+
+def initiate_payment(db: Session, user_id: str, sale_id: uuid.UUID, payment_provider: PaymentGatewayProvider) -> Payment:
     sale = _get_sale_for_buyer_or_404(db, user_id, sale_id)
 
+    result = payment_provider.initiate_payment(amount=sale.net_value, reference_hint=str(sale.id))
+    if not result.available:
+        raise AppError(error_codes.PAYMENT_PROVIDER_UNAVAILABLE, "Payment is temporarily unavailable. Please try again shortly.", 503)
+
     payment = Payment(
-        sale_order_id=sale.id, order_id=None, provider=PaymentProvider.SANDBOX, status=PaymentStatus.PENDING,
-        amount=sale.net_value, external_reference=f"sandbox-sale-{uuid.uuid4().hex[:12]}",
+        sale_order_id=sale.id, order_id=None, provider=_PROVIDER_NAME_TO_ENUM[result.provider_name], status=PaymentStatus.PENDING,
+        amount=sale.net_value, external_reference=result.external_reference,
     )
     order_repository.create_payment(db, payment)
     AuditLogger(db).log("SALE_PAYMENT_INITIATED", actor_id=user_id, actor_role="buyer", entity="sale_order", entity_id=str(sale.id))
@@ -122,7 +130,14 @@ def initiate_payment(db: Session, user_id: str, sale_id: uuid.UUID) -> Payment:
     return payment
 
 
-def complete_payment(db: Session, user_id: str, sale_id: uuid.UUID, succeed: bool) -> Payment:
+def complete_payment(db: Session, user_id: str, sale_id: uuid.UUID, succeed: bool, payment_provider: PaymentGatewayProvider) -> Payment:
+    if not payment_provider.is_sandbox_completable:
+        raise AppError(
+            error_codes.PAYMENT_PROVIDER_UNAVAILABLE,
+            "This payment method does not support manual completion - it is confirmed by the gateway's own callback.",
+            409,
+        )
+
     sale = _get_sale_for_buyer_or_404(db, user_id, sale_id)
 
     payment = db.execute(

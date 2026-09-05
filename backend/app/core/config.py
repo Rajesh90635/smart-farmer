@@ -88,6 +88,13 @@ class Settings(BaseSettings):
     weather_extreme_heat_celsius_threshold: float = 40.0
     weather_extreme_cold_celsius_threshold: float = 5.0
 
+    # --- Payment gateway (D90-10: provider abstraction) - "sandbox" is
+    # the only implemented adapter (moves no real money, matches this
+    # project's pre-existing sandbox-only behavior exactly); a real
+    # gateway name here with no adapter class falls back to "none"
+    # (NotConfiguredPaymentGatewayProvider), same pattern as weather/SMS. ---
+    payment_gateway_provider: str = "sandbox"  # "sandbox" | "none"
+
     # --- SMS / OTP (password-reset identity verification - Requirement:
     # closes the previously-documented account-takeover gap. "none" keeps
     # today's dev/test default; setting "twilio" without all three Twilio

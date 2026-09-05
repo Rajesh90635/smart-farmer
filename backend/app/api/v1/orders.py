@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.current_user import CurrentUser, require_role
+from app.core.payment_provider_dependency import get_payment_gateway_provider
 from app.core.roles import Role
 from app.db.session import get_db
 from app.models.order import OrderStatus
+from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
 from app.schemas.order import (
     CartItemAddRequest,
     CartItemUpdateRequest,
@@ -117,8 +119,9 @@ def initiate_payment(
     order_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    payment_provider: PaymentGatewayProvider = Depends(get_payment_gateway_provider),
 ) -> PaymentInitiateResponse:
-    return payment_service.initiate_payment(db, current_user.user_id, order_id)
+    return payment_service.initiate_payment(db, current_user.user_id, order_id, payment_provider)
 
 
 @router.post("/orders/{order_id}/pay/complete", response_model=PaymentInitiateResponse)
@@ -127,10 +130,12 @@ def complete_payment_sandbox(
     payload: PaymentCompleteRequest,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    payment_provider: PaymentGatewayProvider = Depends(get_payment_gateway_provider),
 ) -> PaymentInitiateResponse:
-    """SANDBOX/TEST-ONLY - see docs/PAYMENT_SANDBOX.md. Simulates a
-    gateway callback since no real gateway is integrated this phase."""
-    return payment_service.complete_payment(db, current_user.user_id, order_id, payload)
+    """SANDBOX/TEST-ONLY - see docs/PAYMENT_ARCHITECTURE.md. Simulates a
+    gateway callback; only works when the configured provider is
+    sandbox-completable (payment_provider.is_sandbox_completable)."""
+    return payment_service.complete_payment(db, current_user.user_id, order_id, payload, payment_provider)
 
 
 @router.get("/orders/{order_id}/delivery", response_model=DeliveryResponse)

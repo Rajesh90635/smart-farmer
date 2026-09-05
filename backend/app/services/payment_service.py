@@ -1,10 +1,10 @@
 """
-Payment service: SANDBOX ONLY this phase. No real gateway is integrated.
-`initiate_payment` creates a PENDING Payment and moves the order to
-PAYMENT_PENDING; `complete_payment` is a TEST-ONLY endpoint (clearly
-documented, not something a real farmer would call in production)
-simulating a gateway callback, since there is no real gateway to call
-back from.
+Payment service. `initiate_payment` creates a PENDING Payment and moves
+the order to PAYMENT_PENDING; `complete_payment` is a TEST-ONLY endpoint
+(clearly documented, not something a real farmer would call in
+production) simulating a gateway callback, since only the sandbox
+adapter is actually implemented (see
+app/services/payment/payment_gateway_provider.py, D90-10).
 """
 import uuid
 from datetime import datetime, timezone
@@ -21,10 +21,13 @@ from app.schemas.order import PaymentCompleteRequest, PaymentInitiateResponse
 from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.order_transitions import apply_transition
+from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
 from app.services.weather_alert_rules import AlertCandidate
 
+_PROVIDER_NAME_TO_ENUM = {"sandbox": PaymentProvider.SANDBOX}
 
-def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID) -> PaymentInitiateResponse:
+
+def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID, payment_provider: PaymentGatewayProvider) -> PaymentInitiateResponse:
     order = order_repository.get_order_owned_by_farmer(db, order_id, uuid.UUID(farmer_id))
     if order is None:
         raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)
@@ -32,6 +35,10 @@ def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID) -> Paymen
     existing_payment = order_repository.get_latest_payment_for_order(db, order.id)
     if existing_payment is not None and existing_payment.status == PaymentStatus.PENDING:
         raise AppError(error_codes.VALIDATION_ERROR, "A payment is already in progress for this order.", 409)
+
+    result = payment_provider.initiate_payment(amount=order.final_amount, reference_hint=str(order.id))
+    if not result.available:
+        raise AppError(error_codes.PAYMENT_PROVIDER_UNAVAILABLE, "Payment is temporarily unavailable. Please try again shortly.", 503)
 
     # Real bug fixed here: apply_transition requires an actual state
     # change, but a farmer retrying after a failed payment finds the order
@@ -45,10 +52,10 @@ def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID) -> Paymen
 
     payment = Payment(
         order_id=order.id,
-        provider=PaymentProvider.SANDBOX,
+        provider=_PROVIDER_NAME_TO_ENUM[result.provider_name],
         status=PaymentStatus.PENDING,
         amount=order.final_amount,
-        external_reference=f"sandbox-{uuid.uuid4().hex[:12]}",
+        external_reference=result.external_reference,
     )
     order_repository.create_payment(db, payment)
 
@@ -58,10 +65,22 @@ def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID) -> Paymen
     return PaymentInitiateResponse.model_validate(payment)
 
 
-def complete_payment(db: Session, farmer_id: str, order_id: uuid.UUID, payload: PaymentCompleteRequest) -> PaymentInitiateResponse:
+def complete_payment(
+    db: Session, farmer_id: str, order_id: uuid.UUID, payload: PaymentCompleteRequest, payment_provider: PaymentGatewayProvider
+) -> PaymentInitiateResponse:
     """SANDBOX/TEST-ONLY: simulates what a real gateway's webhook would
-    report. See docs/PAYMENT_SANDBOX.md for why this exists and how it
-    must be replaced (not extended) when a real gateway is integrated."""
+    report. See docs/PAYMENT_ARCHITECTURE.md for why this exists and how
+    it must be replaced (not extended) when a real gateway is integrated -
+    refuses to run at all unless the configured provider is
+    sandbox-completable (a real gateway's completion must arrive via an
+    actual webhook, never a farmer-callable endpoint)."""
+    if not payment_provider.is_sandbox_completable:
+        raise AppError(
+            error_codes.PAYMENT_PROVIDER_UNAVAILABLE,
+            "This payment method does not support manual completion - it is confirmed by the gateway's own callback.",
+            409,
+        )
+
     order = order_repository.get_order_owned_by_farmer(db, order_id, uuid.UUID(farmer_id))
     if order is None:
         raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)

@@ -9,9 +9,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.current_user import CurrentUser, require_role
+from app.core.payment_provider_dependency import get_payment_gateway_provider
 from app.core.roles import Role
 from app.db.session import get_db
 from app.models.sale_order import SaleOrderStatus
+from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
 from app.schemas.harvest import HarvestListingListResponse
 from app.schemas.marketplace import (
     AcceptOfferRequest,
@@ -258,8 +260,9 @@ def initiate_sale_payment(
     sale_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(_BUYER_ROLE)),
     db: Session = Depends(get_db),
+    payment_provider: PaymentGatewayProvider = Depends(get_payment_gateway_provider),
 ):
-    payment = sale_order_service.initiate_payment(db, current_user.user_id, sale_id)
+    payment = sale_order_service.initiate_payment(db, current_user.user_id, sale_id, payment_provider)
     return {"payment_id": str(payment.id), "status": payment.status.value, "amount": str(payment.amount)}
 
 
@@ -269,9 +272,11 @@ def complete_sale_payment(
     succeed: bool = True,
     current_user: CurrentUser = Depends(require_role(_BUYER_ROLE)),
     db: Session = Depends(get_db),
+    payment_provider: PaymentGatewayProvider = Depends(get_payment_gateway_provider),
 ):
-    """SANDBOX/TEST-ONLY - see docs/PAYMENT_AND_SETTLEMENT.md."""
-    payment = sale_order_service.complete_payment(db, current_user.user_id, sale_id, succeed)
+    """SANDBOX/TEST-ONLY - see docs/PAYMENT_ARCHITECTURE.md. Only works
+    when the configured provider is sandbox-completable."""
+    payment = sale_order_service.complete_payment(db, current_user.user_id, sale_id, succeed, payment_provider)
     return {"payment_id": str(payment.id), "status": payment.status.value}
 
 

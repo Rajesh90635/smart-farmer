@@ -63,3 +63,38 @@ def test_cannot_initiate_a_second_payment_while_one_is_already_pending(client, r
 
     second_attempt = client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
     assert second_attempt.status_code == 409
+
+
+# --- D90-10: payment gateway provider abstraction ---
+
+def test_initiate_payment_fails_honestly_when_no_gateway_is_configured(client, registered_farmer, verified_dealer, approved_product):
+    from app.services.payment.not_configured_payment_gateway_provider import NotConfiguredPaymentGatewayProvider
+    from tests.conftest import override_payment_gateway_provider
+
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    with override_payment_gateway_provider(NotConfiguredPaymentGatewayProvider()):
+        response = client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    assert response.status_code == 503
+
+    order_after = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert order_after["status"] != "payment_pending"  # never silently entered a payment state with no real payment
+
+
+def test_sandbox_completion_is_refused_when_provider_is_not_sandbox_completable(
+    client, registered_farmer, verified_dealer, approved_product
+):
+    """A real gateway's completion must arrive via its own webhook, never
+    a farmer-callable endpoint - this must be refused, not silently
+    treated as a real confirmation."""
+    from app.services.payment.not_configured_payment_gateway_provider import NotConfiguredPaymentGatewayProvider
+    from tests.conftest import override_payment_gateway_provider
+
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+
+    with override_payment_gateway_provider(NotConfiguredPaymentGatewayProvider()):
+        response = client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+    assert response.status_code == 409
+
+    order_after = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert order_after["status"] != "paid"
