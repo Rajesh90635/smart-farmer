@@ -617,3 +617,46 @@ Full suite: **680 passed, 1 failed** (the failure,
 is the same pre-existing pagination/shared-database-order flakiness noted
 in batch 4 - passes 11/11 in isolation, touches nothing this batch
 modified).
+
+### Batch 10 — GDPR/DPDP data export & account deletion (D100-09, `c13_governance_farmbrain_security.md`)
+
+Tackled at the product owner's explicit request, after being deliberately
+deferred in batch 9 pending exactly this kind of direct instruction (the
+legal sensitivity warranted not guessing at scope unprompted).
+
+New `app/services/data_privacy_service.py` — see its module docstring
+for the full, honest scoping disclosure (repeated in
+`docs/SECURITY.md`'s new "Data privacy" section): this is a good-faith
+MVP implementation, explicitly NOT a certified DPDP Act/GDPR compliance
+review. Two endpoints:
+
+- `GET /farmers/me/data-export` — aggregates profile, consents, farms/
+  plots, crop cycles (+ tasks/treatments/AI analyses/crop-photo metadata
+  scoped to them), harvests/listings, expert cases, dealer orders,
+  marketplace sales, notifications, input inventory, cost estimates,
+  invoices, and ledger entries into one JSON response. Deliberately
+  excludes raw photo file bytes (metadata only), `AuditLog` rows, and
+  other parties' own data - each exclusion disclosed in the response's
+  own `not_included` field, not silently omitted.
+- `POST /farmers/me/delete-account` — deactivates (`AccountStatus.INACTIVE`,
+  a previously-unused enum value confirmed by grep before this change),
+  scrubs direct PII (phone/email/name), and revokes every refresh token.
+  Does NOT hard-delete or cascade-delete farms/orders/sales/notifications
+  - retained, now tied to an anonymized account, since this codebase has
+  no authority to unilaterally decide what tax/audit/dispute-resolution
+  retention period is legally sufficient. A known, disclosed limitation:
+  an already-issued access token still works for up to
+  `jwt_access_token_minutes` after deletion (`current_user.py` never
+  re-checks `User.status`, true of every account status already, not
+  introduced here) - refresh tokens are revoked immediately, bounding it.
+
+8 new tests (`tests/test_data_privacy.py`) exercising every export
+category with real data, not just empty-list happy paths - this caught
+two real bugs before they shipped: a wrong model import path
+(`HarvestListing` actually lives in `app.models.harvest_listing`, not
+`harvest_record`) and calling the input-inventory REPOSITORY instead of
+its SERVICE (the repository returns bare ORM rows with no resolved
+`product_name`, unlike `input_inventory_service.list_items`).
+
+688/689 backend tests pass (the same pre-existing flaky
+`test_products.py` failure, unrelated).

@@ -229,6 +229,36 @@ checked-for, it's structurally impossible in this phase.
 - **Every response's provenance is recorded** (intent, tools called,
   sources) - a real, queryable audit trail, not a log line.
 
+## Data privacy: export & account deletion (D100-09, this update)
+
+`GET /farmers/me/data-export` and `POST /farmers/me/delete-account` -
+see `app/services/data_privacy_service.py`'s module docstring for the
+full scoping disclosure. Read that before assuming this satisfies any
+specific regulation:
+
+- **This is a good-faith MVP implementation, not a certified DPDP Act /
+  GDPR compliance review.** No lawyer has signed off on what counts as
+  "personal data" here, the retention choices, or that soft-deactivation
+  (rather than hard deletion) is the correct legal answer for this
+  business.
+- Export covers profile, consents, farms/plots, crop cycles and
+  everything scoped to them (tasks, treatments, AI analyses, crop-photo
+  METADATA only - not raw file bytes), harvests/listings, expert cases,
+  dealer orders, marketplace sales, notifications, input inventory, cost
+  estimates, invoices, and ledger entries. Does NOT include `AuditLog`
+  rows or other parties' own data.
+- Deletion deactivates (`AccountStatus.INACTIVE`, previously an unused
+  enum value) and scrubs direct PII (phone number, email, full name) but
+  does NOT hard-delete or cascade-delete farms/orders/sales/notifications -
+  financial/transactional records are retained, now tied to an anonymized
+  account, since this codebase has no authority to unilaterally decide a
+  retention period satisfies tax/audit/dispute-resolution obligations.
+- Known limitation: an already-issued access token keeps working for up
+  to `jwt_access_token_minutes` after deletion, since `current_user.py`
+  never re-checks `User.status` against the database (true of every
+  account status, not introduced by this change) - refresh tokens ARE
+  revoked immediately, bounding the window.
+
 ## What does NOT exist yet (by design — later phases)
 - The real farmer OTP-login flow (a dev-only token issuer exists purely to
   test protected endpoints — see `docs/ARCHITECTURE.md`).

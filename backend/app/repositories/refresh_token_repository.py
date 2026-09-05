@@ -19,3 +19,15 @@ def get_by_hash(db: Session, token_hash: str) -> RefreshToken | None:
 
 def revoke(db: Session, token: RefreshToken) -> None:
     token.revoked_at = datetime.now(timezone.utc)
+
+
+def revoke_all_for_user(db: Session, user_id: uuid.UUID) -> int:
+    """D100-09: used by account deletion - logs the farmer out of every
+    session/device at once. Returns the count revoked."""
+    now = datetime.now(timezone.utc)
+    tokens = db.execute(
+        select(RefreshToken).where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+    ).scalars().all()
+    for token in tokens:
+        token.revoked_at = now
+    return len(tokens)

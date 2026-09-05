@@ -14,7 +14,7 @@ from app.db.session import get_db
 from app.schemas.consent import ConsentRecordResponse, ConsentUpsertRequest
 from app.schemas.dashboard import FarmerDashboardResponse
 from app.schemas.farmer import FarmerProfileResponse, FarmerProfileUpdateRequest
-from app.services import consent_service, dashboard_service, farmer_service
+from app.services import consent_service, dashboard_service, data_privacy_service, farmer_service
 
 router = APIRouter(prefix="/farmers", tags=["farmers"])
 
@@ -61,3 +61,26 @@ def get_my_dashboard(
     """Farm/plot/crop summary only - no disease, weather, or market data
     yet, per this phase's explicit scope limit (see PROJECT_STATUS.md)."""
     return dashboard_service.get_dashboard(db, current_user.user_id)
+
+
+@router.get("/me/data-export")
+def export_my_data(
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """D100-09: see app/services/data_privacy_service.py's module
+    docstring for exactly what is and isn't included - a good-faith MVP
+    scope, not a certified compliance export."""
+    return data_privacy_service.export_my_data(db, current_user.user_id)
+
+
+@router.post("/me/delete-account", status_code=204)
+def delete_my_account(
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> None:
+    """D100-09: deactivates the account and scrubs direct PII (phone,
+    email, name); does NOT hard-delete farms/orders/sales/notifications -
+    see app/services/data_privacy_service.py's module docstring for the
+    full retention rationale."""
+    data_privacy_service.request_account_deletion(db, current_user.user_id)
