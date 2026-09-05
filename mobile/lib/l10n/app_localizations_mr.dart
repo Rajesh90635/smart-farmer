@@ -55,6 +55,25 @@ class AppLocalizationsMr extends AppLocalizations {
       'तुमचा पासवर्ड रीसेट करता आला नाही. कृपया फोन नंबर तपासा आणि पुन्हा प्रयत्न करा.';
 
   @override
+  String get sendCodeButton => 'कोड पाठवा';
+
+  @override
+  String get resendCodeButton => 'कोड पुन्हा पाठवा';
+
+  @override
+  String get otpCodeLabel => 'पडताळणी कोड';
+
+  @override
+  String get otpSentMessage => 'आम्ही तुमच्या फोनवर एक पडताळणी कोड पाठवला आहे.';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'पडताळणी कोड पाठवता आला नाही. कृपया फोन नंबर तपासा आणि पुन्हा प्रयत्न करा.';
+
+  @override
+  String get otpCodeRequiredError => 'कृपया पडताळणी कोड टाका.';
+
+  @override
   String get loginFailedMessage => 'लॉग इन अयशस्वी झालं.';
 
   @override
@@ -98,6 +117,15 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get languageLabel => 'भाषा';
+
+  @override
+  String get audioLanguageLabel => 'ऑडिओ भाषा';
+
+  @override
+  String get audioLanguageManualOption => 'माझी अ‍ॅप भाषा वापरा';
+
+  @override
+  String get audioLanguageLocationOption => 'माझ्या स्थानावरून ओळखा';
 
   @override
   String get saveButton => 'जतन करा';
@@ -163,6 +191,16 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'पुन्हा प्रयत्न करा';
+
+  @override
+  String get pendingUploadsTitle => 'प्रलंबित फोटो अपलोड';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'कोणतेही प्रलंबित अपलोड नाहीत.';
+
+  @override
+  String get pendingUploadsBannerMessage =>
+      'काही पीक फोटो अपलोड होऊ शकले नाहीत';
 
   @override
   String get checkCropTitle => 'पीक तपासा';
@@ -2069,6 +2107,14 @@ class AppLocalizationsMr extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'खूप वेळा प्रयत्न झाले. कृपया काही मिनिटे थांबून पुन्हा प्रयत्न करा.';
+
+  @override
+  String get errorInvalidOtp =>
+      'हा पडताळणी कोड अवैध आहे किंवा त्याची मुदत संपली आहे.';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'आत्ता पडताळणी कोड पाठवता आला नाही. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.';
 
   @override
   String get errorUnauthorized =>

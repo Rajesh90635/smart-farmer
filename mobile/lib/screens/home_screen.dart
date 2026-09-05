@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../core/friendly_error.dart';
 import '../features/auth/farmer_repository.dart';
+import '../features/crop_photo/pending_upload_queue.dart';
+import '../features/crop_photo/pending_uploads_screen.dart';
 import '../features/daily_briefing/daily_briefing_screen.dart';
 import '../features/dealer_market/product_list_screen.dart';
 import '../features/farm/my_farms_screen.dart';
@@ -123,9 +125,25 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final dashboard = _dashboard!;
+    final stuckUploads = context.watch<PendingUploadQueue>().needsManualAction;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (stuckUploads.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Card(
+              color: Colors.orange.shade50,
+              child: ListTile(
+                leading: const Icon(Icons.warning_amber, color: Colors.orange),
+                title: Text(l10n.pendingUploadsBannerMessage),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PendingUploadsScreen()),
+                ),
+              ),
+            ),
+          ),
         ElevatedButton.icon(
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const DailyBriefingScreen()),

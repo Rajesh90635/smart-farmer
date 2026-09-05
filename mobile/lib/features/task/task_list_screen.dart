@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/voice_language_controller.dart';
 import '../../core/voice_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'task_models.dart';
@@ -154,8 +155,16 @@ class _TaskListScreenState extends State<TaskListScreen> {
       final key = taskWeatherAdvisoryMessageKeys[task.weatherAdvisory!.reasonMessageKey] ?? task.weatherAdvisory!.reasonMessageKey;
       parts.add(_lookupAdvisoryMessage(l10n, key));
     }
+    // Was hardcoded to 'en' regardless of the farmer's chosen app
+    // language - the advisory phrase (when present) is already correctly
+    // localized via `l10n`, so the spoken language should match it.
+    final displayLanguageCode = Localizations.localeOf(context).languageCode;
+    final voiceLanguageController = context.read<VoiceLanguageController>();
+    final voiceLanguageCode = await voiceLanguageController.resolveLanguageCode(contentLanguageCode: displayLanguageCode);
+    if (!mounted) return;
+
     final voice = context.read<VoiceService>();
-    final started = await voice.speak(parts.join('. '), languageCode: 'en');
+    final started = await voice.speak(parts.join('. '), languageCode: voiceLanguageCode);
     if (!mounted) return;
     setState(() => _voiceUnavailableMessageShown = !started);
   }

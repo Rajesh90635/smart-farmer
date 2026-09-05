@@ -198,6 +198,42 @@ abstract class AppLocalizations {
   /// **'Could not reset your password. Please check the phone number and try again.'**
   String get resetPasswordFailedMessage;
 
+  /// No description provided for @sendCodeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code'**
+  String get sendCodeButton;
+
+  /// No description provided for @resendCodeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get resendCodeButton;
+
+  /// No description provided for @otpCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get otpCodeLabel;
+
+  /// No description provided for @otpSentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ve sent a verification code to your phone.'**
+  String get otpSentMessage;
+
+  /// No description provided for @requestOtpFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send a verification code. Please check the phone number and try again.'**
+  String get requestOtpFailedMessage;
+
+  /// No description provided for @otpCodeRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the verification code.'**
+  String get otpCodeRequiredError;
+
   /// No description provided for @loginFailedMessage.
   ///
   /// In en, this message translates to:
@@ -287,6 +323,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Language'**
   String get languageLabel;
+
+  /// No description provided for @audioLanguageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio language'**
+  String get audioLanguageLabel;
+
+  /// No description provided for @audioLanguageManualOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Use my app language'**
+  String get audioLanguageManualOption;
+
+  /// No description provided for @audioLanguageLocationOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect from my location'**
+  String get audioLanguageLocationOption;
 
   /// No description provided for @saveButton.
   ///
@@ -413,6 +467,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get genericErrorRetry;
+
+  /// No description provided for @pendingUploadsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending photo uploads'**
+  String get pendingUploadsTitle;
+
+  /// No description provided for @pendingUploadsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending uploads.'**
+  String get pendingUploadsEmptyMessage;
+
+  /// No description provided for @pendingUploadsBannerMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Some crop photos could not be uploaded'**
+  String get pendingUploadsBannerMessage;
 
   /// No description provided for @checkCropTitle.
   ///
@@ -3981,6 +4053,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Too many attempts. Please wait a few minutes and try again.'**
   String get errorRateLimited;
+
+  /// No description provided for @errorInvalidOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'That verification code is invalid or has expired.'**
+  String get errorInvalidOtp;
+
+  /// No description provided for @errorOtpDeliveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the verification code right now. Please try again shortly.'**
+  String get errorOtpDeliveryFailed;
 
   /// No description provided for @errorUnauthorized.
   ///

@@ -55,6 +55,25 @@ class AppLocalizationsHi extends AppLocalizations {
       'आपका पासवर्ड रीसेट नहीं हो सका। कृपया फोन नंबर जांचें और फिर से प्रयास करें।';
 
   @override
+  String get sendCodeButton => 'कोड भेजें';
+
+  @override
+  String get resendCodeButton => 'कोड फिर से भेजें';
+
+  @override
+  String get otpCodeLabel => 'सत्यापन कोड';
+
+  @override
+  String get otpSentMessage => 'हमने आपके फोन पर एक सत्यापन कोड भेजा है।';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'सत्यापन कोड नहीं भेजा जा सका। कृपया फोन नंबर जांचें और फिर से प्रयास करें।';
+
+  @override
+  String get otpCodeRequiredError => 'कृपया सत्यापन कोड दर्ज करें।';
+
+  @override
   String get loginFailedMessage => 'लॉग इन नहीं हो पाया।';
 
   @override
@@ -98,6 +117,15 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get languageLabel => 'भाषा';
+
+  @override
+  String get audioLanguageLabel => 'ऑडियो भाषा';
+
+  @override
+  String get audioLanguageManualOption => 'मेरी ऐप भाषा का उपयोग करें';
+
+  @override
+  String get audioLanguageLocationOption => 'मेरे स्थान से पता लगाएं';
 
   @override
   String get saveButton => 'सेव करें';
@@ -162,6 +190,15 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'फिर कोशिश करें';
+
+  @override
+  String get pendingUploadsTitle => 'लंबित फोटो अपलोड';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'कोई लंबित अपलोड नहीं है।';
+
+  @override
+  String get pendingUploadsBannerMessage => 'कुछ फसल फोटो अपलोड नहीं हो सकीं';
 
   @override
   String get checkCropTitle => 'फसल जांचें';
@@ -2069,6 +2106,13 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'बहुत अधिक प्रयास हो गए। कृपया कुछ मिनट बाद पुनः प्रयास करें।';
+
+  @override
+  String get errorInvalidOtp => 'यह सत्यापन कोड अमान्य है या समाप्त हो गया है।';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'अभी सत्यापन कोड नहीं भेजा जा सका। कृपया थोड़ी देर बाद पुनः प्रयास करें।';
 
   @override
   String get errorUnauthorized =>

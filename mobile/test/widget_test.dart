@@ -15,10 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:smart_farmer_mobile/app.dart';
 import 'package:smart_farmer_mobile/core/locale_controller.dart';
+import 'package:smart_farmer_mobile/core/voice_language_controller.dart';
 
 void main() {
   testWidgets('SmartFarmerApp builds and shows the splash loading screen first', (WidgetTester tester) async {
-    await tester.pumpWidget(SmartFarmerApp(localeController: LocaleController()));
+    await tester.pumpWidget(SmartFarmerApp(localeController: LocaleController(), voiceLanguageController: VoiceLanguageController()));
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);

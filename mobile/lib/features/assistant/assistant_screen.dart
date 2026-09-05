@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/voice_language_controller.dart';
 import '../../core/voice_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'assistant_models.dart';
@@ -103,8 +104,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
   /// Speaks EXACTLY this message's own content - never a separately
   /// composed summary (same rule as every other VoiceService call site).
   Future<void> _speak(ChatMessage message) async {
+    // In location mode, this can only ever change the VOICE LOCALE, not
+    // re-translate `message.content` itself (already backend-composed in
+    // `message.languageCode`) - same disclosed limitation as every other
+    // non-daily-briefing voice call site.
+    final voiceLanguageController = context.read<VoiceLanguageController>();
+    final voiceLanguageCode = await voiceLanguageController.resolveLanguageCode(contentLanguageCode: message.languageCode);
+    if (!mounted) return;
+
     final voice = context.read<VoiceService>();
-    final started = await voice.speak(message.content, languageCode: message.languageCode);
+    final started = await voice.speak(message.content, languageCode: voiceLanguageCode);
     if (!mounted || started) return;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.voiceUnavailable)));

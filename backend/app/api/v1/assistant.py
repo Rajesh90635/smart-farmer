@@ -99,9 +99,15 @@ def update_preferences(
 
 @router.get("/daily-summary", response_model=DailySummaryResponse)
 def daily_summary(
+    language_code: str | None = None,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     weather_provider: WeatherProvider = Depends(get_weather_provider),
     settings: Settings = Depends(get_settings),
 ) -> DailySummaryResponse:
-    return assistant_extras_service.get_daily_summary(db, current_user.user_id, weather_provider, settings)
+    # `language_code` is a one-off override for this single response only
+    # (e.g. the mobile app's location-based audio language detection) -
+    # it never writes to the farmer's saved preferred_language_code.
+    # get_daily_summary() itself validates/falls back for an unrecognized
+    # code, so no validation is duplicated here.
+    return assistant_extras_service.get_daily_summary(db, current_user.user_id, weather_provider, settings, language_code_override=language_code)

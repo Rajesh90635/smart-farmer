@@ -74,6 +74,90 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "assistant_prescription_redirect": {"en": "I can't recommend a specific pesticide, fungicide, or dosage. This needs verified agricultural guidance - I can help you send this to an agriculture expert instead."},
     "assistant_general_unavailable": {"en": "I don't have enough information to answer that reliably. Please ask about your crop, weather, orders, or marketplace, or contact an agriculture expert for general guidance."},
     "assistant_help": {"en": "You can ask me about your crop, disease results, weather, harvest, buyer offers, your sales, your orders, deliveries, expert cases, or where to find seeds."},
+
+    # --- Daily Briefing (Today's Briefing screen), keys below only ---
+    # DRAFT, UNREVIEWED machine translations - explicitly requested by the
+    # user to unblock location-based audio language switching, as an
+    # exception to this file's normal English-only default. NOT
+    # native-speaker-verified. Unlike every other entry above, these six
+    # languages are populated - but flagged here, and in
+    # docs/LOCALIZATION.md, as needing native-speaker review before being
+    # trusted for real farmer-facing weather/crop content, per this file's
+    # own stated rule (see module docstring) that a wrong translation of
+    # exactly this kind of content is actively harmful. Do not copy this
+    # pattern to any other key without the same explicit user sign-off.
+    "daily_summary_weather": {
+        "en": "Weather: {temp}°C, {rain}% chance of rain today.",
+        "hi": "मौसम: आज {temp}°C, बारिश की {rain}% संभावना।",
+        "te": "వాతావరణం: ఈరోజు {temp}°C, వర్షం పడే అవకాశం {rain}%.",
+        "ta": "வானிலை: இன்று {temp}°C, மழை பெய்யும் வாய்ப்பு {rain}%.",
+        "kn": "ಹವಾಮಾನ: ಇಂದು {temp}°C, ಮಳೆಯ ಸಾಧ್ಯತೆ {rain}%.",
+        "ml": "കാലാവസ്ഥ: ഇന്ന് {temp}°C, മഴയ്ക്കുള്ള സാധ്യത {rain}%.",
+        "mr": "हवामान: आज {temp}°C, पावसाची शक्यता {rain}%.",
+    },
+    "daily_summary_crop": {
+        "en": "Crop: your {crop_name} is at the {stage} stage.",
+        "hi": "फसल: आपकी {crop_name} अभी {stage} चरण में है।",
+        "te": "పంట: మీ {crop_name} ప్రస్తుతం {stage} దశలో ఉంది.",
+        "ta": "பயிர்: உங்கள் {crop_name} தற்போது {stage} நிலையில் உள்ளது.",
+        "kn": "ಬೆಳೆ: ನಿಮ್ಮ {crop_name} ಪ್ರಸ್ತುತ {stage} ಹಂತದಲ್ಲಿದೆ.",
+        "ml": "വിള: നിങ്ങളുടെ {crop_name} ഇപ്പോൾ {stage} ഘട്ടത്തിലാണ്.",
+        "mr": "पीक: तुमचे {crop_name} सध्या {stage} अवस्थेत आहे.",
+    },
+    "daily_summary_harvest": {
+        "en": "Harvest: currently {status}.",
+        "hi": "कटाई: वर्तमान स्थिति {status}।",
+        "te": "పంట కోత: ప్రస్తుత స్థితి {status}.",
+        "ta": "அறுவடை: தற்போதைய நிலை {status}.",
+        "kn": "ಕೊಯ್ಲು: ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ {status}.",
+        "ml": "വിളവെടുപ്പ്: നിലവിലെ അവസ്ഥ {status}.",
+        "mr": "कापणी: सध्याची स्थिती {status}.",
+    },
+    "daily_summary_marketplace": {
+        "en": "Marketplace: {offer_count} buyer offer(s) on your current listing.",
+        "hi": "बाज़ार: आपकी सूची पर {offer_count} खरीदार प्रस्ताव।",
+        "te": "మార్కెట్‌ప్లేస్: మీ లిస్టింగ్‌పై {offer_count} కొనుగోలుదారు ఆఫర్లు.",
+        "ta": "சந்தை: உங்கள் பட்டியலில் {offer_count} வாங்குபவர் சலுகைகள்.",
+        "kn": "ಮಾರುಕಟ್ಟೆ: ನಿಮ್ಮ ಪಟ್ಟಿಯಲ್ಲಿ {offer_count} ಖರೀದಿದಾರರ ಕೊಡುಗೆಗಳು.",
+        "ml": "മാർക്കറ്റ്: നിങ്ങളുടെ ലിസ്റ്റിംഗിൽ {offer_count} വാങ്ങുന്നവരുടെ ഓഫറുകൾ.",
+        "mr": "बाजारपेठ: तुमच्या यादीवर {offer_count} खरेदीदार ऑफर्स.",
+    },
+    "daily_summary_delivery": {
+        "en": "Delivery: your order is currently {status}.",
+        "hi": "डिलीवरी: आपका ऑर्डर वर्तमान में {status} है।",
+        "te": "డెలివరీ: మీ ఆర్డర్ ప్రస్తుతం {status}.",
+        "ta": "விநியோகம்: உங்கள் ஆர்டர் தற்போது {status}.",
+        "kn": "ವಿತರಣೆ: ನಿಮ್ಮ ಆರ್ಡರ್ ಪ್ರಸ್ತುತ {status}.",
+        "ml": "ഡെലിവറി: നിങ്ങളുടെ ഓർഡർ നിലവിൽ {status}.",
+        "mr": "डिलिव्हरी: तुमची ऑर्डर सध्या {status} आहे.",
+    },
+    "daily_summary_expert_review": {
+        "en": "Expert review: your case is currently {status}.",
+        "hi": "विशेषज्ञ समीक्षा: आपका मामला वर्तमान में {status} है।",
+        "te": "నిపుణుల సమీక్ష: మీ కేసు ప్రస్తుతం {status}.",
+        "ta": "நிபுணர் மதிப்பாய்வு: உங்கள் வழக்கு தற்போது {status}.",
+        "kn": "ತಜ್ಞರ ಪರಿಶೀಲನೆ: ನಿಮ್ಮ ಪ್ರಕರಣ ಪ್ರಸ್ತುತ {status}.",
+        "ml": "വിദഗ്ദ്ധ അവലോകനം: നിങ്ങളുടെ കേസ് നിലവിൽ {status}.",
+        "mr": "तज्ञ पुनरावलोकन: तुमचे प्रकरण सध्या {status} आहे.",
+    },
+    "daily_summary_tasks_overdue": {
+        "en": "Tasks: you have {count} overdue task{plural}.",
+        "hi": "कार्य: आपके पास {count} विलंबित कार्य हैं।",
+        "te": "పనులు: మీకు {count} ఆలస్యమైన పనులు ఉన్నాయి.",
+        "ta": "பணிகள்: உங்களிடம் {count} தாமதமான பணிகள் உள்ளன.",
+        "kn": "ಕಾರ್ಯಗಳು: ನಿಮಗೆ {count} ವಿಳಂಬವಾದ ಕಾರ್ಯಗಳಿವೆ.",
+        "ml": "ജോലികൾ: നിങ്ങൾക്ക് {count} കാലതാമസം വന്ന ജോലികൾ ഉണ്ട്.",
+        "mr": "कामे: तुमच्याकडे {count} विलंबित कामे आहेत.",
+    },
+    "daily_summary_no_updates": {
+        "en": "No new updates for your farm right now.",
+        "hi": "अभी आपके खेत के लिए कोई नई जानकारी नहीं है।",
+        "te": "మీ పొలం కోసం ప్రస్తుతం కొత్త అప్‌డేట్‌లు లేవు.",
+        "ta": "இப்போது உங்கள் பண்ணைக்கு புதிய புதுப்பிப்புகள் இல்லை.",
+        "kn": "ಸದ್ಯಕ್ಕೆ ನಿಮ್ಮ ಜಮೀನಿಗೆ ಯಾವುದೇ ಹೊಸ ಅಪ್‌ಡೇಟ್‌ಗಳಿಲ್ಲ.",
+        "ml": "നിലവിൽ നിങ്ങളുടെ കൃഷിയിടത്തിന് പുതിയ അപ്ഡേറ്റുകൾ ഇല്ല.",
+        "mr": "सध्या तुमच्या शेतासाठी कोणतीही नवीन माहिती नाही.",
+    },
 }
 
 

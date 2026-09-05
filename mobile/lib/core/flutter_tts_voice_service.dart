@@ -54,6 +54,21 @@ class FlutterTtsVoiceService implements VoiceService {
       final locale = _languageCodeToLocale[languageCode];
       if (locale == null) return false;
 
+      // `setLanguage`'s return code is NOT trustworthy for this on every
+      // platform: Android's engine genuinely fails setLanguage (returns 0)
+      // when the device has no voice for `locale`, but flutter_tts's web
+      // implementation always returns 1 from setLanguage regardless of
+      // whether any matching voice exists - it silently keeps whatever
+      // voice/lang was already selected (e.g. English, left over from a
+      // previous call) instead of failing, so a farmer picking a language
+      // this browser has no voice for got the app reporting success while
+      // it read (or garbled) the text in the wrong language. `isLanguageAvailable`
+      // is implemented honestly on both platforms - checked here directly
+      // so an unsupported language is correctly reported as unavailable
+      // instead of speaking in the wrong voice.
+      final languageAvailable = await _tts.isLanguageAvailable(locale);
+      if (languageAvailable != true) return false;
+
       final setResult = await _tts.setLanguage(locale);
       if (setResult != 1) return false;
 

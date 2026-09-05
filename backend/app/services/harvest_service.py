@@ -105,10 +105,27 @@ def mark_approaching(db: Session, farmer_id: str, harvest_id: uuid.UUID) -> Harv
     return HarvestResponse.model_validate(harvest)
 
 
+_CONFIRM_READY_ALLOWED_FROM = (HarvestStatus.PLANNED, HarvestStatus.APPROACHING, HarvestStatus.READY)
+
+
 def confirm_ready(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: HarvestConfirmReadyRequest) -> HarvestResponse:
     harvest = harvest_repository.get_harvest_owned(db, harvest_id, uuid.UUID(farmer_id))
     if harvest is None:
         raise AppError(error_codes.NOT_FOUND, "Harvest record not found.", 404)
+
+    # Real bug fixed here: this used to unconditionally set status back to
+    # READY regardless of the harvest's current status - calling it again
+    # to correct estimated_quantity/actual_harvest_date after the harvest
+    # had already progressed to HARVESTED/LISTED/PARTIALLY_SOLD/SOLD would
+    # silently regress it back to READY, corrupting downstream marketplace/
+    # financial state. Once past READY, this endpoint is the wrong tool for
+    # a correction - reject it instead of guessing what the farmer meant.
+    if harvest.status not in _CONFIRM_READY_ALLOWED_FROM:
+        raise AppError(
+            error_codes.VALIDATION_ERROR,
+            f"Cannot confirm ready - harvest is already '{harvest.status.value}'.",
+            409,
+        )
 
     harvest.status = HarvestStatus.READY
     if payload.actual_harvest_date:

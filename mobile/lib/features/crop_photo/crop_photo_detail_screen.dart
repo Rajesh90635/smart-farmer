@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/voice_language_controller.dart';
 import '../../core/voice_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../expert_case/case_models.dart';
@@ -197,8 +198,16 @@ class _CropPhotoDetailScreenState extends State<CropPhotoDetailScreen> {
   /// the device), the text is ALREADY visible on screen from the normal
   /// result rendering above - nothing is lost.
   Future<void> _speak(String text, String languageCode) async {
+    // In location mode, this can only ever change the VOICE LOCALE, not
+    // re-translate `text` itself (already backend-composed in
+    // `languageCode`) - same disclosed limitation as every other
+    // non-daily-briefing voice call site.
+    final voiceLanguageController = context.read<VoiceLanguageController>();
+    final voiceLanguageCode = await voiceLanguageController.resolveLanguageCode(contentLanguageCode: languageCode);
+    if (!mounted) return;
+
     final voice = context.read<VoiceService>();
-    final started = await voice.speak(text, languageCode: languageCode);
+    final started = await voice.speak(text, languageCode: voiceLanguageCode);
     if (!mounted) return;
     setState(() => _voiceUnavailableMessageShown = !started);
   }

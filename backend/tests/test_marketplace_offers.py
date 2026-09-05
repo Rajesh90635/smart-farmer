@@ -61,6 +61,71 @@ def test_accepting_offer_decrements_listing_quantity(client, farmer_with_crop_cy
     assert listings_after["items"][0]["quantity_available"] == "600.00"
 
 
+def test_net_realization_reflects_farmer_entered_charges_not_a_fabricated_zero(client, farmer_with_crop_cycle, verified_buyer):
+    """Real bug fix: charges/net_value used to be hardcoded to 0, so
+    net_value could never differ from gross_value. Now farmer-entered at
+    accept time, matching this app's never-fabricate-a-number convention."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="100.00")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(quantity="100.00", price_per_unit="30.00"), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", json={"charges": "250.00"}, headers=auth_headers(farmer_tokens))
+    assert sale.status_code == 200
+    body = sale.json()
+    assert body["gross_value"] == "3000.00"
+    assert body["charges"] == "250.00"
+    assert body["net_value"] == "2750.00"
+
+
+def test_accepting_offer_without_charges_defaults_to_zero_not_an_error(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="100.00")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(quantity="100.00", price_per_unit="30.00"), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens))
+    assert sale.status_code == 200
+    assert sale.json()["charges"] == "0.00" or sale.json()["charges"] == "0"
+    assert sale.json()["net_value"] == sale.json()["gross_value"]
+
+
+def test_charges_cannot_exceed_gross_value(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="100.00")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(quantity="100.00", price_per_unit="30.00"), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", json={"charges": "5000.00"}, headers=auth_headers(farmer_tokens))
+    assert sale.status_code == 422
+
+
+def test_cannot_accept_an_expired_offer(client, farmer_with_crop_cycle, verified_buyer):
+    """Real bug fix: `valid_until`/OfferStatus.EXPIRED existed but nothing
+    ever checked it - a farmer could accept an offer past its own stated
+    validity window."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id)
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers",
+        json=valid_offer_payload(valid_until="2020-01-01T00:00:00Z"),
+        headers=auth_headers(buyer_tokens),
+    ).json()
+
+    response = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens))
+    assert response.status_code == 409
+
+    offers_after = client.get(f"/api/v1/marketplace/listings/{listing['id']}/offers", headers=auth_headers(farmer_tokens)).json()
+    assert offers_after["items"][0]["status"] == "expired"
+
+
 def test_cannot_accept_offer_exceeding_available_quantity(client, farmer_with_crop_cycle, verified_buyer):
     farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
     buyer_tokens, _ = verified_buyer

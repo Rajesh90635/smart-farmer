@@ -55,6 +55,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not reset your password. Please check the phone number and try again.';
 
   @override
+  String get sendCodeButton => 'Send code';
+
+  @override
+  String get resendCodeButton => 'Resend code';
+
+  @override
+  String get otpCodeLabel => 'Verification code';
+
+  @override
+  String get otpSentMessage => 'We\'ve sent a verification code to your phone.';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'Could not send a verification code. Please check the phone number and try again.';
+
+  @override
+  String get otpCodeRequiredError => 'Please enter the verification code.';
+
+  @override
   String get loginFailedMessage => 'Login failed.';
 
   @override
@@ -98,6 +117,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageLabel => 'Language';
+
+  @override
+  String get audioLanguageLabel => 'Audio language';
+
+  @override
+  String get audioLanguageManualOption => 'Use my app language';
+
+  @override
+  String get audioLanguageLocationOption => 'Detect from my location';
 
   @override
   String get saveButton => 'Save';
@@ -163,6 +191,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'Try again';
+
+  @override
+  String get pendingUploadsTitle => 'Pending photo uploads';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'No pending uploads.';
+
+  @override
+  String get pendingUploadsBannerMessage =>
+      'Some crop photos could not be uploaded';
 
   @override
   String get checkCropTitle => 'Check Crop';
@@ -2065,6 +2103,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'Too many attempts. Please wait a few minutes and try again.';
+
+  @override
+  String get errorInvalidOtp =>
+      'That verification code is invalid or has expired.';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'Could not send the verification code right now. Please try again shortly.';
 
   @override
   String get errorUnauthorized => 'You need to log in again to continue.';

@@ -22,6 +22,9 @@ class _FlakyFirstCallTts extends FlutterTts {
   }
 
   @override
+  Future<dynamic> isLanguageAvailable(String language) async => true;
+
+  @override
   Future<dynamic> setLanguage(String language) async => 1;
 
   @override
@@ -39,7 +42,31 @@ class _WebLikeTts extends FlutterTts {
   Future<dynamic> get getLanguages async => <String>['en-US'];
 
   @override
+  Future<dynamic> isLanguageAvailable(String language) async => true;
+
+  @override
   Future<dynamic> setLanguage(String language) async => 1;
+
+  @override
+  Future<dynamic> speak(String text, {bool focus = false}) async => null;
+}
+
+/// Matches the ACTUAL bug this was written to catch: flutter_tts's web
+/// 'setLanguage' method-channel case (flutter_tts_web.dart) always returns
+/// 1 - even when the browser has no voice for the requested language, it
+/// silently keeps whatever voice/lang was already active instead of
+/// failing. `isLanguageAvailable` is the one method web implements
+/// honestly (it checks the real speechSynthesis voice list), so it must be
+/// what `speak()` actually trusts - not `setLanguage`'s return value.
+class _WebNoMatchingVoiceTts extends FlutterTts {
+  @override
+  Future<dynamic> get getLanguages async => <String>['en-US'];
+
+  @override
+  Future<dynamic> isLanguageAvailable(String language) async => language == 'en-IN';
+
+  @override
+  Future<dynamic> setLanguage(String language) async => 1; // lies: always "succeeds" on web.
 
   @override
   Future<dynamic> speak(String text, {bool focus = false}) async => null;
@@ -53,6 +80,22 @@ void main() {
       final voice = FlutterTtsVoiceService(tts: _WebLikeTts());
       final started = await voice.speak('Weather update.', languageCode: 'en');
       expect(started, isTrue);
+    });
+  });
+
+  group('FlutterTtsVoiceService.speak() per-language availability', () {
+    test('speaks when the requested language has a real matching voice', () async {
+      final voice = FlutterTtsVoiceService(tts: _WebNoMatchingVoiceTts());
+      final started = await voice.speak('Weather update.', languageCode: 'en');
+      expect(started, isTrue);
+    });
+
+    test('reports unavailable, and never calls speak(), for a language the '
+        'browser has no voice for - even though web setLanguage lies and '
+        'reports success', () async {
+      final voice = FlutterTtsVoiceService(tts: _WebNoMatchingVoiceTts());
+      final started = await voice.speak('హెచ్చరిక.', languageCode: 'te');
+      expect(started, isFalse);
     });
   });
 

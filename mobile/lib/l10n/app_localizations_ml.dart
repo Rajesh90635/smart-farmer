@@ -56,6 +56,26 @@ class AppLocalizationsMl extends AppLocalizations {
       'നിങ്ങളുടെ പാസ്‌വേഡ് പുനഃസജ്ജമാക്കാൻ കഴിഞ്ഞില്ല. ദയവായി ഫോൺ നമ്പർ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.';
 
   @override
+  String get sendCodeButton => 'കോഡ് അയയ്ക്കുക';
+
+  @override
+  String get resendCodeButton => 'കോഡ് വീണ്ടും അയയ്ക്കുക';
+
+  @override
+  String get otpCodeLabel => 'സ്ഥിരീകരണ കോഡ്';
+
+  @override
+  String get otpSentMessage =>
+      'ഞങ്ങൾ നിങ്ങളുടെ ഫോണിലേക്ക് ഒരു സ്ഥിരീകരണ കോഡ് അയച്ചിട്ടുണ്ട്.';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'സ്ഥിരീകരണ കോഡ് അയയ്ക്കാൻ കഴിഞ്ഞില്ല. ദയവായി ഫോൺ നമ്പർ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get otpCodeRequiredError => 'ദയവായി സ്ഥിരീകരണ കോഡ് നൽകുക.';
+
+  @override
   String get loginFailedMessage => 'ലോഗിൻ പരാജയപ്പെട്ടു.';
 
   @override
@@ -100,6 +120,15 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get languageLabel => 'ഭാഷ';
+
+  @override
+  String get audioLanguageLabel => 'ഓഡിയോ ഭാഷ';
+
+  @override
+  String get audioLanguageManualOption => 'എന്റെ ആപ്പ് ഭാഷ ഉപയോഗിക്കുക';
+
+  @override
+  String get audioLanguageLocationOption => 'എന്റെ സ്ഥലത്ത് നിന്ന് കണ്ടെത്തുക';
 
   @override
   String get saveButton => 'സേവ് ചെയ്യുക';
@@ -166,6 +195,16 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'വീണ്ടും ശ്രമിക്കുക';
+
+  @override
+  String get pendingUploadsTitle => 'തീർച്ചയാകാത്ത ഫോട്ടോ അപ്‌ലോഡുകൾ';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'തീർച്ചയാകാത്ത അപ്‌ലോഡുകൾ ഇല്ല.';
+
+  @override
+  String get pendingUploadsBannerMessage =>
+      'ചില വിള ഫോട്ടോകൾ അപ്‌ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല';
 
   @override
   String get checkCropTitle => 'വിള പരിശോധിക്കുക';
@@ -2092,6 +2131,14 @@ class AppLocalizationsMl extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'വളരെയധികം തവണ ശ്രമിച്ചു. ദയവായി കുറച്ച് മിനിറ്റ് കാത്തിരുന്ന് വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get errorInvalidOtp =>
+      'ഈ സ്ഥിരീകരണ കോഡ് അസാധുവാണ് അല്ലെങ്കിൽ കാലഹരണപ്പെട്ടു.';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'ഇപ്പോൾ സ്ഥിരീകരണ കോഡ് അയയ്ക്കാൻ കഴിഞ്ഞില്ല. ദയവായി അൽപ്പസമയത്തിനുശേഷം വീണ്ടും ശ്രമിക്കുക.';
 
   @override
   String get errorUnauthorized =>

@@ -55,6 +55,26 @@ class AppLocalizationsKn extends AppLocalizations {
       'ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಅನ್ನು ಮರುಹೊಂದಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಫೋನ್ ನಂಬರ್ ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 
   @override
+  String get sendCodeButton => 'ಕೋಡ್ ಕಳುಹಿಸಿ';
+
+  @override
+  String get resendCodeButton => 'ಕೋಡ್ ಮತ್ತೆ ಕಳುಹಿಸಿ';
+
+  @override
+  String get otpCodeLabel => 'ಪರಿಶೀಲನಾ ಕೋಡ್';
+
+  @override
+  String get otpSentMessage =>
+      'ನಾವು ನಿಮ್ಮ ಫೋನ್‌ಗೆ ಪರಿಶೀಲನಾ ಕೋಡ್ ಕಳುಹಿಸಿದ್ದೇವೆ.';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'ಪರಿಶೀಲನಾ ಕೋಡ್ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಫೋನ್ ನಂಬರ್ ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get otpCodeRequiredError => 'ದಯವಿಟ್ಟು ಪರಿಶೀಲನಾ ಕೋಡ್ ನಮೂದಿಸಿ.';
+
+  @override
   String get loginFailedMessage => 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ.';
 
   @override
@@ -98,6 +118,15 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get languageLabel => 'ಭಾಷೆ';
+
+  @override
+  String get audioLanguageLabel => 'ಆಡಿಯೋ ಭಾಷೆ';
+
+  @override
+  String get audioLanguageManualOption => 'ನನ್ನ ಆ್ಯಪ್ ಭಾಷೆಯನ್ನು ಬಳಸಿ';
+
+  @override
+  String get audioLanguageLocationOption => 'ನನ್ನ ಸ್ಥಳದಿಂದ ಪತ್ತೆ ಮಾಡಿ';
 
   @override
   String get saveButton => 'ಉಳಿಸಿ';
@@ -164,6 +193,16 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
+
+  @override
+  String get pendingUploadsTitle => 'ಬಾಕಿ ಇರುವ ಫೋಟೋ ಅಪ್‌ಲೋಡ್‌ಗಳು';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'ಯಾವುದೇ ಬಾಕಿ ಅಪ್‌ಲೋಡ್‌ಗಳಿಲ್ಲ.';
+
+  @override
+  String get pendingUploadsBannerMessage =>
+      'ಕೆಲವು ಬೆಳೆ ಫೋಟೋಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ';
 
   @override
   String get checkCropTitle => 'ಬೆಳೆ ಪರೀಕ್ಷಿಸಿ';
@@ -2076,6 +2115,14 @@ class AppLocalizationsKn extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'ಹಲವು ಬಾರಿ ಪ್ರಯತ್ನಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಕೆಲವು ನಿಮಿಷ ಕಾದು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get errorInvalidOtp =>
+      'ಈ ಪರಿಶೀಲನಾ ಕೋಡ್ ಅಮಾನ್ಯವಾಗಿದೆ ಅಥವಾ ಅವಧಿ ಮುಗಿದಿದೆ.';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'ಈಗ ಪರಿಶೀಲನಾ ಕೋಡ್ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 
   @override
   String get errorUnauthorized => 'ಮುಂದುವರಿಯಲು ನೀವು ಮತ್ತೆ ಲಾಗಿನ್ ಮಾಡಬೇಕು.';

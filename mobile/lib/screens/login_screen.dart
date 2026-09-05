@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../core/locale_sync.dart';
 import '../features/auth/auth_state.dart';
+import '../features/crop_photo/pending_upload_queue.dart';
+import '../features/crop_photo/sync_coordinator.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/auth/validators.dart';
 import '../l10n/app_localizations.dart';
@@ -49,6 +51,18 @@ class _LoginScreenState extends State<LoginScreen> {
       // farmer before, so apply their backend-saved language now rather
       // than showing Home in the on-device default (English).
       await syncLocaleFromBackendProfile(context);
+      if (!mounted) return;
+
+      // Real bug fixed here: an upload that hit `authenticationRequired`
+      // (session expired mid-upload) was never revived by anything,
+      // including a fresh, successful re-login - it stayed permanently
+      // stuck. Logging back in is exactly the moment it becomes safe to
+      // retry, so do it here rather than requiring the farmer to find a
+      // separate "retry" control.
+      await context.read<PendingUploadQueue>().reviveAuthRequiredItems();
+      if (!mounted) return;
+      context.read<SyncCoordinator>().syncNow();
+
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } else {

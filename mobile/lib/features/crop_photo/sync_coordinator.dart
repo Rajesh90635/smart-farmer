@@ -133,16 +133,16 @@ class SyncCoordinator {
   }
 }
 
-/// Constructs and starts the coordinator from the widget tree's existing
-/// providers - called once from app.dart at startup.
+/// Loads the persisted queue and starts the ALREADY-PROVIDED SyncCoordinator
+/// singleton (registered in app.dart's MultiProvider) - called once from
+/// splash_screen.dart at startup. Reading it from Provider, rather than
+/// constructing a new instance here, is what makes the coordinator
+/// reachable later (e.g. `context.read<SyncCoordinator>().syncNow()` from
+/// login_screen.dart after re-authentication, or from
+/// PendingUploadsScreen's manual "Retry" button) - a real, previously
+/// missing "manual recovery" path.
 Future<void> initializeOfflineSync(BuildContext context) async {
   final queue = context.read<PendingUploadQueue>();
   await queue.loadFromDisk();
-
-  final coordinator = SyncCoordinator(
-    queue: queue,
-    networkChecker: context.read<NetworkStatusChecker>(),
-    repository: context.read<CropPhotoRepository>(),
-  );
-  coordinator.start();
+  context.read<SyncCoordinator>().start();
 }

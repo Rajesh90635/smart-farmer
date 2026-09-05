@@ -32,6 +32,35 @@ def test_harvest_never_reaches_ready_without_explicit_farmer_confirmation(client
     assert confirmed.json()["status"] == "ready"
 
 
+def test_confirm_ready_rejects_regressing_a_harvest_already_past_ready(client, farmer_with_crop_cycle):
+    """Real bug fix: confirm-ready used to unconditionally set status back
+    to READY, so calling it again to correct a quantity after the harvest
+    had already been listed would silently regress LISTED -> READY."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1000.00"}, headers=auth_headers(tokens))
+    client.post(f"/api/v1/harvests/{harvest['id']}/listing", json=valid_harvest_listing_payload(), headers=auth_headers(tokens))
+
+    regression_attempt = client.post(
+        f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1200.00"}, headers=auth_headers(tokens)
+    )
+    assert regression_attempt.status_code == 409
+
+    unchanged = client.get("/api/v1/harvests", headers=auth_headers(tokens)).json()
+    assert unchanged["items"][0]["status"] == "listed"
+
+
+def test_confirm_ready_is_idempotent_while_still_in_ready(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1000.00"}, headers=auth_headers(tokens))
+
+    corrected = client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1050.00"}, headers=auth_headers(tokens))
+    assert corrected.status_code == 200
+    assert corrected.json()["status"] == "ready"
+    assert corrected.json()["estimated_quantity"] == "1050.00"
+
+
 def test_create_listing(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()

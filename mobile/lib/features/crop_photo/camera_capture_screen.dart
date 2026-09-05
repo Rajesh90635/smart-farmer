@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api_client.dart';
 import '../../core/friendly_error.dart';
 import '../../l10n/app_localizations.dart';
 import 'crop_photo_models.dart';
@@ -141,6 +142,32 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       } else {
         setState(() => _state = _CaptureUiState.uploaded);
       }
+    } on ApiException catch (e) {
+      // Real bug fixed here: this path used to fall into the generic
+      // catch below and be marked 'failed' identically to a plain network
+      // error - unlike sync_coordinator.dart's background upload path,
+      // which already correctly distinguishes a 401 (needs re-login, will
+      // never succeed by simply retrying) from a transient failure. A
+      // farmer tapping "Retry" here on an expired session would just get
+      // the exact same 401 again, forever, with a misleading "try again"
+      // message.
+      if (e.statusCode == 401) {
+        final message = AppLocalizations.of(context)!.errorSessionExpired;
+        await queue.updateStatus(pending.clientUploadId, PendingUploadStatus.authenticationRequired, errorMessage: message);
+        if (!mounted) return;
+        setState(() {
+          _state = _CaptureUiState.failed;
+          _errorMessage = message;
+        });
+        return;
+      }
+      final message = FriendlyError.from(e, AppLocalizations.of(context)!);
+      await queue.updateStatus(pending.clientUploadId, PendingUploadStatus.failed, errorMessage: message);
+      if (!mounted) return;
+      setState(() {
+        _state = _CaptureUiState.failed;
+        _errorMessage = message;
+      });
     } catch (e) {
       final message = FriendlyError.from(e, AppLocalizations.of(context)!);
       await queue.updateStatus(pending.clientUploadId, PendingUploadStatus.failed, errorMessage: message);

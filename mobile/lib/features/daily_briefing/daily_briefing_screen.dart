@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/voice_language_controller.dart';
 import '../../core/voice_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'daily_briefing_models.dart';
@@ -55,12 +56,38 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
 
   /// Speaks EXACTLY the lines already on screen (DailyBriefing.audioText
   /// is just those same lines joined) - never a separately-generated
-  /// voice summary, so screen and audio can never disagree.
+  /// voice summary, so screen and audio can never disagree. This is the
+  /// ONE screen where "location" audio-language mode also re-fetches the
+  /// CONTENT itself in the detected language (via the backend's
+  /// `language_code` override), not just the voice locale - every other
+  /// voice call site in the app can only switch locale, since it has no
+  /// way to re-render its own already-backend-composed or already-l10n
+  /// text in a different language on demand.
   Future<void> _speak() async {
-    final briefing = _briefing;
-    if (briefing == null) return;
+    final initialBriefing = _briefing;
+    if (initialBriefing == null) return;
+    var current = initialBriefing;
+
+    final voiceLanguageController = context.read<VoiceLanguageController>();
+    if (voiceLanguageController.mode == VoiceLanguageMode.location) {
+      final detected = await voiceLanguageController.resolveLanguageCode(contentLanguageCode: current.languageCode);
+      if (!mounted) return;
+      if (detected != current.languageCode) {
+        try {
+          final relocalized = await context.read<DailyBriefingRepository>().getDailyBriefing(languageCodeOverride: detected);
+          if (!mounted) return;
+          setState(() => _briefing = relocalized);
+          current = relocalized;
+        } catch (_) {
+          // Best-effort only - if the re-fetch fails (offline, backend
+          // error), fall through and speak the already-loaded briefing
+          // in its existing language rather than blocking Listen entirely.
+        }
+      }
+    }
+
     final voice = context.read<VoiceService>();
-    final started = await voice.speak(briefing.audioText, languageCode: briefing.languageCode);
+    final started = await voice.speak(current.audioText, languageCode: current.languageCode);
     if (!mounted) return;
     setState(() => _voiceUnavailableMessageShown = !started);
   }

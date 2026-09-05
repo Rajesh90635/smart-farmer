@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/api_client.dart';
 import 'core/flutter_tts_voice_service.dart';
 import 'core/locale_controller.dart';
+import 'core/voice_language_controller.dart';
 import 'core/voice_service.dart';
 import 'features/assistant/assistant_repository.dart';
 import 'features/auth/auth_repository.dart';
@@ -35,6 +36,7 @@ import 'features/treatment/treatment_repository.dart';
 import 'features/weather_action/weather_action_repository.dart';
 import 'features/crop_photo/network_status_checker.dart';
 import 'features/crop_photo/pending_upload_queue.dart';
+import 'features/crop_photo/sync_coordinator.dart';
 import 'l10n/app_localizations.dart';
 import 'main_navigation_shell.dart';
 import 'screens/login_screen.dart';
@@ -43,9 +45,10 @@ import 'screens/welcome_screen.dart';
 import 'theme/app_theme.dart';
 
 class SmartFarmerApp extends StatelessWidget {
-  const SmartFarmerApp({super.key, required this.localeController});
+  const SmartFarmerApp({super.key, required this.localeController, required this.voiceLanguageController});
 
   final LocaleController localeController;
+  final VoiceLanguageController voiceLanguageController;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +61,7 @@ class SmartFarmerApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<LocaleController>.value(value: localeController),
+        ChangeNotifierProvider<VoiceLanguageController>.value(value: voiceLanguageController),
         Provider<ApiClient>.value(value: apiClient),
         Provider<AuthRepository>.value(value: authRepository),
         Provider<FarmerRepository>(create: (_) => FarmerRepository(apiClient: apiClient)),
@@ -87,6 +91,15 @@ class SmartFarmerApp extends StatelessWidget {
         Provider<VoiceService>(create: (_) => FlutterTtsVoiceService()),
         Provider<NetworkStatusChecker>(create: (_) => NetworkStatusChecker()),
         ChangeNotifierProvider<PendingUploadQueue>(create: (_) => PendingUploadQueue()),
+        // Registered here (not constructed ad hoc in initializeOfflineSync)
+        // so it's reachable later for a manual retry - see sync_coordinator.dart.
+        Provider<SyncCoordinator>(
+          create: (context) => SyncCoordinator(
+            queue: context.read<PendingUploadQueue>(),
+            networkChecker: context.read<NetworkStatusChecker>(),
+            repository: context.read<CropPhotoRepository>(),
+          ),
+        ),
         ChangeNotifierProvider<AuthState>(create: (_) => AuthState(repository: authRepository)),
       ],
       child: Consumer<LocaleController>(

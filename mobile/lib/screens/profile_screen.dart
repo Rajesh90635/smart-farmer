@@ -7,6 +7,7 @@ import '../features/auth/farmer_repository.dart';
 import '../features/auth/language_selection_screen.dart';
 import '../core/friendly_error.dart';
 import '../core/locale_controller.dart';
+import '../core/voice_language_controller.dart';
 import '../l10n/app_localizations.dart';
 
 /// Farmer profile screen: view, edit, change language, logout. Kept
@@ -96,6 +97,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _changeAudioLanguageMode(AppLocalizations l10n) async {
+    final voiceLanguageController = context.read<VoiceLanguageController>();
+    final chosen = await showDialog<VoiceLanguageMode>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(l10n.audioLanguageLabel),
+        children: [
+          RadioListTile<VoiceLanguageMode>(
+            title: Text(l10n.audioLanguageManualOption),
+            value: VoiceLanguageMode.manual,
+            groupValue: voiceLanguageController.mode,
+            onChanged: (value) => Navigator.of(dialogContext).pop(value),
+          ),
+          RadioListTile<VoiceLanguageMode>(
+            title: Text(l10n.audioLanguageLocationOption),
+            value: VoiceLanguageMode.location,
+            groupValue: voiceLanguageController.mode,
+            onChanged: (value) => Navigator.of(dialogContext).pop(value),
+          ),
+        ],
+      ),
+    );
+    if (chosen == null) return;
+    await voiceLanguageController.setMode(chosen);
+    if (!mounted) return;
+    setState(() {});
+  }
+
   void _changePassword() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
@@ -159,6 +188,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: _changeLanguage,
+          ),
+          Consumer<VoiceLanguageController>(
+            builder: (context, voiceLanguageController, _) => ListTile(
+              title: Text(l10n.audioLanguageLabel),
+              subtitle: Text(
+                voiceLanguageController.mode == VoiceLanguageMode.location
+                    ? l10n.audioLanguageLocationOption
+                    : l10n.audioLanguageManualOption,
+                style: const TextStyle(fontSize: 18),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _changeAudioLanguageMode(l10n),
+            ),
           ),
           const SizedBox(height: 32),
           if (_editing)

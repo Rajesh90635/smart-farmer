@@ -151,6 +151,38 @@ def test_daily_summary_includes_overdue_task_count_reusing_the_real_task_reposit
     assert any("1 overdue task" in line for line in lines), f"Expected an overdue-task line, got: {lines}"
 
 
+def test_daily_summary_language_code_query_param_overrides_profile_language_for_this_response_only(client, registered_farmer):
+    """The `language_code` override (added for the mobile app's
+    location-based audio language detection) must change this one
+    response's language without touching the farmer's saved
+    preferred_language_code - confirmed by re-fetching without the
+    override afterward and getting English again."""
+    _, tokens = registered_farmer
+
+    default_response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    assert default_response.json()["language_code"] == "en"
+
+    overridden = client.get("/api/v1/assistant/daily-summary?language_code=hi", headers=auth_headers(tokens))
+    assert overridden.status_code == 200
+    assert overridden.json()["language_code"] == "hi"
+    assert any("अभी आपके खेत" in line for line in overridden.json()["lines"]), overridden.json()["lines"]
+
+    # The override must not have persisted anywhere - the farmer's saved
+    # preference (and thus the un-overridden response) is unchanged.
+    after = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    assert after.json()["language_code"] == "en"
+
+
+def test_daily_summary_language_code_override_falls_back_to_profile_language_when_unrecognized(client, registered_farmer):
+    """A location-detection bug or an unsupported region must never break
+    the endpoint or silently produce empty/garbled text - it must degrade
+    to the farmer's normal saved-profile language."""
+    _, tokens = registered_farmer
+    response = client.get("/api/v1/assistant/daily-summary?language_code=xx", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    assert response.json()["language_code"] == "en"
+
+
 def test_active_history_is_empty_before_any_message(client, registered_farmer):
     _, tokens = registered_farmer
     response = client.get("/api/v1/assistant/history", headers=auth_headers(tokens))

@@ -1,17 +1,48 @@
+import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:smart_farmer_mobile/core/api_client.dart';
 import 'package:smart_farmer_mobile/features/auth/auth_state.dart';
+import 'package:smart_farmer_mobile/features/crop_photo/crop_photo_repository.dart';
+import 'package:smart_farmer_mobile/features/crop_photo/network_status_checker.dart';
+import 'package:smart_farmer_mobile/features/crop_photo/pending_upload_queue.dart';
+import 'package:smart_farmer_mobile/features/crop_photo/sync_coordinator.dart';
 import 'package:smart_farmer_mobile/l10n/app_localizations.dart';
 import 'package:smart_farmer_mobile/screens/login_screen.dart';
 
 import '../features/auth/auth_state_test.dart' show FakeAuthRepository;
 
+/// Login success (see login_screen.dart) reads NetworkStatusChecker via
+/// SyncCoordinator, which delegates to connectivity_plus's platform
+/// channel - unavailable in a widget test. Faking the federated-plugin
+/// interface (the same seam real platform implementations register
+/// through) reports "offline", so syncNow() returns immediately without
+/// ever touching CropPhotoRepository/ApiClient.
+class FakeOfflineConnectivityPlatform extends ConnectivityPlatform {
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async => [ConnectivityResult.none];
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => const Stream.empty();
+}
+
 Widget _wrap(AuthState authState, Map<String, WidgetBuilder> routes) {
-  return ChangeNotifierProvider<AuthState>.value(
-    value: authState,
+  final queue = PendingUploadQueue();
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<AuthState>.value(value: authState),
+      ChangeNotifierProvider<PendingUploadQueue>.value(value: queue),
+      Provider<SyncCoordinator>(
+        create: (_) => SyncCoordinator(
+          queue: queue,
+          networkChecker: NetworkStatusChecker(),
+          repository: CropPhotoRepository(apiClient: ApiClient()),
+        ),
+      ),
+    ],
     child: MaterialApp(
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -27,6 +58,8 @@ Widget _wrap(AuthState authState, Map<String, WidgetBuilder> routes) {
 }
 
 void main() {
+  ConnectivityPlatform.instance = FakeOfflineConnectivityPlatform();
+
   testWidgets('renders phone and password fields', (tester) async {
     await tester.pumpWidget(_wrap(AuthState(repository: FakeAuthRepository(shouldSucceed: true)), const {}));
 

@@ -56,6 +56,26 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் கடவுச்சொல்லை மீட்டமைக்க முடியவில்லை. தொலைபேசி எண்ணைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
 
   @override
+  String get sendCodeButton => 'குறியீட்டை அனுப்பு';
+
+  @override
+  String get resendCodeButton => 'குறியீட்டை மீண்டும் அனுப்பு';
+
+  @override
+  String get otpCodeLabel => 'சரிபார்ப்புக் குறியீடு';
+
+  @override
+  String get otpSentMessage =>
+      'உங்கள் தொலைபேசிக்கு ஒரு சரிபார்ப்புக் குறியீட்டை அனுப்பியுள்ளோம்.';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'சரிபார்ப்புக் குறியீட்டை அனுப்ப முடியவில்லை. தொலைபேசி எண்ணைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get otpCodeRequiredError => 'சரிபார்ப்புக் குறியீட்டை உள்ளிடவும்.';
+
+  @override
   String get loginFailedMessage => 'உள்நுழைவு தோல்வியடைந்தது.';
 
   @override
@@ -101,6 +121,15 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get languageLabel => 'மொழி';
+
+  @override
+  String get audioLanguageLabel => 'ஆடியோ மொழி';
+
+  @override
+  String get audioLanguageManualOption => 'எனது ஆப் மொழியைப் பயன்படுத்து';
+
+  @override
+  String get audioLanguageLocationOption => 'எனது இருப்பிடத்திலிருந்து கண்டறி';
 
   @override
   String get saveButton => 'சேமி';
@@ -166,6 +195,16 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'மீண்டும் முயற்சி';
+
+  @override
+  String get pendingUploadsTitle => 'நிலுவையிலுள்ள புகைப்பட பதிவேற்றங்கள்';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'நிலுவையிலுள்ள பதிவேற்றங்கள் இல்லை.';
+
+  @override
+  String get pendingUploadsBannerMessage =>
+      'சில பயிர் புகைப்படங்களை பதிவேற்ற முடியவில்லை';
 
   @override
   String get checkCropTitle => 'பயிரை பரிசோதி';
@@ -2101,6 +2140,14 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'பல முறை முயற்சிக்கப்பட்டது. தயவுசெய்து சில நிமிடங்கள் காத்திருந்து மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get errorInvalidOtp =>
+      'இந்த சரிபார்ப்புக் குறியீடு தவறானது அல்லது காலாவதியானது.';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'இப்போது சரிபார்ப்புக் குறியீட்டை அனுப்ப முடியவில்லை. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get errorUnauthorized => 'தொடர நீங்கள் மீண்டும் உள்நுழைய வேண்டும்.';

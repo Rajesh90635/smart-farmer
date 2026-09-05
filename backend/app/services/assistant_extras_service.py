@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.core import error_codes
 from app.core.config import Settings
 from app.core.errors import AppError
+from app.core.farmer_messages import get_message
+from app.core.localization import is_supported_language
 from app.models.assistant_feedback import AssistantFeedback, AssistantPreference
 from app.repositories import assistant_repository, user_repository
 from app.schemas.assistant import DailySummaryResponse, FeedbackCreateRequest, PreferenceResponse, PreferenceUpdateRequest
@@ -55,31 +57,49 @@ def update_preferences(db: Session, farmer_id: str, payload: PreferenceUpdateReq
     return PreferenceResponse.model_validate(prefs)
 
 
-def get_daily_summary(db: Session, farmer_id: str, weather_provider: WeatherProvider, settings: Settings) -> DailySummaryResponse:
+def get_daily_summary(
+    db: Session, farmer_id: str, weather_provider: WeatherProvider, settings: Settings, *, language_code_override: str | None = None
+) -> DailySummaryResponse:
     user = user_repository.get_by_id(db, uuid.UUID(farmer_id))
-    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+    profile_language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+
+    # `language_code_override` lets a caller (the location-based audio
+    # language feature) request the summary in a different language than
+    # the farmer's saved profile preference, WITHOUT changing that saved
+    # preference - e.g. a farmer traveling into a different linguistic
+    # region hearing the briefing in that region's language once, not a
+    # permanent profile change. Falls back to the profile language for any
+    # unrecognized code rather than silently accepting an invalid one.
+    language_code = language_code_override if language_code_override and is_supported_language(language_code_override) else profile_language_code
 
     lines: list[str] = []
 
     weather = tools.get_weather_status(db, farmer_id, weather_provider, settings)
     if weather.get("available"):
-        lines.append(f"Weather: {weather.get('current_temperature_c', '?')}\u00b0C, {weather.get('rain_probability_today_percent', '?')}% chance of rain today.")
+        lines.append(
+            get_message(
+                "daily_summary_weather",
+                language_code,
+                temp=weather.get("current_temperature_c", "?"),
+                rain=weather.get("rain_probability_today_percent", "?"),
+            )
+        )
 
     crop = tools.get_crop_status(db, farmer_id)
     if crop.get("available"):
-        lines.append(f"Crop: your {crop['crop_name']} is at the {crop['stage']} stage.")
+        lines.append(get_message("daily_summary_crop", language_code, crop_name=crop["crop_name"], stage=crop["stage"]))
 
     harvest = tools.get_harvest_status(db, farmer_id)
     if harvest.get("available") and harvest["status"] in ("approaching", "ready", "listed"):
-        lines.append(f"Harvest: currently {harvest['status']}.")
+        lines.append(get_message("daily_summary_harvest", language_code, status=harvest["status"]))
 
     offers = tools.get_buyer_offers(db, farmer_id)
     if offers.get("available") and offers["offer_count"] > 0:
-        lines.append(f"Marketplace: {offers['offer_count']} buyer offer(s) on your current listing.")
+        lines.append(get_message("daily_summary_marketplace", language_code, offer_count=offers["offer_count"]))
 
     delivery = tools.get_delivery_status(db, farmer_id)
     if delivery.get("available") and delivery["status"] not in ("delivered",):
-        lines.append(f"Delivery: your order is currently {delivery['status']}.")
+        lines.append(get_message("daily_summary_delivery", language_code, status=delivery["status"]))
 
     # Added Step 14: the tool already existed (Prompt 11/Step 13's
     # get_expert_case_status) but was never included in the daily
@@ -87,7 +107,7 @@ def get_daily_summary(db: Session, farmer_id: str, weather_provider: WeatherProv
     # exactly like every other line above, not by building anything new.
     case = tools.get_expert_case_status(db, farmer_id)
     if case.get("available") and case["status"] not in ("closed", "cancelled"):
-        lines.append(f"Expert review: your case is currently {case['status']}.")
+        lines.append(get_message("daily_summary_expert_review", language_code, status=case["status"]))
 
     # Added Step 16: reuses task_repository.list_overdue_for_farmer
     # directly (a simple count, not a farmer-question-answering tool, so
@@ -99,9 +119,9 @@ def get_daily_summary(db: Session, farmer_id: str, weather_provider: WeatherProv
     overdue_tasks = task_repository.list_overdue_for_farmer(db, uuid.UUID(farmer_id), today=datetime.now(timezone.utc).date())
     if overdue_tasks:
         count = len(overdue_tasks)
-        lines.append(f"Tasks: you have {count} overdue task{'s' if count != 1 else ''}.")
+        lines.append(get_message("daily_summary_tasks_overdue", language_code, count=count, plural="s" if count != 1 else ""))
 
     if not lines:
-        lines.append("No new updates for your farm right now.")
+        lines.append(get_message("daily_summary_no_updates", language_code))
 
     return DailySummaryResponse(language_code=language_code, lines=lines, generated_at=datetime.now(timezone.utc))

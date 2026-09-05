@@ -42,6 +42,16 @@ class OfferCreateRequest(BaseModel):
     collection_terms: str | None = None
 
 
+class AcceptOfferRequest(BaseModel):
+    """`charges` is always farmer-entered, never computed/estimated by the
+    backend - matching this app's ledger/cost-estimate convention of never
+    fabricating a financial figure. Omitted or 0 means no transport/
+    commission/storage cost was deducted from this sale, not that none
+    exists in reality."""
+
+    charges: Decimal = Field(default=Decimal("0"), ge=0)
+
+
 class OfferResponse(BaseModel):
     id: uuid.UUID
     harvest_listing_id: uuid.UUID

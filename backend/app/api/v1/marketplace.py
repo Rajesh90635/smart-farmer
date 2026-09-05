@@ -14,6 +14,7 @@ from app.db.session import get_db
 from app.models.sale_order import SaleOrderStatus
 from app.schemas.harvest import HarvestListingListResponse
 from app.schemas.marketplace import (
+    AcceptOfferRequest,
     BuyerProfileRegisterRequest,
     BuyerProfileResponse,
     CounterOfferCreateRequest,
@@ -110,12 +111,14 @@ def create_counter_offer_as_buyer(
 @router.post("/offers/{offer_id}/accept", response_model=SaleOrderResponse)
 def accept_offer(
     offer_id: uuid.UUID,
+    payload: AcceptOfferRequest = AcceptOfferRequest(),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
 ) -> SaleOrderResponse:
     """Concurrency-safe: takes a real row lock on the listing before
-    checking/decrementing available quantity - see offer_service.py."""
-    return offer_service.accept_offer(db, current_user.user_id, offer_id)
+    checking/decrementing available quantity - see offer_service.py.
+    `payload.charges` is optional and farmer-entered (never fabricated)."""
+    return offer_service.accept_offer(db, current_user.user_id, offer_id, payload)
 
 
 @router.post("/offers/{offer_id}/reject", response_model=OfferResponse)

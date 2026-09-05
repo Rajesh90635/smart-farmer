@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/voice_language_controller.dart';
 import '../../core/voice_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../farm/farm_repository.dart';
@@ -79,8 +80,20 @@ class _WeatherScreenState extends State<WeatherScreen> {
     }
     if (parts.isEmpty) return;
 
+    // Was hardcoded to 'en' regardless of the farmer's chosen app
+    // language - a real bug, since this screen's advisory phrase (the
+    // last `parts` entry) is already correctly localized via `l10n`.
+    // Note: the temperature/rain-percent phrasing above is still
+    // hardcoded English text (a separate, pre-existing content gap, not
+    // fixed here) - only the SPOKEN LANGUAGE is corrected to match what's
+    // actually on screen.
+    final displayLanguageCode = Localizations.localeOf(context).languageCode;
+    final voiceLanguageController = context.read<VoiceLanguageController>();
+    final voiceLanguageCode = await voiceLanguageController.resolveLanguageCode(contentLanguageCode: displayLanguageCode);
+    if (!mounted) return;
+
     final voice = context.read<VoiceService>();
-    final started = await voice.speak(parts.join(' '), languageCode: 'en');
+    final started = await voice.speak(parts.join(' '), languageCode: voiceLanguageCode);
     if (!mounted) return;
     setState(() => _voiceUnavailableMessageShown = !started);
   }

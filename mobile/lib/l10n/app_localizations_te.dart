@@ -55,6 +55,25 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ పాస్‌వర్డ్‌ను రీసెట్ చేయలేకపోయాము. దయచేసి ఫోన్ నంబర్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get sendCodeButton => 'కోడ్ పంపండి';
+
+  @override
+  String get resendCodeButton => 'కోడ్ మళ్లీ పంపండి';
+
+  @override
+  String get otpCodeLabel => 'ధృవీకరణ కోడ్';
+
+  @override
+  String get otpSentMessage => 'మేము మీ ఫోన్‌కు ఒక ధృవీకరణ కోడ్ పంపాము.';
+
+  @override
+  String get requestOtpFailedMessage =>
+      'ధృవీకరణ కోడ్‌ను పంపలేకపోయాము. దయచేసి ఫోన్ నంబర్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get otpCodeRequiredError => 'దయచేసి ధృవీకరణ కోడ్‌ను నమోదు చేయండి.';
+
+  @override
   String get loginFailedMessage => 'లాగిన్ విఫలమైంది.';
 
   @override
@@ -101,6 +120,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get languageLabel => 'భాష';
+
+  @override
+  String get audioLanguageLabel => 'ఆడియో భాష';
+
+  @override
+  String get audioLanguageManualOption => 'నా యాప్ భాషను ఉపయోగించండి';
+
+  @override
+  String get audioLanguageLocationOption => 'నా ప్రాంతం నుండి గుర్తించండి';
 
   @override
   String get saveButton => 'సేవ్ చేయండి';
@@ -165,6 +193,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get genericErrorRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get pendingUploadsTitle => 'పెండింగ్‌లో ఉన్న ఫోటో అప్‌లోడ్‌లు';
+
+  @override
+  String get pendingUploadsEmptyMessage => 'పెండింగ్ అప్‌లోడ్‌లు లేవు.';
+
+  @override
+  String get pendingUploadsBannerMessage => 'కొన్ని పంట ఫోటోలు అప్‌లోడ్ కాలేదు';
 
   @override
   String get checkCropTitle => 'పంట తనిఖీ చేయండి';
@@ -2075,6 +2112,13 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get errorRateLimited =>
       'చాలా ప్రయత్నాలు జరిగాయి. దయచేసి కొన్ని నిమిషాలు ఆగి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get errorInvalidOtp => 'ఈ ధృవీకరణ కోడ్ చెల్లదు లేదా గడువు ముగిసింది.';
+
+  @override
+  String get errorOtpDeliveryFailed =>
+      'ఇప్పుడు ధృవీకరణ కోడ్‌ను పంపలేకపోయాము. దయచేసి కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
 
   @override
   String get errorUnauthorized => 'కొనసాగించడానికి మీరు మళ్లీ లాగిన్ అవ్వాలి.';

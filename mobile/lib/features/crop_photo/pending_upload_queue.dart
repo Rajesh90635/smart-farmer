@@ -210,9 +210,46 @@ class PendingUploadQueue extends ChangeNotifier {
   /// Uploads that will NEVER be automatically retried again - either the
   /// farmer's session needs re-authentication, or automatic retries were
   /// exhausted. Still present in the queue (not deleted) so a farmer-
-  /// facing UI can surface them distinctly and offer manual action.
+  /// facing UI can surface them distinctly and offer manual action - see
+  /// PendingUploadsScreen, and reviveAuthRequiredItems()/reviveForRetry()
+  /// below, which are that "existing UI retry path" made real.
   List<PendingUpload> get needsManualAction =>
       _items.where((u) => u.status == PendingUploadStatus.authenticationRequired || u.status == PendingUploadStatus.retriesExhausted).toList();
+
+  /// Real bug fixed here: nothing previously ever revived an
+  /// `authenticationRequired` item - it was permanently stuck once a
+  /// session expired mid-upload, even after the farmer logged back in.
+  /// Called from the login success path (login_screen.dart) so
+  /// re-authenticating is itself what makes these retryable again,
+  /// without the farmer needing to find and tap anything.
+  Future<void> reviveAuthRequiredItems() async {
+    var changed = false;
+    for (final u in _items) {
+      if (u.status == PendingUploadStatus.authenticationRequired) {
+        u.status = PendingUploadStatus.waitingForNetwork;
+        u.lastErrorMessage = null;
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    notifyListeners();
+    await _persist();
+  }
+
+  /// Real bug fixed here: `retriesExhausted` was also permanently
+  /// terminal - resets one specific item back to retryable, for the
+  /// manual "Retry" button on PendingUploadsScreen. Resets retryCount too,
+  /// since a farmer explicitly retrying is a fresh attempt, not a
+  /// continuation of the automatic-retry budget that was exhausted.
+  Future<void> reviveForRetry(String clientUploadId) async {
+    final upload = _items.where((u) => u.clientUploadId == clientUploadId).firstOrNull;
+    if (upload == null) return;
+    upload.status = PendingUploadStatus.waitingForNetwork;
+    upload.lastErrorMessage = null;
+    upload.retryCount = 0;
+    notifyListeners();
+    await _persist();
+  }
 }
 
 extension _FirstOrNull<T> on Iterable<T> {

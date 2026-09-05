@@ -12,6 +12,7 @@ is a real database-level guarantee, not an application-level check that
 could race.
 """
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -22,7 +23,7 @@ from app.models.buyer_offer import BuyerOffer, CounterOffer, NegotiationParty, O
 from app.models.professional_profile import VerificationStatus
 from app.models.sale_order import SaleOrder
 from app.repositories import buyer_offer_repository, harvest_repository, professional_repository, sale_order_repository
-from app.schemas.marketplace import CounterOfferCreateRequest, CounterOfferResponse, OfferCreateRequest, OfferListResponse, OfferResponse, SaleOrderResponse
+from app.schemas.marketplace import AcceptOfferRequest, CounterOfferCreateRequest, CounterOfferResponse, OfferCreateRequest, OfferListResponse, OfferResponse, SaleOrderResponse
 from app.services.audit_logger import AuditLogger
 
 
@@ -94,13 +95,24 @@ def create_counter_offer(db: Session, user_id: str, offer_id: uuid.UUID, role: s
     return CounterOfferResponse.model_validate(counter)
 
 
-def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID) -> SaleOrderResponse:
+def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: AcceptOfferRequest | None = None) -> SaleOrderResponse:
     offer = buyer_offer_repository.get_offer_by_id(db, offer_id)
     if offer is None:
         raise AppError(error_codes.NOT_FOUND, "Offer not found.", 404)
 
     if offer.status != OfferStatus.ACTIVE:
         raise AppError(error_codes.VALIDATION_ERROR, "This offer is no longer active.", 409)
+
+    # Real bug fixed here: `valid_until`/OfferStatus.EXPIRED existed but
+    # nothing ever checked expiry - a farmer could accept an offer after
+    # its own declared validity window had passed. Checked here (accept
+    # time), not as a background job, since no scheduler exists in this
+    # project (see docs/audit/README.md) - this is the one place an
+    # expired-but-still-ACTIVE offer is actually read before being acted on.
+    if offer.valid_until is not None and offer.valid_until < datetime.now(timezone.utc):
+        offer.status = OfferStatus.EXPIRED
+        db.commit()
+        raise AppError(error_codes.VALIDATION_ERROR, "This offer has expired and can no longer be accepted.", 409)
 
     latest_counter = buyer_offer_repository.get_latest_counter_offer(db, offer.id)
     final_price = latest_counter.price_per_unit if latest_counter else offer.price_per_unit
@@ -120,7 +132,14 @@ def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID) -> SaleOrderR
         )
 
     gross_value = final_price * final_quantity
-    charges = Decimal("0")
+    # Real bug fixed here: this was unconditionally Decimal("0") - "net
+    # realization" was structurally incapable of ever differing from
+    # gross. Now farmer-entered at accept time (never estimated/fabricated
+    # by the backend), matching the ledger/cost-estimate convention used
+    # everywhere else in this app - see AcceptOfferRequest's docstring.
+    charges = payload.charges if payload is not None else Decimal("0")
+    if charges > gross_value:
+        raise AppError(error_codes.VALIDATION_ERROR, "Charges cannot exceed the sale's gross value.", 422)
     net_value = gross_value - charges
 
     sale = SaleOrder(

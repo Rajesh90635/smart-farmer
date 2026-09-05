@@ -26,7 +26,19 @@ def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID) -> Paymen
     if order is None:
         raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)
 
-    apply_transition(order, OrderStatus.PAYMENT_PENDING)
+    existing_payment = order_repository.get_latest_payment_for_order(db, order.id)
+    if existing_payment is not None and existing_payment.status == PaymentStatus.PENDING:
+        raise AppError(error_codes.VALIDATION_ERROR, "A payment is already in progress for this order.", 409)
+
+    # Real bug fixed here: apply_transition requires an actual state
+    # change, but a farmer retrying after a failed payment finds the order
+    # ALREADY sitting in PAYMENT_PENDING - complete_payment's failure path
+    # never moves it anywhere else, and PAYMENT_PENDING has no allowed
+    # self-transition in ALLOWED_ORDER_TRANSITIONS. This 409'd every retry
+    # attempt with no way forward. Only transition when genuinely entering
+    # PAYMENT_PENDING for the first time.
+    if order.status != OrderStatus.PAYMENT_PENDING:
+        apply_transition(order, OrderStatus.PAYMENT_PENDING)
 
     payment = Payment(
         order_id=order.id,
