@@ -8,7 +8,7 @@
 | JWT | HS256, short-lived access tokens, signing key from `JWT_SIGNING_KEY` env var only — never a real default (`app/core/jwt.py`) |
 | Current-user / role check | `app/core/current_user.py` — `get_current_user` (401 if missing/invalid token) and `require_role(...)` (403 if wrong role) |
 | Role vocabulary | `app/core/roles.py` — matches the RBAC model in the approved architecture; full permission-matrix enforcement is a later module |
-| Rate limiting | `app/middleware/rate_limit.py` — in-memory fixed-window limiter, correct for a single-process deployment; documented as needing a Redis-backed version once the API runs as more than one process |
+| Rate limiting | `app/middleware/rate_limit.py` — in-memory fixed-window limiter, correct for a single-process deployment; documented as needing a Redis-backed version once the API runs as more than one process. Wired into login, reset-password, **and crop-photo upload** (D100-14, 20/5min per farmer_id — the module's own docstring named image-upload as an intended target from the start; confirmed by grep it had never actually been wired in before this fix). Still not global ASGI middleware — per-endpoint only. |
 | Audit logging | `app/models/audit_log.py` + `app/services/audit_logger.py` — append-only by convention today; a DB-role-level `NO UPDATE/DELETE` grant is applied in the security-hardening pass before pilot, not yet enforced at the DB permission level |
 | CORS | Configured via `cors_allowed_origins` in settings, applied in `app/main.py` |
 | Storage path safety | `LocalFileStorage._resolve()` rejects path-traversal attempts — verified by test (`test_path_traversal_is_rejected`) |

@@ -25,7 +25,7 @@ from app.core.errors import AppError
 from app.models.ai_analysis import AIAnalysis, AnalysisStatus, ResultStatus
 from app.models.crop_photo import ImageQualityStatus
 from app.repositories import ai_analysis_repository, ai_reference_repository, crop_cycle_repository, crop_photo_repository
-from app.schemas.ai_analysis import AIAnalysisListResponse, AIAnalysisResponse
+from app.schemas.ai_analysis import AIAnalysisCorrectionRequest, AIAnalysisListResponse, AIAnalysisResponse
 from app.services.ai.model_provider import ModelProvider
 from app.services.ai.prediction_validator import validate_disease_prediction
 from app.services.audit_logger import AuditLogger
@@ -139,6 +139,30 @@ def get_analysis(db: Session, farmer_id: str, analysis_id: uuid.UUID) -> AIAnaly
     analysis = ai_analysis_repository.get_analysis_owned(db, analysis_id, uuid.UUID(farmer_id))
     if analysis is None:
         raise AppError(error_codes.NOT_FOUND, "Analysis not found.", 404)
+    return AIAnalysisResponse.model_validate(analysis)
+
+
+def submit_correction(db: Session, farmer_id: str, analysis_id: uuid.UUID, payload: AIAnalysisCorrectionRequest) -> AIAnalysisResponse:
+    """D91-07 (docs/audit/c13_governance_farmbrain_security.md): a
+    farmer's own after-the-fact correction of THIS specific AI result -
+    distinct from AdvisoryFeedback, which never covered the disease
+    pipeline. Also the raw false-positive/false-negative signal D91-09/
+    D91-10 need. Overwritable (a farmer can change their mind), not
+    append-only - AuditLogger still records every submission."""
+    analysis = ai_analysis_repository.get_analysis_owned(db, analysis_id, uuid.UUID(farmer_id))
+    if analysis is None:
+        raise AppError(error_codes.NOT_FOUND, "Analysis not found.", 404)
+
+    analysis.farmer_correction = payload.correction.value
+    analysis.farmer_correction_notes = payload.notes
+    analysis.farmer_corrected_at = datetime.now(timezone.utc)
+
+    AuditLogger(db).log(
+        "AI_ANALYSIS_FARMER_CORRECTION_SUBMITTED", actor_id=farmer_id, actor_role="farmer",
+        entity="ai_analysis", entity_id=str(analysis.id),
+    )
+    db.commit()
+    db.refresh(analysis)
     return AIAnalysisResponse.model_validate(analysis)
 
 

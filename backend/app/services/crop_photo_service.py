@@ -11,6 +11,7 @@ from app.core.image_processing import process_image
 from app.core.image_quality import check_quality
 from app.core.image_validation import validate_upload
 from app.core.photo_storage_keys import build_leaf_filename, build_photo_container
+from app.middleware.rate_limit import InMemoryRateLimiter
 from app.models.crop_photo import CropPhoto, ImageQualityStatus, UploadStatus
 from app.models.crop_photo_session import CropPhotoSession
 from app.repositories import crop_cycle_repository, crop_photo_repository, crop_photo_session_repository
@@ -29,6 +30,15 @@ _EXT_BY_MIME = {"image/jpeg": "jpg", "image/png": "jpg", "image/webp": "jpg"}
 # image_processing.py) regardless of the uploaded format, so the stored
 # file's extension is always "jpg" - deliberate simplification, not an
 # oversight. PNG/WEBP are accepted as *input* formats only.
+
+# D100-14 (docs/audit/c13_governance_farmbrain_security.md): rate_limit.py's
+# own docstring named "image-upload endpoints" as an intended target from
+# the start, but nothing ever wired it in here - confirmed by grep before
+# this fix. Keyed by farmer_id (an account-level cost/abuse bound, not an
+# IP-level one - a farmer legitimately taking several photos in one
+# session must not be blocked by a same-IP household/shared-network
+# limiter).
+_upload_limiter = InMemoryRateLimiter(max_requests=20, window_seconds=300)
 
 
 def create_session(db: Session, farmer_id: str, payload: CropPhotoSessionCreateRequest) -> CropPhotoSessionResponse:
@@ -75,6 +85,9 @@ def upload_photo(
     storage: FileStorage,
     settings: Settings,
 ) -> CropPhotoResponse:
+    if not _upload_limiter.allow(farmer_id):
+        raise AppError(error_codes.RATE_LIMITED, "Too many photo uploads. Please wait a few minutes and try again.", 429)
+
     farmer_uuid = uuid.UUID(farmer_id)
 
     session_obj = crop_photo_session_repository.get_owned(db, session_id, farmer_uuid)

@@ -573,3 +573,47 @@ payment notifications - this was a genuine oversight, not a boundary to
 respect.
 
 Full suite: **676 passed, 0 failed.**
+
+### Batch 9 — Governance/security: rate limiting, rule version, AI farmer correction (3 rows fixed, `c13_governance_farmbrain_security.md`)
+
+- **D100-14:** `rate_limit.py`'s own docstring named image-upload
+  endpoints as an intended target from the start; grep confirmed it was
+  never actually wired in. `crop_photo_service.upload_photo` now enforces
+  20 uploads/5min per `farmer_id` (account-scoped, not IP-scoped - a
+  farmer legitimately taking several photos in one session must not be
+  blocked by a same-IP/shared-network limiter).
+- **D88-07:** `CropRiskScoreResponse` now carries `rule_version`
+  (`crop_risk_v1`) - lets a historical score stay explainable/reproducible
+  even after `_aggregate`'s actual logic changes in a future release.
+  Not extended to `weather_action_rules.py`/`weather_alert_rules.py` this
+  pass (same pattern, smaller marginal value, deferred).
+- **D91-07/D91-09/D91-10:** new `AIAnalysis.farmer_correction`/
+  `farmer_correction_notes`/`farmer_corrected_at` fields + `POST
+  /ai/analysis/{id}/correction` - a farmer's own correction of a SPECIFIC
+  disease-detection result (`confirmed_correct`/`actually_healthy`/
+  `actually_diseased`/`wrong_disease_name`), distinct from
+  `AdvisoryFeedback`/`AssistantFeedback` which the earlier audit confirmed
+  never covered the photo/disease AI pipeline at all. This is the raw
+  false-positive/false-negative signal D91-09/10 asked for - a query
+  away, not yet a dashboard endpoint (disclosed, not built this pass).
+
+**Investigated and deliberately NOT built, with reasoning:**
+- **D88-09** (confidence field on weather/market outputs) - Open-Meteo
+  doesn't expose a confidence figure to attach, and fabricating one would
+  violate the "no invented precision" rule that already governs AI
+  confidence elsewhere in this project.
+- **D90-10** (formal `PaymentProvider` ABC mirroring `WeatherProvider`) -
+  a pure internal refactor with no farmer-facing behavior change; lower
+  value than the other items given the time available this pass.
+- **D100-09** (GDPR/DPDP-style data export & account deletion) - a
+  genuine compliance gap, but building even a partial version risks
+  looking more complete than it is on a legally sensitive feature; this
+  needs explicit product/legal scoping (what "export" and "delete" mean
+  across dozens of tables, retention requirements) rather than a
+  best-guess implementation.
+
+Full suite: **680 passed, 1 failed** (the failure,
+`test_products.py::test_admin_can_list_pending_products_to_discover_what_needs_review`,
+is the same pre-existing pagination/shared-database-order flakiness noted
+in batch 4 - passes 11/11 in isolation, touches nothing this batch
+modified).

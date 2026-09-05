@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
-from app.models.ai_analysis import AnalysisStatus, ResultStatus
+from app.models.ai_analysis import AnalysisStatus, FarmerCorrection, ResultStatus
 
 
 class TopKPredictionResponse(BaseModel):
@@ -25,6 +25,9 @@ class AIAnalysisResponse(BaseModel):
     analysis_status: AnalysisStatus
     requires_review: bool
     processing_time_ms: int | None
+    farmer_correction: str | None
+    farmer_correction_notes: str | None
+    farmer_corrected_at: datetime | None
     created_at: datetime
 
     model_config = {"from_attributes": True, "protected_namespaces": ()}
@@ -42,6 +45,11 @@ class AIAnalysisResponse(BaseModel):
 class AIAnalysisListResponse(BaseModel):
     items: list[AIAnalysisResponse]
     total: int
+
+
+class AIAnalysisCorrectionRequest(BaseModel):
+    correction: FarmerCorrection
+    notes: str | None = None
 
 
 class AIAnalysisSessionCreateRequest(BaseModel):

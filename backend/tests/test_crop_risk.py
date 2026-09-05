@@ -32,6 +32,8 @@ def test_no_data_at_all_returns_insufficient_data_not_fabricated_low(client, far
     assert all(f["value"] == "unknown" for f in body["factors"])
     treatment_factor = next(f for f in body["factors"] if f["factor_name"] == "Treatment Response")
     assert treatment_factor["value"] == "unknown"
+    # D88-07: the rule version that produced this score must always be present.
+    assert body["rule_version"] == "crop_risk_v1"
 
 
 def test_disease_detected_analysis_produces_high_risk_factor(client, farmer_with_crop_cycle):

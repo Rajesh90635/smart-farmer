@@ -52,6 +52,55 @@ def test_low_confidence_result_never_names_a_disease(client, uploaded_photo):
     assert body["requires_review"] is True
 
 
+# --- D91-07/D91-09/D91-10: farmer correction of a specific AI result ---
+
+def test_farmer_can_submit_a_correction_marking_a_false_positive(client, uploaded_photo):
+    tokens, crop_cycle_id, photo_id, _ = uploaded_photo
+    fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.90)], supported_crops=["tomato"])
+    with override_model_provider(fake):
+        analysis = client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(tokens)).json()
+    assert analysis["result_status"] == "disease_detected"
+
+    response = client.post(
+        f"/api/v1/ai/analysis/{analysis['id']}/correction",
+        json={"correction": "actually_healthy", "notes": "It was just water spots, not disease."},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["farmer_correction"] == "actually_healthy"
+    assert body["farmer_correction_notes"] == "It was just water spots, not disease."
+    assert body["farmer_corrected_at"] is not None
+
+
+def test_farmer_can_revise_a_previously_submitted_correction(client, uploaded_photo):
+    tokens, crop_cycle_id, photo_id, _ = uploaded_photo
+    fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.90)], supported_crops=["tomato"])
+    with override_model_provider(fake):
+        analysis = client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(tokens)).json()
+
+    client.post(
+        f"/api/v1/ai/analysis/{analysis['id']}/correction", json={"correction": "actually_healthy"}, headers=auth_headers(tokens)
+    )
+    revised = client.post(
+        f"/api/v1/ai/analysis/{analysis['id']}/correction", json={"correction": "confirmed_correct"}, headers=auth_headers(tokens)
+    )
+    assert revised.json()["farmer_correction"] == "confirmed_correct"
+
+
+def test_cannot_submit_correction_for_another_farmers_analysis(client, uploaded_photo, another_farmer):
+    tokens, crop_cycle_id, photo_id, _ = uploaded_photo
+    fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.90)], supported_crops=["tomato"])
+    with override_model_provider(fake):
+        analysis = client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(tokens)).json()
+
+    _, tokens_b = another_farmer
+    response = client.post(
+        f"/api/v1/ai/analysis/{analysis['id']}/correction", json={"correction": "actually_healthy"}, headers=auth_headers(tokens_b)
+    )
+    assert response.status_code == 404
+
+
 def test_unsupported_crop_result(client, uploaded_photo):
     tokens, crop_cycle_id, photo_id, _ = uploaded_photo
     # The photo's crop cycle is a Tomato (see farmer_with_crop_cycle

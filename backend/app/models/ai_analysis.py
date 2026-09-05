@@ -56,6 +56,22 @@ class ResultStatus(str, enum.Enum):
     AI_UNAVAILABLE = "ai_unavailable"  # Requirement 36 - MODEL_NOT_AVAILABLE, never a fake result
 
 
+class FarmerCorrection(str, enum.Enum):
+    """D91-07/D91-09/D91-10 (docs/audit/c13_governance_farmbrain_security.md):
+    a farmer's own after-the-fact correction of THIS specific AIAnalysis
+    result - distinct from AdvisoryFeedback/AssistantFeedback, which the
+    audit confirmed are scoped away from the disease-detection pipeline
+    entirely. Also the raw signal false-positive/false-negative tracking
+    needs - CONFIRMED_CORRECT/ACTUALLY_HEALTHY/ACTUALLY_DISEASED/
+    WRONG_DISEASE_NAME let a false positive (ACTUALLY_HEALTHY on a
+    DISEASE_DETECTED result) or false negative (ACTUALLY_DISEASED on a
+    HEALTHY result) be derived without guessing."""
+    CONFIRMED_CORRECT = "confirmed_correct"
+    ACTUALLY_HEALTHY = "actually_healthy"
+    ACTUALLY_DISEASED = "actually_diseased"
+    WRONG_DISEASE_NAME = "wrong_disease_name"
+
+
 class AIAnalysis(Base):
     __tablename__ = "ai_analyses"
 
@@ -102,6 +118,14 @@ class AIAnalysis(Base):
         index=True,
     )
     requires_review: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # D91-07/D91-09/D91-10: a plain string (a FarmerCorrection value), not
+    # a shared native enum - avoids touching the ai_result_status/
+    # ai_analysis_status enum types, consistent with this project's
+    # precedent elsewhere (e.g. InputInventoryItem.category).
+    farmer_correction: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    farmer_correction_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    farmer_corrected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     inference_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     processing_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)

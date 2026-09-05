@@ -27,6 +27,26 @@
 - **Data isolation** - verified by test that farmer A cannot read or
   delete farmer B's conversation (404 both directions).
 
+## Farmer correction on the disease-detection pipeline (D91-07/D91-09/D91-10)
+
+Distinct from the assistant-chat evaluation above and from
+`ai/evaluation.py`'s dataset-based framework (which needs a labeled batch
+dataset, still not configured - `EvaluationDatasetConfig.NOT_CONFIGURED`):
+`AIAnalysis.farmer_correction`/`farmer_correction_notes`/`farmer_corrected_at`
+(`POST /ai/analysis/{id}/correction`) let a farmer flag a SPECIFIC disease-
+detection result as `confirmed_correct`/`actually_healthy`/
+`actually_diseased`/`wrong_disease_name`. This closes a real, previously-
+disclosed gap: `AdvisoryFeedback`/`AssistantFeedback` (the only farmer-
+feedback mechanisms that existed before this) are scoped to stateless
+advisories (risk score, crop assistant, weather action, irrigation) and
+never covered the photo/disease AI pipeline at all.
+
+This is the raw signal false-positive tracking (`actually_healthy` on a
+`disease_detected` result) and false-negative tracking (`actually_diseased`
+on a `healthy` result) need - a query over this column, not yet a
+dashboard/aggregate-metric endpoint (not built this pass, but the data it
+would read now actually exists, which it didn't before).
+
 ## AIEvaluationRecord - schema-only this phase (disclosed)
 
 `AIEvaluationRecord` exists (per Requirement 59) but no automated

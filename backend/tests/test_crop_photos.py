@@ -220,3 +220,40 @@ def test_delete_photo_is_soft_delete(client, farmer_with_crop_cycle, db_session)
     row = db_session.get(CropPhoto, uuid_mod.UUID(uploaded["id"]))
     assert row is not None
     assert row.upload_status == UploadStatus.DELETED
+
+
+def test_upload_is_rate_limited_per_farmer(client, farmer_with_crop_cycle):
+    """D100-14 (docs/audit/c13_governance_farmbrain_security.md):
+    rate_limit.py's own docstring named image-upload endpoints as an
+    intended target from the start, but nothing was ever wired in -
+    confirmed by grep before this fix."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+
+    for i in range(20):
+        response = _upload(client, tokens, session["id"], content=make_test_jpeg(), client_upload_id=f"rate-limit-{i}")
+        assert response.status_code == 201, response.text
+
+    over_limit = _upload(client, tokens, session["id"], content=make_test_jpeg(), client_upload_id="rate-limit-21")
+    assert over_limit.status_code == 429
+
+
+def test_upload_rate_limit_is_scoped_per_farmer_not_global(client, farmer_with_crop_cycle, another_farmer, sample_crop_id):
+    """A different farmer's uploads must never be blocked by another
+    farmer's usage - the limiter is keyed by farmer_id, not shared."""
+    tokens_a, crop_cycle_id_a = farmer_with_crop_cycle
+    session_a = _create_session(client, tokens_a, crop_cycle_id_a)
+    for i in range(20):
+        _upload(client, tokens_a, session_a["id"], content=make_test_jpeg(), client_upload_id=f"farmer-a-{i}")
+
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    _, tokens_b = another_farmer
+    headers_b = auth_headers(tokens_b)
+    farm_b = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers_b).json()
+    plot_b = client.post(f"/api/v1/farms/{farm_b['id']}/plots", json=valid_plot_payload(), headers=headers_b).json()
+    cycle_b = client.post(f"/api/v1/plots/{plot_b['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers_b).json()
+    session_b = _create_session(client, tokens_b, cycle_b["id"])
+
+    response = _upload(client, tokens_b, session_b["id"], content=make_test_jpeg(), client_upload_id="farmer-b-1")
+    assert response.status_code == 201

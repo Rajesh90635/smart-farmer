@@ -28,6 +28,12 @@ from app.repositories import ai_analysis_repository, case_repository, crop_cycle
 from app.schemas.crop_risk import CropRiskScoreResponse, RiskFactor
 from app.services import crop_financial_service, task_service
 
+# D88-07: bump whenever _aggregate/_build_recommendation's actual logic
+# changes, so a historical score stays explainable/reproducible even
+# after the rule itself evolves - never silently reinterpreted under an
+# unversioned "current" rule.
+RULE_VERSION = "crop_risk_v1"
+
 
 def get_risk_score(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, *, weather_provider=None, settings=None) -> CropRiskScoreResponse:
     farmer_uuid = uuid.UUID(farmer_id)
@@ -49,7 +55,10 @@ def get_risk_score(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, *, wea
     overall = _aggregate(factors)
     recommendation = _build_recommendation(factors, overall)
 
-    return CropRiskScoreResponse(crop_cycle_id=crop_cycle_id, overall_risk=overall, factors=factors, recommendation=recommendation)
+    return CropRiskScoreResponse(
+        crop_cycle_id=crop_cycle_id, overall_risk=overall, factors=factors, recommendation=recommendation,
+        rule_version=RULE_VERSION,
+    )
 
 
 def _recent_disease_factor(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) -> RiskFactor:

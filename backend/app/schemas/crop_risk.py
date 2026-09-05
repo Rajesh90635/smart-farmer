@@ -18,3 +18,8 @@ class CropRiskScoreResponse(BaseModel):
     overall_risk: str
     factors: list[RiskFactor]
     recommendation: str | None
+    # D88-07 (docs/audit/c13_governance_farmbrain_security.md): the rule
+    # logic version that PRODUCED this score - lets a historical score be
+    # explained/reproduced even after the aggregation rule (_aggregate in
+    # crop_risk_service.py) changes in a future release.
+    rule_version: str

@@ -23,7 +23,7 @@ from app.core.storage_dependency import get_file_storage
 from app.core.ai_model_dependency import get_model_provider
 from app.db.session import get_db
 from app.models.crop_photo import PhotoSource
-from app.schemas.ai_analysis import AIAnalysisListResponse, AIAnalysisResponse
+from app.schemas.ai_analysis import AIAnalysisCorrectionRequest, AIAnalysisListResponse, AIAnalysisResponse
 from app.schemas.crop_photo import (
     CropPhotoListResponse,
     CropPhotoResponse,
@@ -162,6 +162,18 @@ def get_photo_analysis(
     db: Session = Depends(get_db),
 ) -> AIAnalysisResponse:
     return ai_analysis_service.get_latest_for_photo(db, current_user.user_id, photo_id)
+
+
+@router.post("/ai/analysis/{analysis_id}/correction", response_model=AIAnalysisResponse)
+def submit_analysis_correction(
+    analysis_id: uuid.UUID,
+    payload: AIAnalysisCorrectionRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> AIAnalysisResponse:
+    """D91-07/D91-09/D91-10: the farmer's own after-the-fact correction of
+    a specific AI result - feeds false-positive/false-negative tracking."""
+    return ai_analysis_service.submit_correction(db, current_user.user_id, analysis_id, payload)
 
 
 @router.get("/crop-cycles/{crop_cycle_id}/analyses", response_model=AIAnalysisListResponse)
