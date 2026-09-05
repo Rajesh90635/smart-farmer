@@ -30,6 +30,7 @@ _CATEGORY_PREFERENCE_MAP = {
     NotificationCategory.CROP_ALERT: "crop_alerts_enabled",
     NotificationCategory.DISEASE_ALERT: "disease_alerts_enabled",
     NotificationCategory.HARVEST_ALERT: "general_notifications_enabled",
+    NotificationCategory.STOCK_ALERT: "general_notifications_enabled",
 }
 
 _TITLE_BY_CATEGORY = {
@@ -39,6 +40,7 @@ _TITLE_BY_CATEGORY = {
     NotificationCategory.CROP_ALERT: "Crop Alert",
     NotificationCategory.DISEASE_ALERT: "Crop Health Alert",
     NotificationCategory.HARVEST_ALERT: "Harvest Update",
+    NotificationCategory.STOCK_ALERT: "Input Stock Alert",
 }
 
 

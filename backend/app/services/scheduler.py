@@ -21,6 +21,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import Settings
 from app.db.session import SessionLocal
 from app.services.case_sla_service import run_case_sla_sweep
+from app.services.input_inventory_service import run_expiry_check_sweep
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,18 @@ def _run_case_sla_sweep_job(settings: Settings) -> None:
         )
     except Exception:
         logger.exception("case_sla_sweep tick failed - will retry next interval")
+        db.rollback()
+    finally:
+        db.close()
+
+
+def _run_input_expiry_sweep_job(settings: Settings) -> None:
+    db = SessionLocal()
+    try:
+        alerted = run_expiry_check_sweep(db, settings)
+        logger.info("input_inventory_expiry_sweep alerted=%s", alerted)
+    except Exception:
+        logger.exception("input_inventory_expiry_sweep tick failed - will retry next interval")
         db.rollback()
     finally:
         db.close()
@@ -63,9 +76,22 @@ def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
         coalesce=True,
         misfire_grace_time=settings.case_sla_sweep_interval_seconds,
     )
+    scheduler.add_job(
+        _run_input_expiry_sweep_job,
+        "interval",
+        seconds=settings.input_inventory_expiry_sweep_interval_seconds,
+        args=[settings],
+        id="input_inventory_expiry_sweep",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=settings.input_inventory_expiry_sweep_interval_seconds,
+    )
     scheduler.start()
     _scheduler = scheduler
-    logger.info("Background scheduler started (case_sla_sweep every %ss)", settings.case_sla_sweep_interval_seconds)
+    logger.info(
+        "Background scheduler started (case_sla_sweep every %ss, input_inventory_expiry_sweep every %ss)",
+        settings.case_sla_sweep_interval_seconds, settings.input_inventory_expiry_sweep_interval_seconds,
+    )
     return scheduler
 
 

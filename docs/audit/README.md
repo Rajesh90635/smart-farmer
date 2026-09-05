@@ -301,3 +301,54 @@ Full backend suite after batches 1-2: **637 passed, 1 error** (the error,
 does not reproduce in isolation — 6/6 pass standalone — and is unrelated
 to any file this pass touched; pre-existing full-suite flakiness, not a
 regression).
+
+### Batch 3 — Farmer Input Inventory (9 of 11 rows, `c04_inputs.md`)
+
+Unlike batches 1-2 (wiring already-existing services together), this
+cluster's dominant gap was a genuinely missing feature: 9 of 11 rows
+(D21-06, D22-04, D22-06, D23-05, D24-01, D24-02, D24-05, D24-08, D24-09)
+all trace to the same root cause — **no farmer-side input inventory
+existed anywhere** (`DealerProduct.stock_quantity` is the dealer's
+sellable stock; nothing tracked what a farmer actually holds). Per the
+product owner's explicit choice (asked directly given the size of this
+one), built as a new feature rather than deferred:
+
+- New model `InputInventoryItem` + migration `fb6859bdd48d` (table +
+  a new `NotificationCategory.STOCK_ALERT` enum value).
+- `app/services/input_inventory_service.py`: create, list, get, record
+  usage (decrements, rejects usage greater than remaining), restock
+  (increments), and an audited quantity correction (a free-text reason
+  required).
+- Low-stock alert (D22-06/D24-08): fires once per "episode" via a
+  `low_stock_alerted_at` gate — not just the Notification table's own
+  dedup_key — so repeated usage calls while still low don't spam, but
+  restocking above threshold and dropping low again correctly re-alerts.
+- Expiry warning (D24-09): a **second** scheduler job
+  (`input_inventory_expiry_sweep`, hourly by default) alongside the P0
+  pass's Expert SLA sweep — proactive, not farmer-screen-triggered,
+  skips already-depleted items, gated by `expiry_alerted_at`.
+- Full API: `POST/GET /input-inventory`, `GET /input-inventory/{id}`,
+  `POST .../usage`, `POST .../restock`, `POST .../correct`. Ownership
+  enforced (cross-farmer access → 404).
+- Documented in `docs/INPUT_INVENTORY.md`. 14 new tests
+  (`tests/test_input_inventory.py`), all passing.
+
+**Two rows in this cluster needed no change:** D22-07 (expired-listing
+checkout block) was already VERIFIED with its own test; its previously-noted
+"no proactive expiry warning" gap is exactly what D24-09 above now closes.
+D26-04 (product authenticity/counterfeit verification) remains
+**correctly MISSING, not built** — no QR/barcode/manufacturer-registry
+integration exists anywhere in this project
+(`docs/PROMPT9_ASSUMPTIONS_RISKS.md:80-89` already discloses this), and
+per this project's explicit "never fabricate a provider integration"
+rule, a real authenticity claim requires a real external registry this
+pass does not invent.
+
+**Explicitly deferred, disclosed rather than silently skipped:**
+automatic "purchase → stock increase" (marketplace order delivery does
+not yet auto-create/restock an inventory row) — inventory creation and
+restocking are farmer-initiated only this phase, using the same
+functions a future automatic hook would call.
+
+Full backend suite after batch 3: **652 passed, 0 errors** (the batch
+1-2 flaky error did not reproduce this run).

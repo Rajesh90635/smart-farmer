@@ -41,6 +41,8 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "CASE_NEEDS_INFORMATION": {"en": "The professional needs more information or a clearer photo for your case."},
     "CASE_ESCALATED": {"en": "Your case has been escalated for further attention."},
     "CASE_CLOSED": {"en": "Your case has been closed."},
+    "INPUT_LOW_STOCK": {"en": "Your stock of {item_name} is running low ({quantity} {unit} left)."},
+    "INPUT_EXPIRY_WARNING": {"en": "Your {item_name} is expiring on {expiry_date}. Consider using it soon."},
     "assistant_no_data_crop": {"en": "I don't have a current active crop record for you yet. Add a crop cycle to get started."},
     "assistant_crop_status": {"en": "Your {crop_name} on {farm_name} is currently at the {stage} stage."},
     "assistant_no_data_treatment": {"en": "No treatment has been recorded for this crop yet."},

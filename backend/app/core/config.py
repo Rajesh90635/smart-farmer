@@ -126,6 +126,12 @@ class Settings(BaseSettings):
     case_sla_reminder_before_hours: float = 4.0
     case_sla_max_reassignment_attempts: int = 2
 
+    # --- Input inventory expiry sweep (D24-09) - same scheduler, a
+    # separate slower-cadence job since expiry doesn't need 5-minute
+    # granularity ---
+    input_inventory_expiry_sweep_interval_seconds: int = 3600
+    input_expiry_warning_days: int = 14
+
     def is_production(self) -> bool:
         return self.environment == "production"
 
