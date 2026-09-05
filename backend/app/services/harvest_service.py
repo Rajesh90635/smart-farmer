@@ -14,7 +14,8 @@ from app.core import error_codes
 from app.core.errors import AppError
 from app.models.harvest_listing import HarvestListing
 from app.models.harvest_record import HarvestRecord, HarvestStatus
-from app.repositories import crop_cycle_repository, harvest_repository
+from app.models.notification import NotificationCategory, NotificationPriority
+from app.repositories import crop_cycle_repository, harvest_repository, user_repository
 from app.schemas.harvest import (
     HarvestConfirmReadyRequest,
     HarvestListingCreateRequest,
@@ -23,7 +24,9 @@ from app.schemas.harvest import (
     HarvestListResponse,
     HarvestResponse,
 )
+from app.services import notification_service
 from app.services.audit_logger import AuditLogger
+from app.services.weather_alert_rules import AlertCandidate
 
 
 def get_or_create_harvest_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> HarvestResponse:
@@ -100,7 +103,10 @@ def mark_approaching(db: Session, farmer_id: str, harvest_id: uuid.UUID) -> Harv
         raise AppError(error_codes.NOT_FOUND, "Harvest record not found.", 404)
     if harvest.status == HarvestStatus.PLANNED:
         harvest.status = HarvestStatus.APPROACHING
-    db.commit()
+        db.commit()
+        _notify_harvest_status(db, farmer_id, harvest, "HARVEST_APPROACHING")
+    else:
+        db.commit()
     db.refresh(harvest)
     return HarvestResponse.model_validate(harvest)
 
@@ -127,6 +133,7 @@ def confirm_ready(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: H
             409,
         )
 
+    is_new_transition_to_ready = harvest.status != HarvestStatus.READY
     harvest.status = HarvestStatus.READY
     if payload.actual_harvest_date:
         harvest.actual_harvest_date = payload.actual_harvest_date
@@ -135,8 +142,36 @@ def confirm_ready(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: H
 
     AuditLogger(db).log("HARVEST_CONFIRMED_READY", actor_id=farmer_id, actor_role="farmer", entity="harvest_record", entity_id=str(harvest.id))
     db.commit()
+    if is_new_transition_to_ready:
+        # Only on the actual PLANNED/APPROACHING -> READY transition, not
+        # on a later call that merely corrects quantity/date while already
+        # READY - a farmer shouldn't be renotified "your harvest is ready"
+        # every time they fix a number.
+        _notify_harvest_status(db, farmer_id, harvest, "HARVEST_READY")
     db.refresh(harvest)
     return HarvestResponse.model_validate(harvest)
+
+
+def _notify_harvest_status(db: Session, farmer_id: str, harvest: HarvestRecord, message_key: str) -> None:
+    """D47-05 (docs/audit/c08_harvest_postharvest.md): NotificationCategory.HARVEST_ALERT
+    was registered (title + preference mapping) but no code path ever
+    created one - confirmed by grep before this fix. A farmer previously
+    had to keep pulling GET /harvests or the daily summary to notice a
+    status change."""
+    user = user_repository.get_by_id(db, uuid.UUID(farmer_id))
+    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+
+    candidate = AlertCandidate(
+        category=NotificationCategory.HARVEST_ALERT,
+        priority=NotificationPriority.MEDIUM,
+        message_key=message_key,
+        message_params={},
+        dedup_suffix=f"{message_key}:{harvest.id}",
+    )
+    notification_service.create_alert_notification(
+        db, farmer_id, candidate, dedup_scope=f"harvest:{harvest.id}", language_code=language_code,
+        related_entity_type="harvest_record", related_entity_id=str(harvest.id),
+    )
 
 
 def list_my_harvests(db: Session, farmer_id: str, *, limit: int = 50, offset: int = 0) -> HarvestListResponse:

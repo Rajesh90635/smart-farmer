@@ -21,37 +21,44 @@ Notification (rendered, stored, ready to read)
 Farmer
 ```
 
-## Trigger model: weather is still pull-based; case SLA is now push-based
+## Trigger model: weather is now ALSO push-based, alongside pull
 
-Weather alerts are still generated **when the farmer's weather is
-fetched** (`GET /farms/{id}/weather` also runs alert evaluation as a
-best-effort side effect — see `app/services/weather_alert_orchestration_service.py`),
-not by a background scheduler proactively checking weather for every
-farmer on a timer. This remains a disclosed limitation:
-- A farmer who never opens the weather screen for a farm won't get alerts
-  for it, even if dangerous weather is happening.
-- There is no push notification delivery — a notification exists in the
-  database and is visible in-app once created, but nothing proactively
-  wakes the farmer's device (this applies project-wide, including the
-  scheduler-driven notifications below — they land in-app, not as a
-  device push).
+D16-10 (docs/audit/README.md): weather alerts are generated two ways now,
+both funneling through the same `generate_alerts_for_farm_weather`:
 
-A background scheduler now DOES exist, though (`app/services/scheduler.py`,
-APScheduler, in-process) — see docs/CASE_MANAGEMENT.md's "Assignment
-timeout (Expert SLA sweep)". It proactively drives Expert case reminders,
-timeout-reassignment, and breach-escalation notifications without
-requiring the farmer or professional to open any screen first. Extending
-weather alerts to the same proactive model is straightforward future work
-(add a per-farm weather-check job calling the exact same
-`weather_alert_orchestration_service` functions the endpoint already
-calls) but was not in scope for this pass.
+1. Pull-based, as before: whenever a farmer's weather is fetched
+   (`GET /farms/{id}/weather`).
+2. Proactive: `weather_alert_orchestration_service.run_proactive_weather_alert_sweep`,
+   run by the background scheduler (`app/services/scheduler.py`, every
+   `proactive_weather_alert_sweep_interval_seconds`, default 30 min) —
+   checks every farm with a location, not just ones a farmer happens to
+   open the weather screen for. The previously-disclosed "a farmer who
+   never opens the app never gets warned of a heavy-rain event" gap is
+   closed.
 
-## Notification categories (Requirement 24 — only currently supported types)
+There is still no push notification DELIVERY — a notification exists in
+the database and is visible in-app once created, but nothing proactively
+wakes the farmer's device (this applies project-wide). What changed is
+that the notification now gets CREATED proactively; actually alerting a
+farmer who isn't looking at the app is still a future, separate step
+(would need a push provider - FCM/APNs - a real infrastructure decision,
+not attempted here).
+
+The same scheduler also now drives Expert case reminders, timeout-
+reassignment/breach-escalation (docs/CASE_MANAGEMENT.md), input-inventory
+low-stock/expiry alerts (docs/INPUT_INVENTORY.md), and harvest status
+alerts (see below) — none of these require the farmer or professional to
+open any screen first.
+
+## Notification categories (only currently supported types)
 
 `WEATHER_ALERT`, `RAIN_ALERT`, `HEAVY_RAIN_ALERT`, `CROP_ALERT`,
-`DISEASE_ALERT`, `HARVEST_ALERT`. `ORDER_ALERT`/`MARKET_ALERT` are **not**
-in the enum — they belong to future marketplace phases and were
-deliberately excluded rather than added as unused placeholders.
+`DISEASE_ALERT`, `HARVEST_ALERT`, `STOCK_ALERT`. `ORDER_ALERT`/`MARKET_ALERT`
+are **not** in the enum — they belong to future marketplace phases and
+were deliberately excluded rather than added as unused placeholders (this
+exclusion was deliberately respected, not overridden, when a later audit
+pass considered adding automatic buyer-listing-match notifications — see
+docs/audit/README.md's "Third pass, Batch 6").
 
 Note: `DISEASE_ALERT` exists in the category enum and preference model
 for forward-compatibility, but **no code path creates one this phase** —
@@ -59,6 +66,12 @@ disease results are surfaced via the AI analysis endpoints directly
 (`GET /crop-photos/{id}/analysis`, `GET /ai/analysis/{id}/localized`), not
 as a notification. Wiring a disease result into a proactive notification
 is straightforward future work using the same `NotificationService`.
+
+`HARVEST_ALERT` was previously registered (title + preference mapping)
+but never dispatched by any code path (D47-05) — `harvest_service.mark_approaching`
+and `confirm_ready` now send one (`HARVEST_APPROACHING`/`HARVEST_READY`),
+exactly once per real status transition (a later quantity correction
+while already READY does not re-send it).
 
 ## Priority levels
 

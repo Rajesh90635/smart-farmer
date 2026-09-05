@@ -509,3 +509,45 @@ boundaries:
   product owner.
 
 Full suite: **669 passed, 0 failed.**
+
+### Batch 7 — Proactive weather push + harvest notifications (2 rows, `c03_weather_water_soil.md` + `c08_harvest_postharvest.md`)
+
+- **D16-10:** a new scheduler job (`run_proactive_weather_alert_sweep`,
+  `weather_alert_orchestration_service.py`) checks every farm with a
+  location on a timer (default 30 min), reusing the exact same
+  `generate_alerts_for_farm_weather` function the pull-based
+  `GET .../weather` endpoint already calls - no duplicated rule logic.
+  Closes the previously-disclosed "a farmer who never opens the app never
+  gets warned of a heavy rain event" safety gap. `farm_repository.list_active_with_location`
+  gained an optional `farm_ids` filter for a targeted manual re-run (and
+  for tests - see below).
+- **D47-05:** `NotificationCategory.HARVEST_ALERT` was registered (title +
+  preference mapping) since an earlier phase but grep confirmed zero call
+  sites ever created one. `harvest_service.mark_approaching`/`confirm_ready`
+  now send `HARVEST_APPROACHING`/`HARVEST_READY`, exactly once per real
+  status transition (a later quantity correction while already READY
+  does not re-send it - verified by test).
+
+**A real operational discovery made while testing D16-10's sweep:** the
+shared test database currently holds **12,020 farms with a location**,
+accumulated across this session's repeated full-suite runs (the DB is
+real Postgres and is never truncated between runs). An unscoped call to
+the new sweep against this database took long enough to need killing
+during test-writing - not a bug in the sweep logic, but a real
+"unbounded sweep over an ever-growing dataset" scaling characteristic
+worth the team's awareness before this ships against a real production
+database that could also grow large. Not fixed here (would need
+pagination/rate-limiting design, a batch-size product decision, or a
+test-database reset strategy - out of scope for this pass); worked
+around for testing via the new `farm_ids` filter, which every new sweep
+test now uses to stay fast regardless of the shared database's size.
+
+Deferred, not attempted this pass: D40-01/02/03 (voice input/STT -
+mobile-only, out of scope for this backend pass), D44-02 (proximity-based
+dealer search - lower priority given time, a catalog/price-comparison
+marketplace already exists and works, just not geo-ranked), D64-06/D66-04
+(payment failure should notify the farmer, not just audit-log - a clean,
+buildable fix using the same `notification_service` pattern as this
+batch, simply not reached this pass).
+
+Full suite: **675 passed, 0 failed.**

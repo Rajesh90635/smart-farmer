@@ -32,3 +32,16 @@ def count_active_for_farmer(db: Session, farmer_id: uuid.UUID) -> int:
     return db.execute(
         select(func.count()).select_from(Farm).where(Farm.farmer_id == farmer_id, Farm.status == FarmStatus.ACTIVE)
     ).scalar_one()
+
+
+def list_active_with_location(db: Session, *, farm_ids: list[uuid.UUID] | None = None) -> list[Farm]:
+    """D16-10 (docs/audit/c03_weather_water_soil.md) - used by the
+    proactive weather-alert sweep (weather_alert_orchestration_service.py)
+    to check every farm with a location, not just ones a farmer happens
+    to open the weather screen for. `farm_ids` narrows to a specific set
+    (a targeted manual re-run, or a test) - omitted, the real scheduled
+    job sweeps every eligible farm."""
+    conditions = [Farm.status == FarmStatus.ACTIVE, Farm.latitude.isnot(None), Farm.longitude.isnot(None)]
+    if farm_ids is not None:
+        conditions.append(Farm.id.in_(farm_ids))
+    return list(db.execute(select(Farm).where(*conditions)).scalars().all())

@@ -32,6 +32,42 @@ def test_harvest_never_reaches_ready_without_explicit_farmer_confirmation(client
     assert confirmed.json()["status"] == "ready"
 
 
+# --- D47-05: HARVEST_ALERT notification wiring (previously registered but never dispatched) ---
+
+def test_marking_approaching_sends_a_harvest_alert_notification(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    client.post(f"/api/v1/harvests/{harvest['id']}/approaching", headers=auth_headers(tokens))
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    harvest_alerts = [n for n in notifications if n["category"] == "harvest_alert"]
+    assert len(harvest_alerts) == 1
+
+
+def test_confirming_ready_sends_a_harvest_alert_notification(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1000.00"}, headers=auth_headers(tokens))
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    harvest_alerts = [n for n in notifications if n["category"] == "harvest_alert"]
+    assert len(harvest_alerts) == 1
+
+
+def test_correcting_quantity_while_already_ready_does_not_resend_the_notification(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1000.00"}, headers=auth_headers(tokens))
+
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1050.00"}, headers=auth_headers(tokens))
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    harvest_alerts = [n for n in notifications if n["category"] == "harvest_alert"]
+    assert len(harvest_alerts) == 1
+
+
 def test_confirm_ready_rejects_regressing_a_harvest_already_past_ready(client, farmer_with_crop_cycle):
     """Real bug fix: confirm-ready used to unconditionally set status back
     to READY, so calling it again to correct a quantity after the harvest

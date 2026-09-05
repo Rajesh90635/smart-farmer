@@ -19,9 +19,11 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import Settings
+from app.core.weather_provider_dependency import get_weather_provider
 from app.db.session import SessionLocal
 from app.services.case_sla_service import run_case_sla_sweep
 from app.services.input_inventory_service import run_expiry_check_sweep
+from app.services.weather_alert_orchestration_service import run_proactive_weather_alert_sweep
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,18 @@ def _run_input_expiry_sweep_job(settings: Settings) -> None:
         logger.info("input_inventory_expiry_sweep alerted=%s", alerted)
     except Exception:
         logger.exception("input_inventory_expiry_sweep tick failed - will retry next interval")
+        db.rollback()
+    finally:
+        db.close()
+
+
+def _run_proactive_weather_alert_sweep_job(settings: Settings) -> None:
+    db = SessionLocal()
+    try:
+        created = run_proactive_weather_alert_sweep(db, get_weather_provider(), settings)
+        logger.info("proactive_weather_alert_sweep notifications_created=%s", created)
+    except Exception:
+        logger.exception("proactive_weather_alert_sweep tick failed - will retry next interval")
         db.rollback()
     finally:
         db.close()
@@ -86,11 +100,23 @@ def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
         coalesce=True,
         misfire_grace_time=settings.input_inventory_expiry_sweep_interval_seconds,
     )
+    scheduler.add_job(
+        _run_proactive_weather_alert_sweep_job,
+        "interval",
+        seconds=settings.proactive_weather_alert_sweep_interval_seconds,
+        args=[settings],
+        id="proactive_weather_alert_sweep",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=settings.proactive_weather_alert_sweep_interval_seconds,
+    )
     scheduler.start()
     _scheduler = scheduler
     logger.info(
-        "Background scheduler started (case_sla_sweep every %ss, input_inventory_expiry_sweep every %ss)",
+        "Background scheduler started (case_sla_sweep every %ss, input_inventory_expiry_sweep every %ss, "
+        "proactive_weather_alert_sweep every %ss)",
         settings.case_sla_sweep_interval_seconds, settings.input_inventory_expiry_sweep_interval_seconds,
+        settings.proactive_weather_alert_sweep_interval_seconds,
     )
     return scheduler
 

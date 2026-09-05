@@ -132,6 +132,13 @@ class Settings(BaseSettings):
     input_inventory_expiry_sweep_interval_seconds: int = 3600
     input_expiry_warning_days: int = 14
 
+    # --- Proactive weather alert sweep (D16-10) - same scheduler; a farm
+    # with dangerous weather is now checked even if the farmer never
+    # opens the weather screen. Interval matches weather_current_cache_minutes
+    # (30 min) so the sweep never forces a provider call more often than
+    # a farmer's own pull-based check already would. ---
+    proactive_weather_alert_sweep_interval_seconds: int = 1800
+
     def is_production(self) -> bool:
         return self.environment == "production"
 
