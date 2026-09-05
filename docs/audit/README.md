@@ -469,3 +469,43 @@ two repeated full runs of the affected files after the fix.
 
 New test file `tests/test_case_routing_and_escalation.py` (9 tests). Full
 suite: **666 passed, 0 failed.**
+
+### Batch 6 — Market/Sales (1 of 11 rows fixed, 6 more reclassified with reasoning, `c09_market_sales.md`)
+
+This cluster turned out to be mostly items that should NOT be silently
+built, once actually investigated - not oversight, but genuine
+boundaries:
+
+- **D59-03 (buyer's own min/max quantity never cross-checked) - FIXED.**
+  `offer_service.create_offer` now rejects (422) an offer whose quantity
+  falls outside the buyer's own registered `BuyerBusinessProfile.min_quantity`/
+  `max_quantity`, when set. 3 new tests in `tests/test_marketplace_offers.py`.
+- **D57-04/D57-05/D58-02/D58-03 (transport/commission deduction) -
+  STALE EVIDENCE, already fixed before this session.** The audit's own
+  citation (`offer_service.py:123` hardcoded `Decimal("0")`) predates
+  this session entirely - `AcceptOfferRequest.charges` is already a real,
+  farmer-entered deduction (part of the original 7-bug fix pass, see this
+  file's "Post-audit status" section from 2026-09-05). What remains is
+  only a cosmetic itemization gap (`charges` is one lump sum, not broken
+  into separate transport/commission/storage fields) - the underlying bug
+  ("net realization structurally incapable of differing from gross") is
+  resolved, not this specific itemization.
+- **D56-01/02/03/04 (live mandi/APMC prices), D57-01 (multi-market
+  registry) - correctly MISSING, requires a product decision.** No live
+  market-price data exists in this project at all (`market.py` is an
+  intentional empty placeholder). A free government API exists in
+  principle (data.gov.in / Agmarknet), but building the provider
+  abstraction now would only ever return "unavailable" without a real,
+  user-provided API key - not attempted this pass, flagged for the
+  product owner rather than built as an always-empty shell.
+- **D59-07 (automatic buyer<->listing match notification) -
+  RECLASSIFIED MISSING -> FUTURE.** The audit missed a directly relevant,
+  already-disclosed decision: `NotificationCategory`'s own code comment
+  states `"ORDER_ALERT, MARKET_ALERT deliberately NOT included - future
+  phases only"` (`app/models/notification.py`). Building automated
+  marketplace-match notifications now would directly contradict that
+  already-made, disclosed scope decision - this is not an oversight to
+  silently fix, it's a decision to respect or explicitly revisit with the
+  product owner.
+
+Full suite: **669 passed, 0 failed.**

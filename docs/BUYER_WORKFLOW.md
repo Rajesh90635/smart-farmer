@@ -24,6 +24,12 @@ already has) are never exposed to farmers - the buyer-facing profile
 response only returns display name, buyer type, crops purchased, and
 quantity range.
 
+`min_quantity`/`max_quantity` are now actually enforced (D59-03,
+docs/audit/README.md) - `offer_service.create_offer` rejects (422) an
+offer whose quantity falls outside the buyer's own registered range.
+Previously these fields were captured but never cross-checked against
+anything a buyer actually did.
+
 ## Buyer discovery of listings
 
 `GET /marketplace/listings?crop_id=...` - straightforward filtered

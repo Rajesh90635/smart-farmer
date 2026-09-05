@@ -41,6 +41,27 @@ def create_offer(db: Session, user_id: str, listing_id: uuid.UUID, payload: Offe
     if listing is None or not listing.is_active:
         raise AppError(error_codes.NOT_FOUND, "Listing not found or no longer active.", 404)
 
+    # D59-03 (docs/audit/c09_market_sales.md): the buyer's OWN registered
+    # min_quantity/max_quantity (BuyerBusinessProfile) was never
+    # cross-checked against anything - a buyer profile stating "I only
+    # buy 500-2000kg lots" could still submit an offer for 10kg or
+    # 50000kg with no rejection. Only enforced when the buyer actually
+    # SET a bound - an unset min/max means no constraint, not zero/infinity.
+    business_profile = buyer_offer_repository.get_buyer_business_profile(db, buyer.id)
+    if business_profile is not None:
+        if business_profile.min_quantity is not None and payload.quantity < business_profile.min_quantity:
+            raise AppError(
+                error_codes.VALIDATION_ERROR,
+                f"Your buyer profile's minimum purchase quantity is {business_profile.min_quantity} {payload.unit} - this offer is below that.",
+                422,
+            )
+        if business_profile.max_quantity is not None and payload.quantity > business_profile.max_quantity:
+            raise AppError(
+                error_codes.VALIDATION_ERROR,
+                f"Your buyer profile's maximum purchase quantity is {business_profile.max_quantity} {payload.unit} - this offer exceeds that.",
+                422,
+            )
+
     offer = BuyerOffer(
         harvest_listing_id=listing.id,
         buyer_id=buyer.id,

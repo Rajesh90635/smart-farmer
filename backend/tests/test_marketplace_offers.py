@@ -29,6 +29,48 @@ def test_verified_buyer_can_browse_listings(client, farmer_with_crop_cycle, veri
     assert listing["id"] in ids
 
 
+# --- Buyer's own min/max purchase quantity enforcement (D59-03) ---
+# verified_buyer's BuyerBusinessProfile registers min_quantity=100, max_quantity=5000 (conftest.py).
+
+def test_offer_below_buyers_registered_minimum_quantity_is_rejected(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id)
+
+    response = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers",
+        json=valid_offer_payload(quantity="50.00"),
+        headers=auth_headers(buyer_tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_offer_above_buyers_registered_maximum_quantity_is_rejected(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="10000.00")
+
+    response = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers",
+        json=valid_offer_payload(quantity="9000.00"),
+        headers=auth_headers(buyer_tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_offer_within_buyers_registered_quantity_range_succeeds(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id)
+
+    response = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers",
+        json=valid_offer_payload(quantity="1000.00"),
+        headers=auth_headers(buyer_tokens),
+    )
+    assert response.status_code == 201
+
+
 def test_offer_and_counter_offer_negotiation_history_is_never_overwritten(client, farmer_with_crop_cycle, verified_buyer):
     farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
     buyer_tokens, _ = verified_buyer
