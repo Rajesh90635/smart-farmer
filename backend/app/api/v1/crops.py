@@ -18,6 +18,7 @@ from app.schemas.crop import (
     CropCycleListResponse,
     CropCycleResponse,
     CropCycleUpdateRequest,
+    CropFailureReportRequest,
     CropMasterResponse,
 )
 from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse
@@ -96,6 +97,19 @@ def close_crop_cycle(
     db: Session = Depends(get_db),
 ) -> CropCycleResponse:
     return crop_cycle_service.close_my_crop_cycle(db, current_user.user_id, crop_cycle_id, payload)
+
+
+@router.post("/crops/{crop_cycle_id}/report-failure", response_model=CropCycleResponse)
+def report_crop_failure(
+    crop_cycle_id: uuid.UUID,
+    payload: CropFailureReportRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> CropCycleResponse:
+    """Distinct from the generic `PUT /crops/{id}` status-only cancel -
+    captures WHY the crop failed (D10-01/D10-02/D10-03) and returns
+    category-driven, non-prescriptive recovery guidance (D10-09/D11-01)."""
+    return crop_cycle_service.report_crop_failure(db, current_user.user_id, crop_cycle_id, payload)
 
 
 @router.get("/crops/{crop_cycle_id}/stage-history", response_model=CropCycleStageHistoryListResponse)

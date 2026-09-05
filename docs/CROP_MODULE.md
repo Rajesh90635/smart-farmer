@@ -67,6 +67,24 @@ PLANNED → SOWN → GROWING → FLOWERING → FRUITING → READY_FOR_HARVEST �
   status as a button (`nextStatusAfter` in `farm_models.dart`), but the
   backend is the actual enforcement point regardless of what the client
   sends.
+
+### Crop failure & re-sowing
+
+`PUT /crops/{id}` with `cultivation_status: cancelled` is a plain,
+reason-less cancel (farmer changed their mind) — `failure_reason` stays
+null. `POST /crops/{id}/report-failure` is the distinct failure-reporting
+workflow: takes a `failure_reason` (`disease`/`pest`/`drought`/`flood`/
+`weather_damage`/`market_conditions`/`other`), transitions to CANCELLED
+the same way, and returns a `recommended_next_action` — a short,
+deliberately generic/non-prescriptive recovery note keyed off the reason
+category (never a specific product, dosage, or variety name). Re-sowing
+on the same plot can optionally link back via
+`CropCycleCreateRequest.resown_from_crop_cycle_id`, validated to be the
+farmer's own, CANCELLED, same-plot cycle. Either path (plain cancel or
+report-failure) also cancels every still-PENDING task tied to that cycle
+(`task_service.cancel_all_pending_for_crop_cycle`) — an orphaned task
+would otherwise stay open/overdue forever with no crop cycle left to act
+on.
 - Closing (`POST /crops/{id}/close`) is only valid from `READY_FOR_HARVEST`
   and requires `actual_harvest_date >= sowing_date`.
 

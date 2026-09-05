@@ -45,6 +45,21 @@ class Season(str, enum.Enum):
     OTHER = "other"
 
 
+class FailureReason(str, enum.Enum):
+    """D10-02/D10-03 (docs/audit/c02_lifecycle_edgecases.md): a reason
+    taxonomy for a reported crop failure - stored as a plain string
+    column (see `CropCycle.failure_reason`), not a native Postgres enum,
+    consistent with this project's precedent of storing some enum-like
+    values as plain strings to avoid touching a shared enum type."""
+    DISEASE = "disease"
+    PEST = "pest"
+    DROUGHT = "drought"
+    FLOOD = "flood"
+    WEATHER_DAMAGE = "weather_damage"
+    MARKET_CONDITIONS = "market_conditions"
+    OTHER = "other"
+
+
 # Forward-only linear path. CANCELLED is reachable from any non-terminal
 # status (a farmer can abandon a cycle at any active stage). HARVESTED and
 # CANCELLED are terminal - nothing transitions out of them. No backward
@@ -105,6 +120,17 @@ class CropCycle(Base):
     # both populated; nothing in this codebase requires variety_id.
     variety_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("crop_varieties.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # D10-02/D10-03/D10-10/D11-01 (docs/audit/c02_lifecycle_edgecases.md):
+    # only ever set by report_crop_failure() (crop_cycle_service.py) -
+    # a plain cancel via update_my_crop_cycle leaves this None, so
+    # "reported failure" stays distinguishable from "farmer changed
+    # their mind." resown_from_crop_cycle_id links a NEW cycle back to
+    # the one it replaced - set only at creation time, never retroactively.
+    failure_reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    resown_from_crop_cycle_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("crop_cycles.id", ondelete="SET NULL"), nullable=True
     )
 
     # --- Future AI integration hooks (Requirement 28). Not written or read

@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.crop_cycle import CultivationStatus, Season
+from app.models.crop_cycle import CultivationStatus, FailureReason, Season
 
 
 class CropMasterResponse(BaseModel):
@@ -26,12 +26,20 @@ class CropCycleCreateRequest(BaseModel):
     # Independent of seed_variety: a request can set neither, either, or
     # both. Omitting it entirely preserves pre-Phase-1 behavior exactly.
     variety_id: uuid.UUID | None = None
+    # D10-10/D11-01: links a re-sown cycle back to the failed one it
+    # replaces - optional, never required, so ordinary "plant a new crop"
+    # creation is completely unaffected.
+    resown_from_crop_cycle_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> "CropCycleCreateRequest":
         if self.expected_harvest_date is not None and self.expected_harvest_date < self.sowing_date:
             raise ValueError("expected_harvest_date cannot be before sowing_date")
         return self
+
+
+class CropFailureReportRequest(BaseModel):
+    failure_reason: FailureReason
 
 
 class CropCycleUpdateRequest(BaseModel):
@@ -57,6 +65,10 @@ class CropCycleResponse(BaseModel):
     cultivation_status: CultivationStatus
     seed_variety: str | None
     variety_id: uuid.UUID | None
+    failure_reason: str | None = None
+    resown_from_crop_cycle_id: uuid.UUID | None = None
+    # Only ever set by report_crop_failure() - never persisted, always None elsewhere.
+    recommended_next_action: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

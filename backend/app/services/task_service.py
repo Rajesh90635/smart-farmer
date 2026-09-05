@@ -147,6 +147,28 @@ def cancel_task(db: Session, farmer_id: str, task_id: uuid.UUID) -> TaskResponse
     return _to_response(task, today=datetime.now(timezone.utc).date())
 
 
+def cancel_all_pending_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> int:
+    """D9-15 (docs/audit/c02_lifecycle_edgecases.md): when a crop cycle
+    ends (CANCELLED or HARVESTED), a task still PENDING for it would
+    otherwise stay open/overdue forever with no crop cycle left to act
+    on - inflating the farmer's overdue-task count and the Crop Risk
+    Score's "Operational Task Risk" factor indefinitely. Cancelled, not
+    deleted - preserves history. Does NOT commit - the caller
+    (crop_cycle_service.py) commits as part of its own status-change
+    transaction."""
+    tasks = task_repository.list_for_crop_cycle(db, crop_cycle_id, uuid.UUID(farmer_id))
+    cancelled = 0
+    for task in tasks:
+        if task.status == TaskStatus.PENDING:
+            task.status = TaskStatus.CANCELLED
+            AuditLogger(db).log(
+                "TASK_AUTO_CANCELLED_CROP_CYCLE_ENDED", actor_id=None, actor_role="automation_service",
+                entity="task", entity_id=str(task.id),
+            )
+            cancelled += 1
+    return cancelled
+
+
 def _to_response(task: Task, *, today: date) -> TaskResponse:
     # NOT TaskResponse.model_validate(task) - the ORM object has no
     # display_status attribute at all (it's a Pydantic-only computed

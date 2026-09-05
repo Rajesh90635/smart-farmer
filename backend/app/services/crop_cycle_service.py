@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
-from app.models.crop_cycle import ALLOWED_TRANSITIONS, CropCycle, CultivationStatus
+from app.models.crop_cycle import ALLOWED_TRANSITIONS, CropCycle, CultivationStatus, FailureReason
 from app.models.crop_cycle_stage_history import CropCycleStageHistory
 from app.repositories import crop_cycle_repository, crop_cycle_stage_history_repository, crop_master_repository, crop_variety_repository, plot_repository
 from app.schemas.crop import (
@@ -14,11 +14,29 @@ from app.schemas.crop import (
     CropCycleListResponse,
     CropCycleResponse,
     CropCycleUpdateRequest,
+    CropFailureReportRequest,
 )
 from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse, CropCycleStageHistoryResponse
+from app.services import task_service
 from app.services.audit_logger import AuditLogger
 
 _DEFAULT_PAGE_SIZE = 50
+
+_TERMINAL_STATUSES = (CultivationStatus.CANCELLED, CultivationStatus.HARVESTED)
+
+# D10-09/D11-01 (docs/audit/c02_lifecycle_edgecases.md): deliberately
+# generic, non-prescriptive category guidance - never a specific product,
+# dosage, or variety name, consistent with crop_risk_service._build_recommendation's
+# own "no unvalidated agronomy advice" convention.
+_RECOVERY_GUIDANCE: dict[str, str] = {
+    FailureReason.DISEASE.value: "Consider requesting an expert review and a disease-resistant variety before re-sowing.",
+    FailureReason.PEST.value: "Consider an expert review of pest management practices before re-sowing.",
+    FailureReason.DROUGHT.value: "Consider checking irrigation availability and soil moisture before re-sowing.",
+    FailureReason.FLOOD.value: "Consider inspecting drainage and soil condition before re-sowing.",
+    FailureReason.WEATHER_DAMAGE.value: "Consider reviewing the weather forecast before re-sowing.",
+    FailureReason.MARKET_CONDITIONS.value: "Consider checking current market prices before deciding on the next crop.",
+    FailureReason.OTHER.value: "Consider reviewing what went wrong before re-sowing.",
+}
 
 
 def _get_owned_plot_or_404(db: Session, farmer_id: str, plot_id: uuid.UUID):
@@ -58,6 +76,19 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
                 error_codes.VALIDATION_ERROR, "Selected variety does not belong to the selected crop.", 422
             )
 
+    resown_from_id = None
+    if payload.resown_from_crop_cycle_id is not None:
+        previous_cycle = crop_cycle_repository.get_owned(db, payload.resown_from_crop_cycle_id, uuid.UUID(farmer_id))
+        if previous_cycle is None:
+            raise AppError(error_codes.NOT_FOUND, "The crop cycle being re-sown from was not found.", 404)
+        if previous_cycle.plot_id != plot_id:
+            raise AppError(error_codes.VALIDATION_ERROR, "resown_from_crop_cycle_id must belong to the same plot.", 422)
+        if previous_cycle.cultivation_status != CultivationStatus.CANCELLED:
+            raise AppError(
+                error_codes.VALIDATION_ERROR, "Can only re-sow from a cancelled (failed) crop cycle.", 422
+            )
+        resown_from_id = previous_cycle.id
+
     crop_cycle = CropCycle(
         plot_id=plot_id,
         crop_id=payload.crop_id,
@@ -67,6 +98,7 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
         seed_variety=payload.seed_variety,
         variety_id=payload.variety_id,
         cultivation_status=CultivationStatus.PLANNED,
+        resown_from_crop_cycle_id=resown_from_id,
     )
     crop_cycle_repository.create(db, crop_cycle)
     db.flush()
@@ -147,6 +179,8 @@ def update_my_crop_cycle(
             entity="crop_cycle",
             entity_id=str(crop_cycle.id),
         )
+        if crop_cycle.cultivation_status in _TERMINAL_STATUSES:
+            task_service.cancel_all_pending_for_crop_cycle(db, farmer_id, crop_cycle.id)
 
     db.commit()
     db.refresh(crop_cycle)
@@ -180,10 +214,48 @@ def close_my_crop_cycle(
         entity="crop_cycle",
         entity_id=str(crop_cycle.id),
     )
+    task_service.cancel_all_pending_for_crop_cycle(db, farmer_id, crop_cycle.id)
 
     db.commit()
     db.refresh(crop_cycle)
     return CropCycleResponse.model_validate(crop_cycle)
+
+
+def report_crop_failure(
+    db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payload: CropFailureReportRequest
+) -> CropCycleResponse:
+    """D10-01/D10-02/D10-03 (docs/audit/c02_lifecycle_edgecases.md): a
+    distinct "report failure" workflow, not the generic status-only
+    cancel `update_my_crop_cycle` already supports - captures WHY, so a
+    reported failure stays distinguishable from a farmer simply changing
+    their mind. Internally still a CANCELLED transition (no new terminal
+    state was invented), so every existing rule about CANCELLED being
+    terminal/non-reversible still applies unchanged."""
+    crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, uuid.UUID(farmer_id))
+    if crop_cycle is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
+
+    _validate_transition(crop_cycle.cultivation_status, CultivationStatus.CANCELLED)
+
+    crop_cycle.cultivation_status = CultivationStatus.CANCELLED
+    crop_cycle.failure_reason = payload.failure_reason.value
+
+    audit = AuditLogger(db)
+    audit.log(
+        "CROP_CYCLE_FAILURE_REPORTED", actor_id=farmer_id, actor_role="farmer", entity="crop_cycle", entity_id=str(crop_cycle.id)
+    )
+    _record_stage_history(db, crop_cycle.id, crop_cycle.cultivation_status)
+    audit.log(
+        "CROP_CYCLE_STATUS_CHANGED", actor_id=farmer_id, actor_role="farmer", entity="crop_cycle", entity_id=str(crop_cycle.id)
+    )
+    task_service.cancel_all_pending_for_crop_cycle(db, farmer_id, crop_cycle.id)
+
+    db.commit()
+    db.refresh(crop_cycle)
+
+    response = CropCycleResponse.model_validate(crop_cycle)
+    response.recommended_next_action = _RECOVERY_GUIDANCE.get(payload.failure_reason.value)
+    return response
 
 
 def _validate_transition(current: CultivationStatus, target: CultivationStatus) -> None:

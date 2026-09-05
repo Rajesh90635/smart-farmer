@@ -352,3 +352,47 @@ functions a future automatic hook would call.
 
 Full backend suite after batch 3: **652 passed, 0 errors** (the batch
 1-2 flaky error did not reproduce this run).
+
+### Batch 4 — Crop Failure & Re-sowing (7 of 9 rows, `c02_lifecycle_edgecases.md`)
+
+D9-15, D10-01, D10-02, D10-03, D10-09, D10-10, D11-01 addressed together
+as one coherent feature (D99-01/D99-02 are cross-reference rollups of
+these same rows, not independently actionable):
+
+- **D9-15 (orphaned tasks):** `task_service.cancel_all_pending_for_crop_cycle`
+  now runs whenever a crop cycle reaches CANCELLED or HARVESTED (both
+  `update_my_crop_cycle` and `close_my_crop_cycle`) - a PENDING task tied
+  to an ended cycle no longer inflates the overdue-task count or the Crop
+  Risk Score's "Operational Task Risk" factor forever. Cancelled, not
+  deleted.
+- **D10-01/D10-02/D10-03 (failure reporting + reason taxonomy):** new
+  `POST /crops/{id}/report-failure` (`CropCycle.failure_reason`, a
+  `FailureReason` enum: disease/pest/drought/flood/weather_damage/
+  market_conditions/other), distinct from the pre-existing generic `PUT`
+  cancel - a plain "changed my mind" cancel leaves `failure_reason` null,
+  so a reported failure stays traceably different.
+- **D10-09/D11-01 (recovery/re-sow recommendation):** `report_crop_failure`
+  returns a `recommended_next_action` - category-driven, still
+  deliberately generic/non-prescriptive (no product, dosage, or variety
+  name), consistent with `crop_risk_service._build_recommendation`'s own
+  convention, which was intentionally NOT modified.
+- **D10-10 (re-sowing linkage):** `CropCycleCreateRequest.resown_from_crop_cycle_id`
+  (optional) links a new cycle back to the cancelled one it replaces -
+  validated to be the farmer's own, CANCELLED, and on the SAME plot.
+
+Migration `d7557ced4b7b`. 9 new tests in `tests/test_crop_cycles.py`.
+Full suite: **660 passed, 1 failed** — the failure,
+`test_products.py::test_admin_can_list_pending_products_to_discover_what_needs_review`,
+passes 11/11 in isolation and touches code this batch never modified
+(products/admin listing pagination against the shared, accumulating test
+database) - pre-existing full-suite-scale flakiness, not a regression
+(this is the third distinct pre-existing flaky test observed across the
+three full-suite runs so far this session, each unrelated to the files
+changed in its own run - worth a dedicated look eventually, but out of
+scope for this backlog pass).
+
+**Not built this batch, disclosed:** automatic reason detection (e.g.
+auto-inferring "disease" from a recent AI diagnosis rather than the
+farmer selecting it) - `failure_reason` is farmer-selected only; and no
+notification is sent for the recovery recommendation (it's a synchronous
+response field on the report-failure call, not a proactive alert).

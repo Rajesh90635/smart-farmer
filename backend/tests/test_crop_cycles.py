@@ -266,3 +266,156 @@ def test_cannot_create_crop_cycle_under_another_farmers_plot(client, registered_
         f"/api/v1/plots/{plot_a['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens_b)
     )
     assert response.status_code == 404
+
+
+# --- Crop failure / re-sowing (D10-01/D10-02/D10-09/D10-10/D11-01) ---
+
+def test_report_crop_failure_captures_reason_and_recommendation(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+
+    response = client.post(
+        f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "disease"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cultivation_status"] == "cancelled"
+    assert body["failure_reason"] == "disease"
+    assert body["recommended_next_action"] is not None
+    assert "resistant" in body["recommended_next_action"].lower()
+
+
+def test_report_crop_failure_is_distinguishable_from_a_plain_cancel(client, registered_farmer, sample_crop_id):
+    """A plain PUT cancel (farmer changed their mind) must leave
+    failure_reason unset - only report-failure sets it."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+
+    response = client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": "cancelled"}, headers=auth_headers(tokens))
+    assert response.status_code == 200
+    assert response.json()["cultivation_status"] == "cancelled"
+    assert response.json()["failure_reason"] is None
+
+
+def test_cannot_report_failure_on_an_already_terminal_crop_cycle(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "pest"}, headers=auth_headers(tokens))
+
+    response = client.post(
+        f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "drought"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 409
+
+
+def test_resowing_links_new_cycle_to_the_failed_one(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    failed = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/crops/{failed['id']}/report-failure", json={"failure_reason": "flood"}, headers=auth_headers(tokens))
+
+    resown = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, resown_from_crop_cycle_id=failed["id"]),
+        headers=auth_headers(tokens),
+    )
+    assert resown.status_code == 201
+    assert resown.json()["resown_from_crop_cycle_id"] == failed["id"]
+
+
+def test_resowing_rejects_a_source_cycle_that_is_not_cancelled(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    active = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+
+    response = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, resown_from_crop_cycle_id=active["id"]),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_resowing_rejects_a_source_cycle_from_a_different_plot(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot_1 = _create_plot(client, tokens)
+    plot_2 = _create_plot(client, tokens)
+    failed = client.post(
+        f"/api/v1/plots/{plot_1['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/crops/{failed['id']}/report-failure", json={"failure_reason": "pest"}, headers=auth_headers(tokens))
+
+    response = client.post(
+        f"/api/v1/plots/{plot_2['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, resown_from_crop_cycle_id=failed["id"]),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_reporting_failure_auto_cancels_pending_tasks(client, registered_farmer, sample_crop_id):
+    """D9-15: a task still PENDING for a crop cycle that just ended must
+    not stay open/overdue forever with no crop cycle left to act on."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    task = client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+
+    client.post(f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "drought"}, headers=auth_headers(tokens))
+
+    task_after = client.get(f"/api/v1/tasks/{task['id']}", headers=auth_headers(tokens)).json()
+    assert task_after["status"] == "cancelled"
+
+
+def test_closing_crop_cycle_auto_cancels_pending_tasks(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    task = client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+
+    client.post(
+        f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-01"}, headers=auth_headers(tokens)
+    )
+
+    task_after = client.get(f"/api/v1/tasks/{task['id']}", headers=auth_headers(tokens)).json()
+    assert task_after["status"] == "cancelled"
+
+
+def test_auto_cancel_never_touches_an_already_completed_task(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    task = client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
+
+    client.post(f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "other"}, headers=auth_headers(tokens))
+
+    task_after = client.get(f"/api/v1/tasks/{task['id']}", headers=auth_headers(tokens)).json()
+    assert task_after["status"] == "completed"
