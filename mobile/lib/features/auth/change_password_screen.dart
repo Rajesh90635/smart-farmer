@@ -6,10 +6,9 @@ import 'auth_state.dart';
 import 'validators.dart';
 
 /// Lets an already-logged-in farmer change their own password by
-/// confirming their current one first. This is the self-service path;
-/// a farmer who has forgotten their password entirely still has to go
-/// through support (see LoginScreen's "Forgot password?" dialog) since
-/// there is no OTP/email channel to verify identity out of band.
+/// confirming their current one first. A farmer who has forgotten their
+/// password entirely uses a different, OTP-verified path instead - see
+/// LoginScreen's "Forgot password?" button, which opens ResetPasswordScreen.
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
 

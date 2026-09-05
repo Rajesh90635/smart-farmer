@@ -88,6 +88,16 @@ class Settings(BaseSettings):
     weather_extreme_heat_celsius_threshold: float = 40.0
     weather_extreme_cold_celsius_threshold: float = 5.0
 
+    # --- SMS / OTP (password-reset identity verification - Requirement:
+    # closes the previously-documented account-takeover gap. "none" keeps
+    # today's dev/test default; setting "twilio" without all three Twilio
+    # values below still falls back to "none" - see sms_provider_dependency.py) ---
+    sms_provider: str = "none"  # "twilio" | "none"
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    twilio_verify_service_sid: str | None = None
+    twilio_request_timeout_seconds: float = 10.0
+
     # --- Notifications ---
     notification_default_quiet_hours_start: str = "22:00"
     notification_default_quiet_hours_end: str = "06:00"

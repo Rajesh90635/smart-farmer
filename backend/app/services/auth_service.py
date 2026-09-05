@@ -22,10 +22,12 @@ from app.schemas.auth import (
     LogoutRequest,
     RefreshRequest,
     RegisterRequest,
+    RequestPasswordResetOtpRequest,
     ResetPasswordRequest,
     TokenResponse,
 )
 from app.services.audit_logger import AuditLogger
+from app.services.sms.sms_otp_provider import SmsOtpProvider
 
 settings = get_settings()
 
@@ -34,9 +36,16 @@ settings = get_settings()
 # sufficient once the API runs as more than one process.
 _login_limiter = InMemoryRateLimiter(max_requests=5, window_seconds=300)
 
-# Reset-password has no identity verification (see ResetPasswordRequest) -
-# rate limiting per phone number is the only friction against someone
-# repeatedly hijacking a number they don't own.
+# Deliberately stricter than the other limiters here - each allowed
+# request costs real money once a real SMS provider is configured, unlike
+# a login/reset attempt. Bounds the cost of someone hammering a number
+# (theirs or not) with OTP sends.
+_request_reset_otp_limiter = InMemoryRateLimiter(max_requests=3, window_seconds=600)
+
+# reset-password itself is also rate-limited: the OTP check below already
+# stops an attacker without the code, but this bounds brute-forcing the
+# code itself (Twilio Verify has its own attempt cap per code, but this is
+# a second, provider-independent layer).
 _reset_password_limiter = InMemoryRateLimiter(max_requests=5, window_seconds=300)
 
 
@@ -194,15 +203,49 @@ def refresh(db: Session, payload: RefreshRequest) -> TokenResponse:
     return tokens
 
 
-def reset_password(db: Session, payload: ResetPasswordRequest) -> TokenResponse:
-    """Sets a new password from phone number alone, with no proof the
-    caller owns the account (no OTP/email channel exists to verify that -
-    see the docstring in api/v1/auth.py). This is a deliberate product
-    trade-off, not an oversight: it means anyone who knows a farmer's
-    phone number can take over their account. Logs the farmer in
-    immediately afterward so they aren't forced through a second step."""
+def request_password_reset_otp(db: Session, sms_provider: SmsOtpProvider, payload: RequestPasswordResetOtpRequest) -> None:
+    """Sends a one-time code to the phone number, which reset_password()
+    below requires before it will change anything. Checks the account
+    exists first (matching reset_password's own existing NOT_FOUND
+    behavior) rather than sending - and paying for - a real SMS to a
+    number with no account."""
+    if not _request_reset_otp_limiter.allow(payload.phone_number):
+        raise AppError(error_codes.RATE_LIMITED, "Too many attempts. Please try again later.", 429)
+
+    user = user_repository.get_by_phone(db, payload.phone_number)
+    if user is None:
+        raise AppError(error_codes.NOT_FOUND, "No account found with this phone number.", 404)
+
+    result = sms_provider.send_otp(payload.phone_number)
+    if not result.available:
+        raise AppError(
+            error_codes.OTP_DELIVERY_FAILED,
+            "Could not send a verification code right now. Please try again shortly.",
+            503,
+        )
+
+
+def reset_password(db: Session, sms_provider: SmsOtpProvider, payload: ResetPasswordRequest) -> TokenResponse:
+    """Requires a valid OTP (see request_password_reset_otp above) proving
+    the caller currently controls the phone number's SMS inbox, checked
+    before any password change is applied - this is what closes the
+    previously-documented account-takeover gap (anyone who merely knew a
+    farmer's phone number could reset their password with no proof of
+    ownership at all). Logs the farmer in immediately afterward so they
+    aren't forced through a second step."""
     if not _reset_password_limiter.allow(payload.phone_number):
         raise AppError(error_codes.RATE_LIMITED, "Too many attempts. Please try again later.", 429)
+
+    otp_result = sms_provider.check_otp(payload.phone_number, payload.otp_code)
+    if not otp_result.available:
+        # Fail closed - "cannot verify" must never be treated as "verified".
+        raise AppError(
+            error_codes.OTP_DELIVERY_FAILED,
+            "Could not verify the code right now. Please try again shortly.",
+            503,
+        )
+    if not otp_result.approved:
+        raise AppError(error_codes.INVALID_OTP, "Invalid or expired verification code.", 401)
 
     user = user_repository.get_by_phone(db, payload.phone_number)
     if user is None:

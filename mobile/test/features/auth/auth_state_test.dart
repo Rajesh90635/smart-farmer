@@ -10,7 +10,11 @@ import 'package:smart_farmer_mobile/l10n/app_localizations_en.dart';
 /// available in a plain widget-test environment.
 class FakeAuthRepository extends AuthRepository {
   bool shouldSucceed;
-  FakeAuthRepository({this.shouldSucceed = true}) : super(apiClient: ApiClient());
+  // Independent of shouldSucceed only so a test can exercise "OTP request
+  // succeeded, but the final reset itself failed (e.g. wrong code)" -
+  // every other method here still follows shouldSucceed alone.
+  final bool? resetPasswordSucceeds;
+  FakeAuthRepository({this.shouldSucceed = true, this.resetPasswordSucceeds}) : super(apiClient: ApiClient());
 
   @override
   Future<AuthTokens> login({required String phoneNumber, required String password}) async {
@@ -40,6 +44,25 @@ class FakeAuthRepository extends AuthRepository {
 
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<void> requestPasswordResetOtp({required String phoneNumber}) async {
+    if (!shouldSucceed) {
+      throw ApiException('No account found', statusCode: 404, code: 'NOT_FOUND');
+    }
+  }
+
+  @override
+  Future<AuthTokens> resetPassword({
+    required String phoneNumber,
+    required String newPassword,
+    required String otpCode,
+  }) async {
+    if (!(resetPasswordSucceeds ?? shouldSucceed)) {
+      throw ApiException('Invalid or expired code', statusCode: 401, code: 'INVALID_OTP');
+    }
+    return AuthTokens(accessToken: 'fake-access', refreshToken: 'fake-refresh');
+  }
 }
 
 void main() {
@@ -103,6 +126,39 @@ void main() {
       final state = AuthState(repository: FakeAuthRepository(shouldSucceed: false));
       await state.restoreSession();
       expect(state.status, AuthStatus.unauthenticated);
+    });
+  });
+
+  group('AuthState.requestPasswordResetOtp', () {
+    test('succeeds without changing auth status', () async {
+      final state = AuthState(repository: FakeAuthRepository(shouldSucceed: true));
+      final result = await state.requestPasswordResetOtp(phoneNumber: '9876543210');
+      expect(result, isTrue);
+      expect(state.errorMessage(l10n), isNull);
+    });
+
+    test('surfaces a friendly error on failure', () async {
+      final state = AuthState(repository: FakeAuthRepository(shouldSucceed: false));
+      final result = await state.requestPasswordResetOtp(phoneNumber: '9876543210');
+      expect(result, isFalse);
+      expect(state.errorMessage(l10n), isNotNull);
+    });
+  });
+
+  group('AuthState.resetPassword', () {
+    test('transitions to authenticated on a valid OTP', () async {
+      final state = AuthState(repository: FakeAuthRepository(shouldSucceed: true));
+      final result = await state.resetPassword(phoneNumber: '9876543210', newPassword: 'NewPass1!', otpCode: '123456');
+      expect(result, isTrue);
+      expect(state.status, AuthStatus.authenticated);
+    });
+
+    test('surfaces an invalid-OTP error on failure', () async {
+      final state = AuthState(repository: FakeAuthRepository(shouldSucceed: false));
+      final result = await state.resetPassword(phoneNumber: '9876543210', newPassword: 'NewPass1!', otpCode: 'wrong');
+      expect(result, isFalse);
+      expect(state.status, AuthStatus.unauthenticated);
+      expect(state.errorMessage(l10n), isNotNull);
     });
   });
 

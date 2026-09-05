@@ -26,6 +26,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  connectivity_plus_platform_interface: ^2.1.0 # fakes real device connectivity in login_screen_test.dart (SyncCoordinator's offline path) - direct dep since it's imported directly by a test, not just transitively via connectivity_plus
+  path_provider_platform_interface: ^2.1.3 # fakes app-documents-directory lookup in pending_uploads_screen_test.dart - the real path_provider_windows plugin call hangs indefinitely under a `testWidgets` pump in this environment (unlike a plain `test()` body, which never registers real desktop plugins - see pending_upload_queue_test.dart's comment), so any widget test that touches PendingUploadQueue's real persistence path needs this fake instead
 
 flutter:
   uses-material-design: true

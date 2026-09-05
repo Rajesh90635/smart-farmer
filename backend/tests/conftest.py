@@ -142,6 +142,24 @@ def override_weather_provider(fake_provider):
     return _ctx()
 
 
+def override_sms_provider(fake_provider):
+    """Same pattern as override_model_provider, for SMS/OTP."""
+    from contextlib import contextmanager
+
+    from app.core.sms_provider_dependency import get_sms_provider
+    from app.main import app
+
+    @contextmanager
+    def _ctx():
+        app.dependency_overrides[get_sms_provider] = lambda: fake_provider
+        try:
+            yield
+        finally:
+            app.dependency_overrides.pop(get_sms_provider, None)
+
+    return _ctx()
+
+
 @pytest.fixture()
 def farmer_with_located_farm(client, registered_farmer):
     """Registers a farmer and creates a farm WITH a latitude/longitude -

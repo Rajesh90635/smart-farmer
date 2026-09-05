@@ -67,10 +67,21 @@ class AuthRepository {
     }
   }
 
-  Future<AuthTokens> resetPassword({required String phoneNumber, required String newPassword}) async {
+  /// Sends a one-time verification code to phoneNumber - resetPassword()
+  /// below will not succeed without it (see backend/app/services/sms/).
+  Future<void> requestPasswordResetOtp({required String phoneNumber}) async {
+    await _apiClient.post('/auth/reset-password/request-otp', body: {'phone_number': phoneNumber});
+  }
+
+  Future<AuthTokens> resetPassword({
+    required String phoneNumber,
+    required String newPassword,
+    required String otpCode,
+  }) async {
     final response = await _apiClient.post('/auth/reset-password', body: {
       'phone_number': phoneNumber,
       'new_password': newPassword,
+      'otp_code': otpCode,
     });
     return _persistTokens(response);
   }

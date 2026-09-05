@@ -44,6 +44,35 @@ for why: avoiding a paid SMS provider dependency in the free-first MVP).
   (`InMemoryRateLimiter`, single-process only — see the existing rate-limit
   caveat above).
 
+**Password reset:**
+- `POST /auth/reset-password/request-otp` then `POST /auth/reset-password`
+  (with the `otp_code` it sent) — a real SMS one-time-code check via
+  `app/services/sms/` (Twilio Verify) now stands between "knows a farmer's
+  phone number" and "can take over their account". Previously this
+  endpoint changed the password from phone number alone with no proof of
+  ownership at all — that gap is closed as of this phase.
+- Fails **closed**: if `Settings.sms_provider` isn't configured (or the
+  provider call itself fails), `reset_password()` refuses the reset with
+  `503 OTP_DELIVERY_FAILED` rather than silently skipping verification —
+  see `NotConfiguredSmsOtpProvider`. A dev/test environment with no Twilio
+  credentials set therefore cannot complete a password reset at all,
+  by design.
+- `request-otp` checks the account exists before sending (`404 NOT_FOUND`
+  otherwise) — avoids paying for a real SMS to a number with no account,
+  at the cost of that response revealing account existence (an accepted
+  trade-off here, consistent with reset-password's own existing
+  `NOT_FOUND` behavior on the final step).
+- Both endpoints are rate-limited per phone number (`request-otp`: 3 per
+  10 minutes — deliberately stricter, since a real SMS costs money once
+  configured; `reset-password` itself: 5 per 5 minutes, a second,
+  provider-independent layer against brute-forcing the code).
+- **Honesty note** (same convention as `OpenMeteoProvider`'s): written
+  against Twilio's real, documented Verify API, but not exercised against
+  the live API from this sandboxed environment. Indian phone numbers also
+  require a DLT-registered template on Twilio's side (TRAI regulation)
+  independent of this code being correct — verify a real end-to-end send
+  on a real device once that registration is complete.
+
 **Tokens/sessions:**
 - Access token: short-lived JWT (15 min default), claims are just `sub`
   (user id) and `role`.

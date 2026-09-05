@@ -71,9 +71,24 @@ class LogoutRequest(BaseModel):
     refresh_token: str
 
 
+class RequestPasswordResetOtpRequest(BaseModel):
+    phone_number: str
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        try:
+            return normalize_phone_number(v)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+
+
 class ResetPasswordRequest(BaseModel):
     phone_number: str
     new_password: str
+    # Verified against the code sent by POST /auth/reset-password/request-otp
+    # before any password change is applied - see auth_service.reset_password.
+    otp_code: str = Field(min_length=4, max_length=10)
 
     @field_validator("phone_number")
     @classmethod

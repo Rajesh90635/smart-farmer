@@ -82,13 +82,29 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  Future<bool> resetPassword({required String phoneNumber, required String newPassword}) async {
+  /// Step 1 of password reset - does not change auth `status` at all,
+  /// since a farmer can be sitting on the reset screen unauthenticated
+  /// either way; only [lastError] is meaningful here.
+  Future<bool> requestPasswordResetOtp({required String phoneNumber}) async {
+    lastError = null;
+    notifyListeners();
+    try {
+      await _repository.requestPasswordResetOtp(phoneNumber: phoneNumber);
+      return true;
+    } catch (e) {
+      lastError = e;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword({required String phoneNumber, required String newPassword, required String otpCode}) async {
     status = AuthStatus.authenticating;
     lastError = null;
     notifyListeners();
 
     try {
-      await _repository.resetPassword(phoneNumber: phoneNumber, newPassword: newPassword);
+      await _repository.resetPassword(phoneNumber: phoneNumber, newPassword: newPassword, otpCode: otpCode);
       status = AuthStatus.authenticated;
       notifyListeners();
       return true;

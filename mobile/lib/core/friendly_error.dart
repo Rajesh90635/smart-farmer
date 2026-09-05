@@ -23,6 +23,10 @@ class FriendlyError {
           return l10n.errorSessionExpired;
         case 'RATE_LIMITED':
           return l10n.errorRateLimited;
+        case 'INVALID_OTP':
+          return l10n.errorInvalidOtp;
+        case 'OTP_DELIVERY_FAILED':
+          return l10n.errorOtpDeliveryFailed;
         case 'UNAUTHORIZED':
         case 'FORBIDDEN':
           return l10n.errorUnauthorized;

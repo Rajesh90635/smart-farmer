@@ -32,9 +32,11 @@ header on every request (success or failure) and logged server-side.
 Stable codes (see `app/core/error_codes.py`) currently in use:
 `INVALID_CREDENTIALS`, `ACCOUNT_DISABLED`, `VALIDATION_ERROR`,
 `UNAUTHORIZED`, `FORBIDDEN`, `SESSION_EXPIRED`, `INVALID_TOKEN`,
-`DUPLICATE_ACCOUNT`, `NOT_FOUND`, `RATE_LIMITED`. The Flutter client maps
-each to a farmer-friendly message (`mobile/lib/core/friendly_error.dart`)
-— never shows the raw `message` field directly.
+`DUPLICATE_ACCOUNT`, `NOT_FOUND`, `RATE_LIMITED`,
+`INCORRECT_CURRENT_PASSWORD`, `INVALID_OTP`, `OTP_DELIVERY_FAILED`. The
+Flutter client maps each to a farmer-friendly message
+(`mobile/lib/core/friendly_error.dart`) — never shows the raw `message`
+field directly.
 
 ## Authentication
 `Authorization: Bearer <jwt>` on every route except `/api/v1/health` and
@@ -69,6 +71,8 @@ descriptions accurate instead.
 | POST | `/api/v1/auth/login` | None | Log in, returns tokens |
 | POST | `/api/v1/auth/refresh` | None (refresh_token in body) | Rotate to a new token pair |
 | POST | `/api/v1/auth/logout` | Bearer | Revoke the given session |
+| POST | `/api/v1/auth/reset-password/request-otp` | None | Send a one-time SMS code for password-reset identity verification |
+| POST | `/api/v1/auth/reset-password` | None | Reset password (phone + new password + the OTP just sent), returns tokens |
 | GET | `/api/v1/farmers/me` | Bearer (farmer role) | Get own profile |
 | PUT | `/api/v1/farmers/me` | Bearer (farmer role) | Update own profile |
 | GET | `/api/v1/farmers/me/consents` | Bearer (farmer role) | List own consent history |

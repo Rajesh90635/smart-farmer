@@ -3,18 +3,21 @@ Authentication endpoints: register, login, refresh, logout, change-password,
 reset-password.
 
 Password-based auth (phone number + password) was chosen for this phase
-instead of OTP/SMS, specifically to avoid requiring a paid SMS provider —
-consistent with the free-first constraint. Revisit if/when an OTP provider
-decision is made (see the open questions in the approved architecture).
-
-Because there is no OTP/email channel, /reset-password cannot verify that
-the caller owns the phone number they're resetting - a deliberate, accepted
-trade-off for now, not an oversight (see auth_service.reset_password).
+instead of an app-wide OTP-only login, specifically to avoid requiring a
+paid SMS provider for every login - consistent with the free-first
+constraint. /reset-password/request-otp and /reset-password DO now use a
+real SMS OTP provider (see app/services/sms/) specifically to verify the
+caller owns the phone number before a password reset is allowed - this was
+previously a deliberately-accepted gap (see docs/SECURITY.md's history)
+and is closed as of this phase, gated on Settings.sms_provider actually
+being configured (falls back to refusing every reset otherwise - see
+NotConfiguredSmsOtpProvider - never to the old no-verification behavior).
 """
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.current_user import CurrentUser, get_current_user
+from app.core.sms_provider_dependency import get_sms_provider
 from app.db.session import get_db
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -22,10 +25,12 @@ from app.schemas.auth import (
     LogoutRequest,
     RefreshRequest,
     RegisterRequest,
+    RequestPasswordResetOtpRequest,
     ResetPasswordRequest,
     TokenResponse,
 )
 from app.services import auth_service
+from app.services.sms.sms_otp_provider import SmsOtpProvider
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -45,9 +50,23 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResp
     return auth_service.refresh(db, payload)
 
 
+@router.post("/reset-password/request-otp", status_code=status.HTTP_204_NO_CONTENT)
+def request_reset_password_otp(
+    payload: RequestPasswordResetOtpRequest,
+    sms_provider: SmsOtpProvider = Depends(get_sms_provider),
+    db: Session = Depends(get_db),
+) -> Response:
+    auth_service.request_password_reset_otp(db, sms_provider, payload)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("/reset-password", response_model=TokenResponse)
-def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    return auth_service.reset_password(db, payload)
+def reset_password(
+    payload: ResetPasswordRequest,
+    sms_provider: SmsOtpProvider = Depends(get_sms_provider),
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    return auth_service.reset_password(db, sms_provider, payload)
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
