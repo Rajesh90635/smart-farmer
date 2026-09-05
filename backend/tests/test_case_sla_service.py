@@ -20,6 +20,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.security_passwords import hash_password
 from app.models.case_assignment import AssignmentStatus, CaseAssignment
+from app.models.notification import Notification
 from app.models.professional_profile import AvailabilityStatus, ProfessionalProfile, VerificationStatus
 from app.models.user import User
 from app.services.case_sla_service import run_case_sla_sweep
@@ -76,12 +77,25 @@ def test_sweep_sends_one_reminder_before_expiry_and_never_duplicates(client, reg
     assignment.expires_at = datetime.now(timezone.utc) + timedelta(hours=1)  # inside the 4h reminder window
     db_session.commit()
 
+    # reminders_sent is a global sweep-wide counter, not scoped to this
+    # test's own assignment - the shared test database accumulates PENDING
+    # assignments across every prior run of this same test (each left
+    # behind forever, no cleanup), so some of them can still be sitting
+    # inside the real-clock 4h reminder window when this test runs, making
+    # an exact count on the aggregate flaky. Assert on the specific
+    # notification this test's own assignment should produce instead.
+    dedup_key = f"crop_alert:case:{assignment.case_id}:assignment_reminder:{assignment.id}"
+
     settings = get_settings()
     first = run_case_sla_sweep(db_session, settings)
-    assert first.reminders_sent == 1
+    assert first.reminders_sent >= 1
+    notification = db_session.execute(select(Notification).where(Notification.dedup_key == dedup_key)).scalar_one()
 
-    second = run_case_sla_sweep(db_session, settings)
-    assert second.reminders_sent == 0  # notification dedup_key blocks a repeat
+    run_case_sla_sweep(db_session, settings)
+    # Re-running must never duplicate: still exactly the one notification
+    # row for this assignment's dedup_key.
+    notifications = db_session.execute(select(Notification).where(Notification.dedup_key == dedup_key)).scalars().all()
+    assert [n.id for n in notifications] == [notification.id]
 
 
 def test_sweep_expires_stale_assignment_and_reassigns_excluding_the_non_responder(
