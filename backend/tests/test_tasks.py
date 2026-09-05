@@ -183,3 +183,118 @@ def test_completed_spraying_task_never_gets_a_weather_advisory(client, farmer_wi
 
     spraying_task = next(t for t in response.json()["items"] if t["task_type"] == "spraying")
     assert spraying_task["weather_advisory"] is None
+
+
+def test_task_dependency_blocks_completion_until_dependency_is_completed(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    prerequisite = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "Prepare soil"}, headers=auth_headers(tokens)
+    ).json()
+    dependent = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Sow seeds", "depends_on_task_id": prerequisite["id"]},
+        headers=auth_headers(tokens),
+    ).json()
+    assert dependent["depends_on_task_id"] == prerequisite["id"]
+    assert dependent["dependency_completed"] is False
+
+    blocked = client.post(f"/api/v1/tasks/{dependent['id']}/complete", headers=auth_headers(tokens))
+    assert blocked.status_code == 409
+
+    client.post(f"/api/v1/tasks/{prerequisite['id']}/complete", headers=auth_headers(tokens))
+    still_blocked_check = client.get(f"/api/v1/tasks/{dependent['id']}", headers=auth_headers(tokens))
+    assert still_blocked_check.json()["dependency_completed"] is True
+
+    allowed = client.post(f"/api/v1/tasks/{dependent['id']}/complete", headers=auth_headers(tokens))
+    assert allowed.status_code == 200
+    assert allowed.json()["status"] == "completed"
+
+
+def test_task_dependency_must_be_in_the_same_crop_cycle(client, farmer_with_crop_cycle, sample_crop_id):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    other_farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    other_plot = client.post(f"/api/v1/farms/{other_farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)).json()
+    other_cycle = client.post(
+        f"/api/v1/plots/{other_plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    other_task = client.post(
+        f"/api/v1/crop-cycles/{other_cycle['id']}/tasks", json={"title": "Unrelated task"}, headers=auth_headers(tokens)
+    ).json()
+
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Sow seeds", "depends_on_task_id": other_task["id"]},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_task_dependency_must_exist(client, farmer_with_crop_cycle):
+    import uuid
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Sow seeds", "depends_on_task_id": str(uuid.uuid4())},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 404
+
+
+def test_completing_a_recurring_task_creates_the_next_occurrence(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    due = (date.today() + timedelta(days=2)).isoformat()
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Water the field", "due_date": due, "repeat_interval_days": 7},
+        headers=auth_headers(tokens),
+    ).json()
+
+    client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
+
+    items = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", headers=auth_headers(tokens)).json()["items"]
+    next_occurrences = [t for t in items if t["title"] == "Water the field" and t["status"] == "pending"]
+    assert len(next_occurrences) == 1
+    expected_due = (date.today() + timedelta(days=2 + 7)).isoformat()
+    assert next_occurrences[0]["due_date"] == expected_due
+    assert next_occurrences[0]["repeat_interval_days"] == 7
+
+
+def test_completing_a_non_recurring_task_creates_no_new_task(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "One-off task"}, headers=auth_headers(tokens)
+    ).json()
+
+    client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
+
+    items = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", headers=auth_headers(tokens)).json()["items"]
+    assert len(items) == 1
+
+
+def test_completing_a_recurring_task_after_crop_cycle_closed_does_not_recur(client, registered_farmer, sample_crop_id):
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    _, tokens = registered_farmer
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+
+    task = client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks",
+        json={"title": "Water the field", "repeat_interval_days": 7},
+        headers=headers,
+    ).json()
+
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=headers)
+    client.post(f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=headers)
+
+    # The task itself is already CANCELLED by the close-cycle auto-cancel
+    # (D9-15) - completion is no longer reachable, confirming there is no
+    # path left for a stray recurrence to be created from it.
+    completed = client.post(f"/api/v1/tasks/{task['id']}/complete", headers=headers)
+    assert completed.status_code == 409

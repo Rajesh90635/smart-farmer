@@ -200,6 +200,30 @@ def test_daily_summary_includes_finance_line_once_expenses_recorded(client, farm
     assert any(line.startswith("Expenses:") and "500" in line for line in after), f"Expected a finance line, got: {after}"
 
 
+def test_daily_summary_flags_what_changed_since_last_visit(client, farmer_with_crop_cycle):
+    """D94-08 (docs/FINAL_GAP_REPORT.md): diffs a stored snapshot of the
+    raw facts behind the lines above, not the rendered text - so this
+    must appear only once something genuinely changed, never on the very
+    first visit (nothing to compare against) and never when nothing
+    changed between two consecutive calls."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+
+    first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any(line.startswith("Since your last visit:") for line in first)
+
+    second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any(line.startswith("Since your last visit:") for line in second)
+
+    client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/ledger/entries",
+        json={"entry_type": "expense", "category": "seed", "amount": "500", "entry_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    )
+
+    third = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert any(line.startswith("Since your last visit:") for line in third), f"Expected a changed-since line, got: {third}"
+
+
 def test_daily_summary_language_code_query_param_overrides_profile_language_for_this_response_only(client, registered_farmer):
     """The `language_code` override (added for the mobile app's
     location-based audio language detection) must change this one

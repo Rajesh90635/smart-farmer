@@ -235,6 +235,42 @@ def test_close_crop_cycle_success(client, registered_farmer, sample_crop_id):
     assert body["actual_harvest_date"] == "2026-09-05"
 
 
+def test_close_crop_cycle_records_lessons_learned(client, registered_farmer, sample_crop_id):
+    """D97-10 (docs/FINAL_GAP_REPORT.md): only settable at the moment of
+    closing the cycle, never editable afterward."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+
+    response = client.post(
+        f"/api/v1/crops/{cycle['id']}/close",
+        json={"actual_harvest_date": "2026-09-05", "lessons_learned": "Should have staked the plants earlier."},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 200
+    assert response.json()["lessons_learned"] == "Should have staked the plants earlier."
+
+
+def test_close_crop_cycle_without_lessons_learned_leaves_it_none(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+
+    response = client.post(
+        f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    assert response.json()["lessons_learned"] is None
+
+
 def test_unauthorized_crop_cycle_access_is_rejected(client, registered_farmer, another_farmer, sample_crop_id):
     _, tokens_a = registered_farmer
     _, tokens_b = another_farmer

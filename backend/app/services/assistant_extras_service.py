@@ -74,6 +74,8 @@ def get_daily_summary(
     language_code = language_code_override if language_code_override and is_supported_language(language_code_override) else profile_language_code
 
     lines: list[str] = []
+    risk = None
+    finance = None
 
     weather = tools.get_weather_status(db, farmer_id, weather_provider, settings)
     if weather.get("available"):
@@ -150,11 +152,55 @@ def get_daily_summary(
     from app.repositories import task_repository
 
     overdue_tasks = task_repository.list_overdue_for_farmer(db, uuid.UUID(farmer_id), today=datetime.now(timezone.utc).date())
+    overdue_count = len(overdue_tasks)
     if overdue_tasks:
-        count = len(overdue_tasks)
-        lines.append(get_message("daily_summary_tasks_overdue", language_code, count=count, plural="s" if count != 1 else ""))
+        lines.append(get_message("daily_summary_tasks_overdue", language_code, count=overdue_count, plural="s" if overdue_count != 1 else ""))
 
     if not lines:
         lines.append(get_message("daily_summary_no_updates", language_code))
 
+    # D94-08 (docs/FINAL_GAP_REPORT.md): a snapshot of the exact raw
+    # facts feeding the lines above (never anything new), diffed against
+    # the farmer's previous fetch to tell them what's changed since their
+    # last visit - no new "events" table or diff engine, just this one
+    # small stored snapshot, overwritten every time this is called.
+    profile = getattr(user, "farmer_profile", None) if user else None
+    if profile is not None:
+        current_snapshot = _build_daily_summary_snapshot(
+            weather=weather, crop=crop, disease=disease, risk=risk, finance=finance,
+            harvest=harvest, offers=offers, delivery=delivery, case=case, overdue_count=overdue_count,
+        )
+        previous_snapshot = profile.last_daily_summary_snapshot
+        if previous_snapshot is not None:
+            changed_count = _count_changed_facts(previous_snapshot, current_snapshot)
+            if changed_count > 0:
+                lines.insert(0, get_message("daily_summary_changed_since_last_visit", language_code, count=changed_count))
+        profile.last_daily_summary_snapshot = current_snapshot
+        profile.last_daily_summary_at = datetime.now(timezone.utc)
+        db.commit()
+
     return DailySummaryResponse(language_code=language_code, lines=lines, generated_at=datetime.now(timezone.utc))
+
+
+def _build_daily_summary_snapshot(*, weather, crop, disease, risk, finance, harvest, offers, delivery, case, overdue_count: int) -> dict:
+    """JSON-safe raw facts only - never the rendered/localized line text,
+    so a farmer switching language never registers as a spurious change."""
+    return {
+        "weather_available": weather.get("available", False),
+        "weather_temp": weather.get("current_temperature_c"),
+        "weather_rain": weather.get("rain_probability_today_percent"),
+        "crop_stage": crop.get("stage") if crop.get("available") else None,
+        "disease_result_status": disease.get("result_status") if disease.get("available") else None,
+        "risk_level": risk.overall_risk if risk is not None else None,
+        "finance_actual_cost": str(finance.actual_cost) if finance is not None else None,
+        "harvest_status": harvest.get("status") if harvest.get("available") else None,
+        "offer_count": offers.get("offer_count") if offers.get("available") else None,
+        "delivery_status": delivery.get("status") if delivery.get("available") else None,
+        "case_status": case.get("status") if case.get("available") else None,
+        "overdue_count": overdue_count,
+    }
+
+
+def _count_changed_facts(previous: dict, current: dict) -> int:
+    keys = set(previous) | set(current)
+    return sum(1 for key in keys if previous.get(key) != current.get(key))

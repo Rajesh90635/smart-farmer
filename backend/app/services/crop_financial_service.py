@@ -14,6 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
+from app.core.area_units import AreaUnit, from_square_meters
 from app.core.errors import AppError
 from app.models.crop_cost_estimate import CropCostEstimate
 from app.models.ledger_entry import LedgerEntryType
@@ -87,6 +88,7 @@ def get_financial_summary(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID)
     revenue_to_cost_ratio = (actual_revenue / actual_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if actual_cost else None
 
     stage_summaries = _build_stage_summaries(db, crop_cycle, crop_cycle_id, farmer_uuid)
+    acres = _acres_for_crop_cycle(crop_cycle)
 
     return CropFinancialSummaryResponse(
         crop_cycle_id=crop_cycle_id,
@@ -100,7 +102,27 @@ def get_financial_summary(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID)
         revenue_to_cost_ratio=revenue_to_cost_ratio,
         has_any_actual_revenue=actual_revenue > 0,
         stage_summaries=stage_summaries,
+        cost_per_acre=_per_acre(actual_cost, acres),
+        revenue_per_acre=_per_acre(actual_revenue, acres),
+        profit_loss_per_acre=_per_acre(actual_profit_loss, acres),
     )
+
+
+def _acres_for_crop_cycle(crop_cycle) -> Decimal | None:
+    """D72-04/05/06 (docs/FINAL_GAP_REPORT.md): Plot.area_sqm is already
+    the canonical square-meter figure (app/models/plot.py) - no need to
+    re-derive it from area_value/area_unit. None whenever the plot can't
+    be resolved, never a fabricated area."""
+    plot = crop_cycle.plot
+    if plot is None:
+        return None
+    return from_square_meters(plot.area_sqm, AreaUnit.ACRE)
+
+
+def _per_acre(value: Decimal, acres: Decimal | None) -> Decimal | None:
+    if acres is None or acres <= 0:
+        return None
+    return (value / acres).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def _build_stage_summaries(db: Session, crop_cycle, crop_cycle_id: uuid.UUID, farmer_uuid: uuid.UUID) -> list[StageFinancialSummary]:

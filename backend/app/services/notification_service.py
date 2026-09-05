@@ -78,6 +78,7 @@ def create_alert_notification(
     related_entity_type: str | None = None,
     related_entity_id: str | None = None,
     now_local_time: time | None = None,
+    rule_version: str | None = None,
 ) -> Notification | None:
     """Returns the created Notification, or None if suppressed by
     preference, quiet hours, or an existing duplicate."""
@@ -111,6 +112,7 @@ def create_alert_notification(
         dedup_key=dedup_key,
         related_entity_type=related_entity_type,
         related_entity_id=related_entity_id,
+        rule_version=rule_version,
     )
     notification_repository.create(db, notification)
     db.commit()

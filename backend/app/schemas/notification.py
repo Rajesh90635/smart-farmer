@@ -15,6 +15,10 @@ class NotificationResponse(BaseModel):
     language_code: str
     related_entity_type: str | None
     related_entity_id: str | None
+    # D89-01/02/07 (docs/FINAL_GAP_REPORT.md): None for non-rule-triggered
+    # notifications (payment/harvest/SLA/etc) - only weather-alert-rule
+    # output carries a version today.
+    rule_version: str | None = None
     read_at: datetime | None
     created_at: datetime
 

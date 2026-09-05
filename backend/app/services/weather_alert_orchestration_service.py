@@ -29,6 +29,7 @@ from app.schemas.weather import FarmWeatherResponse
 from app.services import notification_service
 from app.services.weather.weather_provider import WeatherProvider, WeatherReading
 from app.services.weather_alert_rules import (
+    RULE_VERSION,
     evaluate_crop_weather_alert,
     evaluate_extreme_weather_alerts,
     evaluate_rain_alerts,
@@ -57,7 +58,7 @@ def generate_alerts_for_farm_weather(
     for candidate in evaluate_rain_alerts(forecast_today, settings):
         n = notification_service.create_alert_notification(
             db, farmer_id, candidate, dedup_scope=dedup_scope, language_code=language_code,
-            related_entity_type="farm", related_entity_id=str(farm.id),
+            related_entity_type="farm", related_entity_id=str(farm.id), rule_version=RULE_VERSION,
         )
         if n:
             created.append(n)
@@ -65,7 +66,7 @@ def generate_alerts_for_farm_weather(
     for candidate in evaluate_extreme_weather_alerts(current_reading, settings):
         n = notification_service.create_alert_notification(
             db, farmer_id, candidate, dedup_scope=dedup_scope, language_code=language_code,
-            related_entity_type="farm", related_entity_id=str(farm.id),
+            related_entity_type="farm", related_entity_id=str(farm.id), rule_version=RULE_VERSION,
         )
         if n:
             created.append(n)
@@ -74,7 +75,7 @@ def generate_alerts_for_farm_weather(
     if spray_candidate:
         n = notification_service.create_alert_notification(
             db, farmer_id, spray_candidate, dedup_scope=dedup_scope, language_code=language_code,
-            related_entity_type="farm", related_entity_id=str(farm.id),
+            related_entity_type="farm", related_entity_id=str(farm.id), rule_version=RULE_VERSION,
         )
         if n:
             created.append(n)
@@ -92,7 +93,7 @@ def generate_alerts_for_farm_weather(
         if candidate:
             n = notification_service.create_alert_notification(
                 db, farmer_id, candidate, dedup_scope=f"{dedup_scope}:cycle:{cycle.id}", language_code=language_code,
-                related_entity_type="crop_cycle", related_entity_id=str(cycle.id),
+                related_entity_type="crop_cycle", related_entity_id=str(cycle.id), rule_version=RULE_VERSION,
             )
             if n:
                 created.append(n)

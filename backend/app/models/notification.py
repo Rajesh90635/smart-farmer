@@ -68,5 +68,13 @@ class Notification(Base):
     related_entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)  # e.g. "farm", "crop_cycle"
     related_entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    # D89-01/02/07 (docs/FINAL_GAP_REPORT.md): which version of the
+    # deterministic rule module produced this notification (e.g.
+    # "weather_alert_rules_v1"), so a historical notification stays
+    # explainable/reproducible even after the rule itself changes -
+    # mirrors CropRiskScoreResponse.rule_version's existing pattern.
+    # Nullable because not every notification is rule-triggered.
+    rule_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)

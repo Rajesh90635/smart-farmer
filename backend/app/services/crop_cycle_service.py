@@ -201,6 +201,7 @@ def close_my_crop_cycle(
 
     crop_cycle.actual_harvest_date = payload.actual_harvest_date
     crop_cycle.cultivation_status = CultivationStatus.HARVESTED
+    crop_cycle.lessons_learned = payload.lessons_learned
 
     audit = AuditLogger(db)
     audit.log(

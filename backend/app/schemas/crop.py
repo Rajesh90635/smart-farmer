@@ -52,6 +52,10 @@ class CropCycleUpdateRequest(BaseModel):
 
 class CropCycleCloseRequest(BaseModel):
     actual_harvest_date: date
+    # D97-10 (docs/FINAL_GAP_REPORT.md): free-text farmer reflection,
+    # optional, only ever settable at the moment of closing the cycle -
+    # no other endpoint accepts or edits this field afterward.
+    lessons_learned: str | None = Field(default=None, max_length=2000)
 
 
 class CropCycleResponse(BaseModel):
@@ -69,6 +73,8 @@ class CropCycleResponse(BaseModel):
     resown_from_crop_cycle_id: uuid.UUID | None = None
     # Only ever set by report_crop_failure() - never persisted, always None elsewhere.
     recommended_next_action: str | None = None
+    # Only ever set by close_my_crop_cycle() - never editable afterward.
+    lessons_learned: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

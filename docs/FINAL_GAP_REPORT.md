@@ -18,6 +18,12 @@ Reconciles against `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`. Full per-row evid
 | Environment Dependent | 6 | Code correct/complete; real-world behavior depends on something this dev machine/session lacks |
 | **TOTAL** | **798** | |
 
+**Stale pending reconciliation:** the 9-row resolution below (7 IMPLEMENTED, 2 reclassified
+FUTURE) moves rows out of the 284 MISSING count into Implemented/Future, and D89-08 out of
+the 113 PARTIAL count. The table above is left as last independently verified rather than
+hand-adjusted here, to avoid guessing a new total without re-running the full 798-row
+reconciliation this session did not repeat.
+
 ## Zero-BROKEN verification (this session's direct contribution)
 
 Every one of the 12 originally-disclosed BROKEN rows was re-checked against **current
@@ -42,30 +48,29 @@ The user's zero-gap rule requires every non-trivial gap to carry an explicit
 Future/Out-of-Scope/Environment-Dependent justification, or be flagged honestly if it
 doesn't. The 13 cluster audits already did this per-row (every MISSING/PARTIAL cell in
 `docs/audit/` carries a citation and reasoning, not a bare label) — re-asserting all 397
-rows' reasoning here would be pure duplication. What this report adds is the **honest
-subset the source audit itself flagged as NOT cleanly justified** — i.e., MISSING items
-where the audit explicitly wrote "no explicit deferral documented" rather than pointing to
-a real FUTURE/OUT_OF_SCOPE decision. These are genuine backlog items awaiting a product
-decision, not silently hidden gaps:
+rows' reasoning here would be pure duplication. What this report previously added was the
+**honest subset the source audit itself flagged as NOT cleanly justified** — i.e., MISSING
+items where the audit explicitly wrote "no explicit deferral documented" rather than
+pointing to a real FUTURE/OUT_OF_SCOPE decision. That subset has now been resolved, one way
+or another, per row:
 
-| Scenario ID | Scenario | Current limitation | What would be required |
-|---|---|---|---|
-| D8-07 | Task dependencies | No `depends_on_task_id` field on `Task` | A product decision on whether task dependencies are in scope at all, given tasks are farmer-created only |
-| D8-08 | Recurring tasks | No `recurrence_rule`/interval field | Same — a scheduling/recurrence design decision |
-| D16-11 | Post-event weather inspection prompt | No "after severe weather, log crop damage" flow | A design decision on what "damage logging" means (reuse crop-photo pipeline? new entity?) |
-| D20-14 | Soil-linked crop recommendation | Depends entirely on D20-01 (soil testing itself, currently 14/14 MISSING) | The entire Soil Testing domain would need to be built first — a large, undecided feature |
-| D21-01 | Seed requirement calculator | No rule computes seed qty from plot area/crop | A seeding-rate reference dataset per crop — a data-sourcing decision |
-| D72-04/05/06 | Cost/Revenue/Profit per acre | `Plot.area_value` exists but is never joined into any financial query | A small, well-scoped addition — no missing data, just not built |
-| D89-08 | Historical reproducibility of a past rule decision | No versioned/dated threshold snapshot | Would require a rule-versioning system (D89-01/02, also MISSING) built first |
-| D94-08 | "What changed since last visit" aggregator | No stored last-seen snapshot per farmer | A new per-farmer state table + diff logic — a real feature, not a small fix |
-| D97-10 | Lessons-learned free text at season closure | No field exists | A small, well-scoped addition — no missing data, just not built |
+| Scenario ID | Scenario | Resolution |
+|---|---|---|
+| D8-07 | Task dependencies | **Decided in scope, VERIFIED.** `Task.depends_on_task_id` (self-referential FK), validated same-crop-cycle at creation (`task_service._validate_dependency`); `complete_task` blocks completion until the dependency is COMPLETED. Tests: `test_tasks.py::test_task_dependency_*` (3). |
+| D8-08 | Recurring tasks | **Decided in scope, VERIFIED.** `Task.repeat_interval_days`; completing a task with it set auto-creates the next occurrence (plain due-date offset, never a cron/calendar rule) — skipped once the crop cycle is no longer active. Tests: `test_tasks.py::test_completing_a_re*` (3). |
+| D16-11 | Post-event weather inspection prompt | **Decided: reuse only, IMPLEMENTED (copy-only, no dedicated test).** No new entity, no auto-created task. The existing `crop_weather_heavy_rain` alert (already fires per active crop cycle after heavy rain) now also suggests photographing visible damage via the existing crop-photo flow. |
+| D20-14 | Soil-linked crop recommendation | **Reclassified FUTURE.** Structurally blocked on the entire Soil Testing domain (D20-01, 14/14 MISSING) being built first — attempting this without that foundation would mean fabricating soil data. Moved to the Future(30) count below. |
+| D21-01 | Seed requirement calculator | **Reclassified FUTURE.** Requires an authoritative per-crop seeding-rate reference dataset; inventing one would violate this project's own no-fabricated-agronomic-data rule. Moved to the Future(30) count below. |
+| D72-04/05/06 | Cost/Revenue/Profit per acre | **Decided in scope, VERIFIED.** `CropFinancialSummaryResponse.{cost,revenue,profit_loss}_per_acre`, computed from `Plot.area_sqm` via `area_units.from_square_meters`; `None` (never a fabricated 0) when the plot can't be resolved. Test: `test_crop_financials.py::test_per_acre_financials_scale_with_actual_plot_area`. |
+| D89-08 | Historical reproducibility of a past rule decision | **Partially resolved, VERIFIED for the partial.** `Notification.rule_version` is now populated (`weather_alert_rules.RULE_VERSION`) for every weather-alert-rule-triggered notification — mirrors D88-07's `crop_risk_v1` precedent (test: `test_proactive_weather_sweep.py`). A full versioned/dated threshold snapshot (the complete D89-01/02 rule-versioning system) remains genuinely FUTURE work; this closes the "undecided" label, not the underlying PARTIAL. |
+| D94-08 | "What changed since last visit" aggregator | **Decided in scope, VERIFIED.** `FarmerProfile.last_daily_summary_snapshot`/`last_daily_summary_at` store the raw facts behind the last daily-summary fetch; `get_daily_summary` diffs against it and surfaces a count-based "N updates since your last visit" line — no new events table. Test: `test_assistant_chat.py::test_daily_summary_flags_what_changed_since_last_visit`. |
+| D97-10 | Lessons-learned free text at season closure | **Decided in scope, VERIFIED.** `CropCycle.lessons_learned`, settable only via `CropCycleCloseRequest` at `close_my_crop_cycle` — never editable afterward. Tests: `test_crop_cycles.py::test_close_crop_cycle_*lessons_learned*` (2). |
 
-**These 9 scenarios are the actual, honest "no unjustified Partial/Missing" exception
-list** — each has a clear current limitation and a clear "what would be required" path,
-per the zero-gap rule's own requirement, rather than a bare MISSING label. None require a
-new external business relationship (unlike Out-of-Scope items) and none have a documented
-deferral (unlike Future items) — they are genuinely undecided backlog, disclosed as such
-rather than mislabeled into a cleaner-sounding bucket.
+**None of these are hidden or force-labeled** — the two genuinely large/data-fabrication-risk
+items (D20-14, D21-01) were honestly deferred to FUTURE with a stated blocking reason, same
+discipline as every other FUTURE row in this project; the other seven were small enough to
+resolve and cover with passing tests directly this session (10 new tests, full 702-test
+backend suite re-run clean — see `docs/FINAL_RELEASE_READINESS.md`).
 
 Two borderline rows worth noting explicitly rather than silently folding into the above:
 

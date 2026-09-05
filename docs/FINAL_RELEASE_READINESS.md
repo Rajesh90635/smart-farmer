@@ -27,8 +27,9 @@ release-readiness view.
 
 ## Backend
 
-- **Test result: 692 passed, 0 failed** (full suite, confirmed twice in this session,
-  independently of the 13 cluster audits' own targeted runs).
+- **Test result: 702 passed, 0 failed** (full suite; 692 plus 10 new tests added this
+  session for the 7 backlog items resolved below, confirmed by a full clean re-run — not
+  merely the new tests in isolation).
 - **Zero BROKEN scenarios** — all 12 originally-disclosed bugs independently re-verified
   fixed against current code this session (not merely re-read from prior claims).
 - Migration status: every migration cited in the cluster audits was verified end-to-end at
@@ -154,9 +155,15 @@ release-readiness view.
 ## Zero-gap status
 
 - **0 current-scope BROKEN** (was 12, independently re-verified fixed this session).
-- **9 scenarios flagged as genuinely undecided backlog** (not cleanly Future/Out-of-Scope/
-  Environment-Dependent) — listed explicitly with current-limitation and
-  what-would-be-required in `docs/FINAL_GAP_REPORT.md`, rather than hidden or force-labeled.
+- **0 scenarios remain genuinely undecided backlog** (was 9). 7 (D8-07, D8-08, D16-11,
+  D72-04/05/06, D89-08 partial, D94-08, D97-10) were decided in scope and implemented this
+  session, 6 of them backed by new passing tests (D16-11 is copy-only, no dedicated test);
+  2 (D20-14, D21-01) were honestly reclassified FUTURE — both structurally blocked
+  on a prerequisite (an unbuilt Soil Testing domain; an unsourced seeding-rate dataset) whose
+  absence this project correctly refuses to paper over with fabricated data. Full resolution
+  detail in `docs/FINAL_GAP_REPORT.md`. The top-line category counts in
+  `docs/FINAL_GAP_REPORT.md` are stale pending a full reconciliation pass (this session
+  updated the 9-row table itself, not the 798-row category totals).
 - All other MISSING/PARTIAL rows carry their own inline justification in `docs/audit/c0*.md`.
 
 ## Test-database isolation (this session's own audit, per the prompt's explicit ask)

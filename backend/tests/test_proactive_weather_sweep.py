@@ -31,6 +31,11 @@ def test_sweep_creates_a_notification_without_any_farmer_request(client, farmer_
     categories = {n["category"] for n in notifications["items"]}
     assert "heavy_rain_alert" in categories
 
+    # D89-01/02/07 (docs/FINAL_GAP_REPORT.md): every weather-alert-rule
+    # notification records which rule version produced it.
+    heavy_rain = next(n for n in notifications["items"] if n["category"] == "heavy_rain_alert")
+    assert heavy_rain["rule_version"] == "weather_alert_rules_v1"
+
 
 def test_sweep_never_duplicates_across_repeated_ticks(client, farmer_with_located_farm, db_session):
     tokens, farm_id = farmer_with_located_farm

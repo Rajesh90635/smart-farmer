@@ -21,7 +21,7 @@ import enum
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -52,6 +52,10 @@ class Task(Base):
             "status != 'completed' OR completed_at IS NOT NULL",
             name="ck_tasks_completed_has_timestamp",
         ),
+        CheckConstraint(
+            "repeat_interval_days IS NULL OR repeat_interval_days > 0",
+            name="ck_tasks_repeat_interval_positive",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -74,6 +78,18 @@ class Task(Base):
         index=True,
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # D8-07/D8-08 (docs/FINAL_GAP_REPORT.md): both optional, farmer-set only
+    # - never inferred or auto-generated, consistent with this model's own
+    # "farmer-created tasks only" rule. depends_on_task_id blocks completion
+    # of THIS task until the referenced one is completed (self-referential,
+    # same crop_cycle enforced in task_service). repeat_interval_days, when
+    # set, makes completing this task auto-create its own next occurrence
+    # (a plain future date offset - never a cron/calendar rule).
+    depends_on_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(

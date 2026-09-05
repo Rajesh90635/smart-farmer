@@ -19,6 +19,12 @@ from app.core.config import Settings
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.services.weather.weather_provider import WeatherReading
 
+# D89-01/02/07 (docs/FINAL_GAP_REPORT.md): bump whenever any evaluate_*
+# function's actual logic changes, so a historical notification stays
+# explainable/reproducible even after the rule itself evolves - mirrors
+# crop_risk_service.RULE_VERSION's existing pattern.
+RULE_VERSION = "weather_alert_rules_v1"
+
 
 @dataclass(frozen=True)
 class AlertCandidate:

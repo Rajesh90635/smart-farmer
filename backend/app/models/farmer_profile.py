@@ -18,7 +18,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.localization import DEFAULT_LANGUAGE_CODE
@@ -38,6 +38,14 @@ class FarmerProfile(Base):
     preferred_voice_language_code: Mapped[str] = mapped_column(
         String(10), nullable=False, default=DEFAULT_LANGUAGE_CODE
     )
+
+    # D94-08 (docs/FINAL_GAP_REPORT.md): a small, real snapshot of the
+    # exact fields get_daily_summary() already reports (never anything
+    # new), read and overwritten each time the daily summary is fetched -
+    # lets that one endpoint tell a farmer what's changed since their
+    # last visit without a new "events" table or a diff engine.
+    last_daily_summary_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    last_daily_summary_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(

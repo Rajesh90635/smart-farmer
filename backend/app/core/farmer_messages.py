@@ -27,7 +27,19 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "high_wind_alert": {"en": "Strong winds are expected in your area."},
     "extreme_heat_alert": {"en": "Very high temperatures are expected today."},
     "extreme_cold_alert": {"en": "Unusually cold temperatures are expected today."},
-    "crop_weather_heavy_rain": {"en": "Heavy rain is expected. Your {crop_name} is currently in the {stage} stage. Monitor the crop after rainfall."},
+    # D16-11 (docs/FINAL_GAP_REPORT.md): the inspection prompt reuses the
+    # existing crop-photo capture flow (never a new "damage log" entity,
+    # never an auto-created task) - just an added sentence pointing the
+    # farmer at something that already exists.
+    "crop_weather_heavy_rain": {
+        "en": "Heavy rain is expected. Your {crop_name} is currently in the {stage} stage. Monitor the crop after rainfall, and consider taking a photo of any visible damage.",
+        "hi": "भारी बारिश की संभावना है। आपकी {crop_name} अभी {stage} चरण में है। बारिश के बाद फसल पर नज़र रखें, और किसी भी दिखाई देने वाले नुकसान की फोटो लेने पर विचार करें।",
+        "te": "భారీ వర్షం అవకాశం ఉంది. మీ {crop_name} ప్రస్తుతం {stage} దశలో ఉంది. వర్షం తర్వాత పంటను గమనించండి, కనిపించే ఏదైనా నష్టం ఉంటే ఫోటో తీయడాన్ని పరిగణించండి.",
+        "ta": "கனமழை எதிர்பார்க்கப்படுகிறது. உங்கள் {crop_name} தற்போது {stage} நிலையில் உள்ளது. மழைக்குப் பிறகு பயிரை கவனியுங்கள், மேலும் தெரியும் சேதம் ஏதேனும் இருந்தால் புகைப்படம் எடுக்க பரிசீலியுங்கள்.",
+        "kn": "ಭಾರೀ ಮಳೆ ನಿರೀಕ್ಷಿಸಲಾಗಿದೆ. ನಿಮ್ಮ {crop_name} ಪ್ರಸ್ತುತ {stage} ಹಂತದಲ್ಲಿದೆ. ಮಳೆಯ ನಂತರ ಬೆಳೆಯನ್ನು ಗಮನಿಸಿ, ಮತ್ತು ಗೋಚರಿಸುವ ಯಾವುದೇ ಹಾನಿಯ ಫೋಟೋ ತೆಗೆಯುವುದನ್ನು ಪರಿಗಣಿಸಿ.",
+        "ml": "കനത്ത മഴ പ്രതീക്ഷിക്കുന്നു. നിങ്ങളുടെ {crop_name} ഇപ്പോൾ {stage} ഘട്ടത്തിലാണ്. മഴയ്ക്ക് ശേഷം വിള നിരീക്ഷിക്കുക, ദൃശ്യമായ ഏതെങ്കിലും കേടുപാടുകൾ ഉണ്ടെങ്കിൽ ഫോട്ടോ എടുക്കുന്നത് പരിഗണിക്കുക.",
+        "mr": "जोरदार पावसाची शक्यता आहे. तुमचे {crop_name} सध्या {stage} अवस्थेत आहे. पावसानंतर पिकावर लक्ष ठेवा, आणि दिसणारे कोणतेही नुकसान असल्यास त्याचा फोटो घेण्याचा विचार करा.",
+    },
     "spray_condition_warning": {"en": "Weather conditions may not be suitable for spraying right now."},
     "weather_unavailable": {"en": "Weather information is temporarily unavailable."},
     "weather_stale": {"en": "Showing the last available weather update."},
@@ -191,6 +203,19 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         "kn": "ಸದ್ಯಕ್ಕೆ ನಿಮ್ಮ ಜಮೀನಿಗೆ ಯಾವುದೇ ಹೊಸ ಅಪ್‌ಡೇಟ್‌ಗಳಿಲ್ಲ.",
         "ml": "നിലവിൽ നിങ്ങളുടെ കൃഷിയിടത്തിന് പുതിയ അപ്ഡേറ്റുകൾ ഇല്ല.",
         "mr": "सध्या तुमच्या शेतासाठी कोणतीही नवीन माहिती नाही.",
+    },
+    # D94-08 (docs/FINAL_GAP_REPORT.md): {count} is how many of the lines
+    # above changed since the farmer's previous daily-summary fetch (a
+    # snapshot diff, computed in assistant_extras_service.get_daily_summary
+    # - never a new events table).
+    "daily_summary_changed_since_last_visit": {
+        "en": "Since your last visit: {count} update(s) above have changed.",
+        "hi": "आपकी पिछली विज़िट के बाद से: ऊपर दिए गए {count} अपडेट बदल गए हैं।",
+        "te": "మీ చివరి సందర్శన నుండి: పైన ఉన్న {count} అప్‌డేట్‌లు మారాయి.",
+        "ta": "உங்கள் கடைசி வருகைக்குப் பிறகு: மேலே உள்ள {count} புதுப்பிப்புகள் மாறியுள்ளன.",
+        "kn": "ನಿಮ್ಮ ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ: ಮೇಲಿನ {count} ಅಪ್‌ಡೇಟ್‌ಗಳು ಬದಲಾಗಿವೆ.",
+        "ml": "നിങ്ങളുടെ അവസാന സന്ദർശനത്തിന് ശേഷം: മുകളിലുള്ള {count} അപ്ഡേറ്റുകൾ മാറിയിട്ടുണ്ട്.",
+        "mr": "तुमच्या शेवटच्या भेटीपासून: वरील {count} अपडेट्स बदलले आहेत.",
     },
 }
 

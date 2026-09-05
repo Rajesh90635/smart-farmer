@@ -18,7 +18,7 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, String
+from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -132,6 +132,12 @@ class CropCycle(Base):
     resown_from_crop_cycle_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("crop_cycles.id", ondelete="SET NULL"), nullable=True
     )
+
+    # D97-10 (docs/FINAL_GAP_REPORT.md): free-text farmer reflection,
+    # optional, only ever set at the moment of closing the cycle
+    # (close_my_crop_cycle) - never editable afterward, and never
+    # generated/suggested by the system.
+    lessons_learned: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # --- Future AI integration hooks (Requirement 28). Not written or read
     # by any code in this phase. ---

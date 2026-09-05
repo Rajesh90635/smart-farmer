@@ -63,3 +63,9 @@ class CropFinancialSummaryResponse(BaseModel):
 
     has_any_actual_revenue: bool
     stage_summaries: list[StageFinancialSummary]
+
+    # D72-04/05/06 (docs/FINAL_GAP_REPORT.md): None (not 0) whenever the
+    # plot's area can't be resolved - never a fabricated per-acre figure.
+    cost_per_acre: Decimal | None = None
+    revenue_per_acre: Decimal | None = None
+    profit_loss_per_acre: Decimal | None = None

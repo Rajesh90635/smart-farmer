@@ -13,18 +13,21 @@ Task service. Two things worth calling out:
    connection - it never changes task status, due date, or completion.
 """
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.config import Settings
 from app.core.errors import AppError
+from app.models.crop_cycle import CultivationStatus
 from app.models.task import Task, TaskStatus, TaskType
 from app.repositories import crop_cycle_repository, farm_repository, plot_repository, task_repository
 from app.schemas.task import TaskCreateRequest, TaskListResponse, TaskResponse, WeatherAdvisoryResponse
 from app.services.audit_logger import AuditLogger
 from app.services.weather.weather_provider import WeatherProvider
+
+_TERMINAL_CULTIVATION_STATUSES = (CultivationStatus.HARVESTED, CultivationStatus.CANCELLED)
 
 
 def compute_display_status(task: Task, today: date) -> str:
@@ -41,6 +44,9 @@ def create_task(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payload: 
     if crop_cycle is None:
         raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
 
+    if payload.depends_on_task_id is not None:
+        _validate_dependency(db, farmer_uuid, crop_cycle_id, payload.depends_on_task_id)
+
     task = Task(
         farmer_id=farmer_uuid,
         crop_cycle_id=crop_cycle_id,
@@ -48,20 +54,38 @@ def create_task(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payload: 
         title=payload.title,
         description=payload.description,
         due_date=payload.due_date,
+        depends_on_task_id=payload.depends_on_task_id,
+        repeat_interval_days=payload.repeat_interval_days,
     )
     task_repository.create(db, task)
 
     AuditLogger(db).log("TASK_CREATED", actor_id=farmer_id, actor_role="farmer", entity="task", entity_id=str(task.id))
     db.commit()
     db.refresh(task)
-    return _to_response(task, today=datetime.now(timezone.utc).date())
+    return _to_response(db, task, today=datetime.now(timezone.utc).date())
+
+
+def _validate_dependency(db: Session, farmer_uuid: uuid.UUID, crop_cycle_id: uuid.UUID, depends_on_task_id: uuid.UUID) -> Task:
+    """D8-07 (docs/FINAL_GAP_REPORT.md): a dependency is only meaningful
+    within the same crop cycle it's tracking, and must belong to the same
+    farmer (task_repository.get_owned already enforces that). A cycle in
+    the dependency graph is impossible at creation time - the new task's
+    id doesn't exist yet, so it can only ever depend on something that
+    already exists, never on itself or on something that (transitively)
+    depends on it."""
+    dependency = task_repository.get_owned(db, depends_on_task_id, farmer_uuid)
+    if dependency is None:
+        raise AppError(error_codes.NOT_FOUND, "Dependency task not found.", 404)
+    if dependency.crop_cycle_id != crop_cycle_id:
+        raise AppError(error_codes.VALIDATION_ERROR, "A task can only depend on another task in the same crop cycle.", 422)
+    return dependency
 
 
 def get_task(db: Session, farmer_id: str, task_id: uuid.UUID) -> TaskResponse:
     task = task_repository.get_owned(db, task_id, uuid.UUID(farmer_id))
     if task is None:
         raise AppError(error_codes.NOT_FOUND, "Task not found.", 404)
-    return _to_response(task, today=datetime.now(timezone.utc).date())
+    return _to_response(db, task, today=datetime.now(timezone.utc).date())
 
 
 def list_tasks_for_crop_cycle(
@@ -82,7 +106,7 @@ def list_tasks_for_crop_cycle(
 
     items = []
     for task in tasks:
-        response = _to_response(task, today=today)
+        response = _to_response(db, task, today=today)
         if advisory is not None and task.task_type == TaskType.SPRAYING and task.status == TaskStatus.PENDING:
             response.weather_advisory = advisory
         items.append(response)
@@ -118,19 +142,54 @@ def _get_current_spray_advisory(
 
 
 def complete_task(db: Session, farmer_id: str, task_id: uuid.UUID) -> TaskResponse:
-    task = task_repository.get_owned(db, task_id, uuid.UUID(farmer_id))
+    farmer_uuid = uuid.UUID(farmer_id)
+    task = task_repository.get_owned(db, task_id, farmer_uuid)
     if task is None:
         raise AppError(error_codes.NOT_FOUND, "Task not found.", 404)
     if task.status != TaskStatus.PENDING:
         raise AppError(error_codes.VALIDATION_ERROR, f"Cannot complete a task with status '{task.status.value}'.", 409)
 
+    if task.depends_on_task_id is not None:
+        dependency = task_repository.get_owned(db, task.depends_on_task_id, farmer_uuid)
+        if dependency is None or dependency.status != TaskStatus.COMPLETED:
+            raise AppError(
+                error_codes.VALIDATION_ERROR, "Cannot complete this task until the task it depends on is completed.", 409
+            )
+
     task.status = TaskStatus.COMPLETED
     task.completed_at = datetime.now(timezone.utc)
 
-    AuditLogger(db).log("TASK_COMPLETED", actor_id=farmer_id, actor_role="farmer", entity="task", entity_id=str(task.id))
+    audit = AuditLogger(db)
+    audit.log("TASK_COMPLETED", actor_id=farmer_id, actor_role="farmer", entity="task", entity_id=str(task.id))
+
+    # D8-08 (docs/FINAL_GAP_REPORT.md): a plain future date offset, never
+    # a cron/calendar rule. Only creates the next occurrence when the
+    # crop cycle is still active - a cycle that has already ended
+    # (HARVESTED/CANCELLED) has nothing left for a recurring task to act
+    # on, consistent with cancel_all_pending_for_crop_cycle's own reasoning.
+    if task.repeat_interval_days is not None:
+        crop_cycle = crop_cycle_repository.get_owned(db, task.crop_cycle_id, farmer_uuid)
+        if crop_cycle is not None and crop_cycle.cultivation_status not in _TERMINAL_CULTIVATION_STATUSES:
+            base_date = task.due_date if task.due_date is not None else datetime.now(timezone.utc).date()
+            next_task = Task(
+                farmer_id=farmer_uuid,
+                crop_cycle_id=task.crop_cycle_id,
+                task_type=task.task_type,
+                title=task.title,
+                description=task.description,
+                due_date=base_date + timedelta(days=task.repeat_interval_days),
+                repeat_interval_days=task.repeat_interval_days,
+            )
+            task_repository.create(db, next_task)
+            db.flush()
+            audit.log(
+                "TASK_AUTO_CREATED_RECURRENCE", actor_id=None, actor_role="automation_service",
+                entity="task", entity_id=str(next_task.id),
+            )
+
     db.commit()
     db.refresh(task)
-    return _to_response(task, today=datetime.now(timezone.utc).date())
+    return _to_response(db, task, today=datetime.now(timezone.utc).date())
 
 
 def cancel_task(db: Session, farmer_id: str, task_id: uuid.UUID) -> TaskResponse:
@@ -144,7 +203,7 @@ def cancel_task(db: Session, farmer_id: str, task_id: uuid.UUID) -> TaskResponse
     AuditLogger(db).log("TASK_CANCELLED", actor_id=farmer_id, actor_role="farmer", entity="task", entity_id=str(task.id))
     db.commit()
     db.refresh(task)
-    return _to_response(task, today=datetime.now(timezone.utc).date())
+    return _to_response(db, task, today=datetime.now(timezone.utc).date())
 
 
 def cancel_all_pending_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> int:
@@ -169,12 +228,17 @@ def cancel_all_pending_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id
     return cancelled
 
 
-def _to_response(task: Task, *, today: date) -> TaskResponse:
+def _to_response(db: Session, task: Task, *, today: date) -> TaskResponse:
     # NOT TaskResponse.model_validate(task) - the ORM object has no
     # display_status attribute at all (it's a Pydantic-only computed
     # field, never a database column), so from_attributes validation
     # fails on a required-but-missing field before there's ever a chance
     # to set it afterward. Constructing directly avoids that.
+    dependency_completed = None
+    if task.depends_on_task_id is not None:
+        dependency = task_repository.get_owned(db, task.depends_on_task_id, task.farmer_id)
+        dependency_completed = dependency is not None and dependency.status == TaskStatus.COMPLETED
+
     return TaskResponse(
         id=task.id,
         crop_cycle_id=task.crop_cycle_id,
@@ -187,4 +251,7 @@ def _to_response(task: Task, *, today: date) -> TaskResponse:
         completed_at=task.completed_at,
         created_at=task.created_at,
         weather_advisory=None,
+        depends_on_task_id=task.depends_on_task_id,
+        dependency_completed=dependency_completed,
+        repeat_interval_days=task.repeat_interval_days,
     )

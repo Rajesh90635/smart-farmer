@@ -201,6 +201,31 @@ def test_multiple_crop_cycles_never_combine_financial_data(client, farmer_with_c
     assert Decimal(summary_2["estimated_cost"]) == Decimal("999.00")
 
 
+def test_per_acre_financials_scale_with_actual_plot_area(client, farmer_with_crop_cycle, sample_crop_id):
+    """D72-04/05/06 (docs/FINAL_GAP_REPORT.md): `farmer_with_crop_cycle`'s
+    default plot is exactly 1 acre, so per-acre == raw totals there and
+    would never catch a scaling bug - this test uses a real 2-acre plot
+    instead."""
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    tokens, _ = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(
+        f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(area_value="2.0", area_unit="acre"), headers=headers
+    ).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+    crop_cycle_id = cycle["id"]
+
+    _create_ledger_expense(client, tokens, crop_cycle_id, "1000.00")
+    _create_ledger_revenue(client, tokens, crop_cycle_id, "1600.00")
+
+    summary = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/financial-summary", headers=headers).json()
+    assert Decimal(summary["cost_per_acre"]) == Decimal("500.00")
+    assert Decimal(summary["revenue_per_acre"]) == Decimal("800.00")
+    assert Decimal(summary["profit_loss_per_acre"]) == Decimal("300.00")
+
+
 def test_cannot_access_another_farmers_financial_summary(client, farmer_with_crop_cycle, another_farmer):
     _, crop_cycle_id = farmer_with_crop_cycle
     _, tokens_b = another_farmer
