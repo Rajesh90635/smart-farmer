@@ -87,6 +87,6 @@ def list_approved_products(db: Session, *, query: str | None = None, category=No
     return ProductListResponse(items=[ProductResponse.model_validate(p) for p in items], total=total)
 
 
-def list_all_products_admin(db: Session, *, status: ProductStatus | None = None, limit: int = 50, offset: int = 0) -> ProductListResponse:
-    items, total = product_repository.list_products(db, status=status, query=None, limit=limit, offset=offset)
+def list_all_products_admin(db: Session, *, status: ProductStatus | None = None, query: str | None = None, limit: int = 50, offset: int = 0) -> ProductListResponse:
+    items, total = product_repository.list_products(db, status=status, query=query, limit=limit, offset=offset)
     return ProductListResponse(items=[ProductResponse.model_validate(p) for p in items], total=total)

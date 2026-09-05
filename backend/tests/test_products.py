@@ -13,7 +13,11 @@ def test_admin_can_list_pending_products_to_discover_what_needs_review(client, a
     already existed, but there was no way to find a product_id to act on."""
     pending = client.post("/api/v1/products", json=valid_product_payload(), headers=auth_headers(admin_tokens)).json()
 
-    response = client.get("/api/v1/products/admin", headers=auth_headers(admin_tokens))
+    # Search by the product's own (randomized) name rather than assuming it
+    # falls within the default page size - the shared test database
+    # accumulates products across the whole test session, so an unfiltered
+    # listing can easily exceed one page by the time this test runs.
+    response = client.get(f"/api/v1/products/admin?q={pending['name']}", headers=auth_headers(admin_tokens))
     assert response.status_code == 200
     ids = [p["id"] for p in response.json()["items"]]
     assert pending["id"] in ids
