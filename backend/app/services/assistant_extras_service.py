@@ -17,6 +17,7 @@ from app.core.localization import is_supported_language
 from app.models.assistant_feedback import AssistantFeedback, AssistantPreference
 from app.repositories import assistant_repository, user_repository
 from app.schemas.assistant import DailySummaryResponse, FeedbackCreateRequest, PreferenceResponse, PreferenceUpdateRequest
+from app.services import crop_financial_service, crop_risk_service
 from app.services.assistant import tools
 from app.services.weather.weather_provider import WeatherProvider
 
@@ -88,6 +89,38 @@ def get_daily_summary(
     crop = tools.get_crop_status(db, farmer_id)
     if crop.get("available"):
         lines.append(get_message("daily_summary_crop", language_code, crop_name=crop["crop_name"], stage=crop["stage"]))
+
+    # D92-06/D93-04 (docs/audit/c13_governance_farmbrain_security.md):
+    # get_disease_status already existed and was already used by the
+    # chat assistant's DISEASE_STATUS intent, but was never included in
+    # the daily summary composition - same "reuse an existing tool,
+    # don't invent one" pattern as the expert-case line above. Only a
+    # genuine DISEASE_DETECTED result is surfaced - healthy/low-confidence/
+    # unknown results say nothing here (they carry no actionable urgency,
+    # and low-confidence must never be presented as a finding).
+    disease = tools.get_disease_status(db, farmer_id, settings)
+    if disease.get("available") and disease["result_status"] == "disease_detected":
+        lines.append(get_message("daily_summary_disease", language_code, predicted_class=disease["predicted_class"]))
+
+    # D92-02/D93-01: crop_risk_service already aggregates disease/weather/
+    # task/financial signals into one score for this exact crop cycle
+    # (Phase 33) - only surfaced when it says something worth a farmer's
+    # attention (medium/high), never "low"/"insufficient_data" noise.
+    if crop.get("available"):
+        risk = crop_risk_service.get_risk_score(
+            db, farmer_id, uuid.UUID(crop["crop_cycle_id"]), weather_provider=weather_provider, settings=settings
+        )
+        if risk.overall_risk in ("medium", "high"):
+            lines.append(get_message("daily_summary_risk", language_code, level=risk.overall_risk))
+
+    # D92-08/D93-09: crop_financial_service already computes actual spend
+    # for this crop cycle (Phase 31) - only surfaced once something has
+    # actually been spent, consistent with every other line's "only
+    # report what's actually there" discipline.
+    if crop.get("available"):
+        finance = crop_financial_service.get_financial_summary(db, farmer_id, uuid.UUID(crop["crop_cycle_id"]))
+        if finance.actual_cost and finance.actual_cost > 0:
+            lines.append(get_message("daily_summary_finance", language_code, actual_cost=finance.actual_cost))
 
     harvest = tools.get_harvest_status(db, farmer_id)
     if harvest.get("available") and harvest["status"] in ("approaching", "ready", "listed"):

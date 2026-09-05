@@ -139,6 +139,60 @@ def test_comparison_correctly_identifies_lower_cost_as_favorable(client, farmer_
     assert cost_metric["comparison"] == "a_higher"
 
 
+def test_comparison_reports_insufficient_data_for_yield_when_nothing_harvested_yet(client, farmer_with_crop_cycle, sample_crop_id):
+    """D96-03: no HarvestRecord.actual_quantity is ever written by any
+    current endpoint (a separately-tracked FUTURE gap, see
+    docs/HARVEST_MANAGEMENT.md) - so today this metric always reports
+    'insufficient_data', honestly, rather than a fabricated 0-yield."""
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    body = response.json()
+    yield_metric = next(m for m in body["metrics"] if m["metric_name"] == "actual_yield")
+    assert yield_metric["comparison"] == "insufficient_data"
+
+
+def test_comparison_correctly_identifies_higher_yield_once_harvest_quantities_exist(
+    client, farmer_with_crop_cycle, sample_crop_id, db_session
+):
+    """Once HarvestRecord.actual_quantity IS populated (whenever the
+    separately-tracked 'mark harvested' write path is eventually built),
+    the comparison must correctly treat a higher yield as favorable, and
+    must SUM multiple harvest records for one cycle (perennial/repeated-
+    picking crops can have more than one). No write endpoint exists yet
+    for actual_quantity, so this inserts directly - simulating the future
+    wiring, not today's farmer-reachable flow."""
+    import uuid as uuid_mod
+
+    from app.core.jwt import decode_access_token
+    from app.models.crop_cycle import CropCycle
+    from app.models.harvest_record import HarvestRecord
+
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+    farmer_id = uuid_mod.UUID(decode_access_token(tokens["access_token"])["sub"])
+
+    def _insert_harvest(crop_cycle_id: str, quantity: int) -> None:
+        cc = db_session.get(CropCycle, uuid_mod.UUID(crop_cycle_id))
+        db_session.add(HarvestRecord(
+            farmer_id=farmer_id, farm_id=cc.plot.farm_id, plot_id=cc.plot_id, crop_cycle_id=cc.id,
+            crop_id=cc.crop_id, actual_quantity=quantity,
+        ))
+
+    _insert_harvest(crop_cycle_id_1, 200)
+    _insert_harvest(crop_cycle_id_1, 150)  # second pick - must be summed
+    _insert_harvest(crop_cycle_id_2, 100)
+    db_session.commit()
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    body = response.json()
+    yield_metric = next(m for m in body["metrics"] if m["metric_name"] == "actual_yield")
+    assert yield_metric["value_a"] == "350.00"
+    assert yield_metric["value_b"] == "100.00"
+    assert yield_metric["comparison"] == "a_higher"
+
+
 def test_comparison_never_leaks_a_crop_cycle_belonging_to_another_farmer(client, farmer_with_crop_cycle, another_farmer):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     _, tokens_b = another_farmer

@@ -239,3 +239,65 @@ made this pass — the Expert SLA and treatment-escalation notifications
 surface through the existing generic in-app notification list, which
 already renders arbitrary categories/priorities; no crop-photo-effectiveness
 UI (e.g. surfacing `recommended_action`) was added.
+
+## Third pass (2026-09-05, continued): High/P1 backlog — batch 1 & 2
+
+Starting on the ~82-row High/P1 backlog (product owner asked to continue
+past the P0 cluster). Given how heterogeneous this backlog is (12
+different clusters, many unrelated to each other, unlike the P0 cluster's
+single root cause), work proceeds in coherent batches rather than one
+pass — each batch fully audited, implemented, tested, and recorded here
+before moving to the next.
+
+### Batch 1 — Daily Farm Brief aggregation (7 rows, `c13_governance_farmbrain_security.md`)
+
+D92-01/02/06/08 and D93-01/04/09 all pointed at one function,
+`assistant_extras_service.get_daily_summary()`, which already composed
+weather/crop/harvest/marketplace/delivery/expert-case/overdue-task lines
+but never called `crop_risk_service.get_risk_score`,
+`tools.get_disease_status`, or `crop_financial_service.get_financial_summary`
+— all three already existed and were already tested elsewhere. Now added,
+each following the summary's own "only report what's actually there"
+discipline: disease only surfaces on a genuine `disease_detected` result;
+risk only surfaces at medium/high (never low/insufficient_data noise);
+finance only surfaces once something has actually been spent. 3 new
+`daily_summary_*` message keys added in all 7 already-supported languages
+(matching this specific key family's existing full-translation
+convention — unlike the CASE_*/assistant_* key families elsewhere in the
+same file, which are deliberately English-only pending native-speaker
+review; these 3 follow the same mechanical, not-independently-reviewed
+convention already established for their 7 sibling `daily_summary_*`
+keys). Verified: `tests/test_assistant_chat.py::test_daily_summary_includes_disease_and_risk_lines_when_disease_detected`,
+`::test_daily_summary_includes_finance_line_once_expenses_recorded`.
+
+### Batch 2 — Yield in season comparison & learning (2 rows)
+
+D96-03 (`crop_comparison_service.compare_crop_cycles`) and D98-02
+(`learning_foundation_service.get_learning_summary`) both wanted
+`HarvestRecord.actual_quantity` wired into comparison/learning outputs.
+Both now sum/read `actual_quantity` correctly, guarded to report
+`insufficient_data`/`None` (never a fabricated zero) when absent.
+
+**Important finding, disclosed rather than hidden:** while implementing
+this, `grep -rn "actual_quantity" app/` confirmed `c08_harvest_postharvest.md`'s
+own D49-02/D50-02 finding — **no service function anywhere in the entire
+backend ever writes `HarvestRecord.actual_quantity`**. It is declared on
+the model, read by `profit_forecast_service.py`, and now also read by
+this pass's two fixes, but there is no "mark harvested with an actual
+quantity" endpoint at all. D49-02/D50-02 are correctly marked **FUTURE**
+in `c08` (disclosed at `docs/HARVEST_MANAGEMENT.md:20-26`) — but tagged
+**Critical** priority, a combination worth the product owner's attention:
+these two "High" fixes are code-correct and tested (via direct DB
+insertion simulating the future write path — see
+`test_comparison_correctly_identifies_higher_yield_once_harvest_quantities_exist`),
+but **produce zero visible farmer value today** since the field they
+depend on is never populated through any reachable flow. This is not a
+new gap introduced by this pass — it is the same disclosed FUTURE item,
+surfaced here because two unrelated High-priority fixes turned out to be
+silently blocked by it.
+
+Full backend suite after batches 1-2: **637 passed, 1 error** (the error,
+`test_ai_analysis_security.py::test_farmer_a_cannot_analyze_farmer_bs_photo`,
+does not reproduce in isolation — 6/6 pass standalone — and is unrelated
+to any file this pass touched; pre-existing full-suite flakiness, not a
+regression).

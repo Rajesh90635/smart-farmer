@@ -1,3 +1,5 @@
+import uuid
+
 from tests.conftest import auth_headers
 
 
@@ -149,6 +151,53 @@ def test_daily_summary_includes_overdue_task_count_reusing_the_real_task_reposit
     assert response.status_code == 200
     lines = response.json()["lines"]
     assert any("1 overdue task" in line for line in lines), f"Expected an overdue-task line, got: {lines}"
+
+
+def test_daily_summary_includes_disease_and_risk_lines_when_disease_detected(client, farmer_with_crop_cycle):
+    """D92-02/D92-06/D93-01/D93-04: crop_risk_service and
+    tools.get_disease_status already existed but were never included in
+    the daily summary composition. A genuine disease detection must now
+    surface both a health-check line AND (since disease detection drives
+    the risk factor to 'high') a risk line - never invented, always
+    traced to the real AI analysis."""
+    import io
+
+    from tests.photo_factories import make_test_jpeg, valid_photo_session_payload
+    from tests.conftest import override_model_provider
+    from tests.fake_model_provider import FakeModelProvider
+    from app.services.ai.model_provider import TopKPrediction
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = client.post("/api/v1/crop-photo-sessions", json=valid_photo_session_payload(crop_cycle_id), headers=auth_headers(tokens)).json()
+    files = {"file": ("leaf.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    data = {"client_upload_id": f"upload-{uuid.uuid4().hex[:8]}", "source": "camera"}
+    photo = client.post(f"/api/v1/crop-photo-sessions/{session['id']}/photos", files=files, data=data, headers=auth_headers(tokens)).json()
+    with override_model_provider(FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.92)])):
+        client.post(f"/api/v1/crop-photos/{photo['id']}/analyze", headers=auth_headers(tokens))
+
+    response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    lines = response.json()["lines"]
+    assert any("Early Blight" in line for line in lines), f"Expected a disease line, got: {lines}"
+    assert any(line.startswith("Risk:") and "high" in line for line in lines), f"Expected a high-risk line, got: {lines}"
+
+
+def test_daily_summary_includes_finance_line_once_expenses_recorded(client, farmer_with_crop_cycle):
+    """D92-08/D93-09: crop_financial_service already tracked actual spend
+    but it was never surfaced in the daily summary."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+
+    before = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any(line.startswith("Expenses:") for line in before)
+
+    client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/ledger/entries",
+        json={"entry_type": "expense", "category": "seed", "amount": "500", "entry_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    )
+
+    after = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert any(line.startswith("Expenses:") and "500" in line for line in after), f"Expected a finance line, got: {after}"
 
 
 def test_daily_summary_language_code_query_param_overrides_profile_language_for_this_response_only(client, registered_farmer):

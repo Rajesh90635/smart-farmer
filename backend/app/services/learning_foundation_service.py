@@ -61,6 +61,13 @@ def get_learning_summary(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) 
             outcome_label = {
                 "actual_revenue": str(financial.actual_revenue),
                 "actual_profit_loss": str(financial.actual_profit_loss),
+                # D98-02 (docs/audit/c13_governance_farmbrain_security.md):
+                # yield was entirely absent from the outcome label. Stays
+                # None (not fabricated) until HarvestRecord.actual_quantity
+                # is ever actually written - see D49-02/c08_harvest_postharvest.md,
+                # a separately-tracked FUTURE item (no code path anywhere
+                # sets this column yet; disclosed in docs/HARVEST_MANAGEMENT.md).
+                "actual_quantity": str(harvested.actual_quantity) if harvested.actual_quantity is not None else None,
             }
             outcome_known_only_after = harvested.actual_harvest_date
 

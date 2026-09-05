@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
-from app.repositories import crop_cycle_repository
+from app.repositories import crop_cycle_repository, harvest_repository
 from app.schemas.crop_comparison import ComparisonMetric, CropComparisonResponse
 from app.services import crop_financial_service, crop_performance_service
 
@@ -21,6 +21,7 @@ _METRIC_DIRECTIONS = {
     "actual_cost": "lower_better",
     "actual_revenue": "higher_better",
     "actual_profit_loss": "higher_better",
+    "actual_yield": "higher_better",
 }
 
 
@@ -36,15 +37,35 @@ def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID,
     financial_a = crop_financial_service.get_financial_summary(db, farmer_id, crop_cycle_id_a)
     financial_b = crop_financial_service.get_financial_summary(db, farmer_id, crop_cycle_id_b)
 
+    yield_a = _total_actual_yield(db, crop_cycle_id_a)
+    yield_b = _total_actual_yield(db, crop_cycle_id_b)
+
     metrics = [
         _build_metric("overall_performance_score", performance_a.overall_score, performance_b.overall_score),
         _build_metric("actual_cost", financial_a.actual_cost, financial_b.actual_cost),
         _build_metric("actual_revenue", financial_a.actual_revenue, financial_b.actual_revenue),
         _build_metric("actual_profit_loss", financial_a.actual_profit_loss, financial_b.actual_profit_loss),
+        _build_metric("actual_yield", yield_a, yield_b),
         _build_metric("crop_stage", crop_a.cultivation_status.value, crop_b.cultivation_status.value, comparable=False),
     ]
 
     return CropComparisonResponse(crop_cycle_id_a=crop_cycle_id_a, crop_cycle_id_b=crop_cycle_id_b, metrics=metrics)
+
+
+def _total_actual_yield(db: Session, crop_cycle_id: uuid.UUID):
+    """D96-03: sum of HarvestRecord.actual_quantity across every harvest
+    for this cycle (a perennial/repeated-harvest crop can have more than
+    one) - None (not zero) when nothing has been harvested yet, so
+    _build_metric reports 'insufficient_data' rather than a fabricated
+    zero-yield comparison. HarvestRecord tracks no unit field, so this
+    only ever compares two cycles' raw recorded quantities - the same
+    honesty limitation the checklist's own Domain 34 (Yield/Unit) already
+    discloses elsewhere, not something newly introduced here."""
+    harvests = harvest_repository.list_harvests_by_crop_cycle(db, crop_cycle_id)
+    quantities = [h.actual_quantity for h in harvests if h.actual_quantity is not None]
+    if not quantities:
+        return None
+    return sum(quantities)
 
 
 def _build_metric(name: str, value_a, value_b, *, comparable: bool = True) -> ComparisonMetric:

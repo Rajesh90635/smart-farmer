@@ -50,6 +50,7 @@ def get_crop_status(db: Session, farmer_id: str) -> dict:
     return {
         "available": True,
         "source": "Farmer crop record",
+        "crop_cycle_id": str(cycle.id),
         "crop_name": crop_name,
         "farm_name": farm_name,
         "stage": cycle.cultivation_status.value,
