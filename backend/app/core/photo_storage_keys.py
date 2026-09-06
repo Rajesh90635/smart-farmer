@@ -14,6 +14,13 @@ def build_photo_container(*, farmer_id: uuid.UUID, crop_cycle_id: uuid.UUID) -> 
     return f"crop-photos/{farmer_id}/{crop_cycle_id}"
 
 
+def build_product_photo_container(*, product_id: uuid.UUID) -> str:
+    """D26-02 (docs/audit/FINAL_CANONICAL_group_A.md): admin-uploaded
+    product catalog images - not farmer-owned, so no farmer_id in the
+    path, unlike build_photo_container above."""
+    return f"product-photos/{product_id}"
+
+
 def build_leaf_filename(*, extension: str) -> str:
     return f"{uuid.uuid4().hex}.{_sanitize_extension(extension)}"
 

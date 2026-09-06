@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.repositories import (
     notification_repository,
     plot_repository,
 )
+from app.schemas.crop_stage_history import CropCycleStageHistoryResponse
 from app.schemas.crop import (
     CropCycleCloseRequest,
     CropCycleCreateRequest,
@@ -27,6 +28,9 @@ from app.schemas.crop import (
     CropCycleResponse,
     CropCycleUpdateRequest,
     CropFailureReportRequest,
+    CropYearHarvestSummary,
+    CropYearSummaryItem,
+    CropYearSummaryResponse,
 )
 from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse, CropCycleStageHistoryResponse
 from app.services import crop_financial_service, task_service
@@ -79,6 +83,7 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
     if crop is None:
         raise AppError(error_codes.VALIDATION_ERROR, "Selected crop does not exist or is not available.", 422)
 
+    variety = None
     if payload.variety_id is not None:
         # A variety_id that resolves but belongs to a DIFFERENT crop must
         # be rejected here, not just relied upon at the DB FK level -
@@ -137,7 +142,22 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
 
     db.commit()
     db.refresh(crop_cycle)
-    return CropCycleResponse.model_validate(crop_cycle)
+
+    response = CropCycleResponse.model_validate(crop_cycle)
+
+    # D3-12: the plot's own most recent prior cycle, for read-only context.
+    previous_cycle = crop_cycle_repository.get_most_recent_for_plot(db, plot_id, exclude_id=crop_cycle.id)
+    if previous_cycle is not None:
+        response.previous_crop_cycle_id = previous_cycle.id
+        response.previous_crop_name = previous_cycle.crop.name if previous_cycle.crop else None
+
+    # D5-04: only a suggestion when the farmer didn't supply their own
+    # expected_harvest_date and the selected variety has a real duration -
+    # never silently written into expected_harvest_date itself.
+    if payload.expected_harvest_date is None and variety is not None and variety.typical_duration_days is not None:
+        response.suggested_expected_harvest_date = payload.sowing_date + timedelta(days=variety.typical_duration_days)
+
+    return response
 
 
 def list_crop_cycles_for_plot(
@@ -348,6 +368,40 @@ def _validate_transition(current: CultivationStatus, target: CultivationStatus) 
             f"Cannot change status from '{current.value}' to '{target.value}'.",
             409,
         )
+
+
+def get_crop_year_summary(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> CropYearSummaryResponse:
+    """D13-06 (docs/audit/FINAL_CANONICAL_group_A.md): groups this cycle's
+    existing HarvestRecord/CropCycleStageHistory rows by calendar year -
+    pure read aggregation, no new source data. Scoped to calendar-year
+    only; a real season-boundary rollup needs D13-02 (season history,
+    Missing), disclosed rather than attempted here."""
+    crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, uuid.UUID(farmer_id))
+    if crop_cycle is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
+
+    harvests = harvest_repository.list_harvests_by_crop_cycle(db, crop_cycle_id)
+    stage_changes = crop_cycle_stage_history_repository.list_for_crop_cycle(db, crop_cycle_id)
+
+    years: dict[int, dict[str, list]] = {}
+
+    def _bucket(year: int) -> dict[str, list]:
+        return years.setdefault(year, {"harvests": [], "stage_changes": []})
+
+    for harvest in harvests:
+        year_date = harvest.actual_harvest_date or harvest.expected_harvest_date
+        if year_date is None:
+            continue  # honestly excluded - no date to group by, never guessed
+        _bucket(year_date.year)["harvests"].append(CropYearHarvestSummary.model_validate(harvest))
+
+    for change in stage_changes:
+        _bucket(change.entered_at.year)["stage_changes"].append(CropCycleStageHistoryResponse.model_validate(change))
+
+    items = [
+        CropYearSummaryItem(year=year, harvests=data["harvests"], stage_changes=data["stage_changes"])
+        for year, data in sorted(years.items())
+    ]
+    return CropYearSummaryResponse(crop_cycle_id=crop_cycle_id, years=items)
 
 
 def get_stage_history_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> CropCycleStageHistoryListResponse:

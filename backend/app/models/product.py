@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -61,6 +61,13 @@ class Product(Base):
     usage_information: Mapped[str | None] = mapped_column(Text, nullable=True)
     regulatory_info: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_storage_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # D21-03 (docs/audit/FINAL_CANONICAL_group_A.md): optional, only ever
+    # meaningful for category=SEED - links to the SAME CropVariety table
+    # crop cycles already use, never a second variety concept. Admin-set
+    # at creation only (no product-update endpoint exists in this phase).
+    variety_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("crop_varieties.id"), nullable=True, index=True
+    )
 
     status: Mapped[ProductStatus] = mapped_column(
         SAEnum(ProductStatus, name="product_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),

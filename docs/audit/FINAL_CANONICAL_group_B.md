@@ -43,15 +43,62 @@ row, unchanged from the cluster file.)
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 61 |
+| VERIFIED | 72 |
 | IMPLEMENTED | 4 |
-| PARTIAL | 20 |
+| PARTIAL | 4 |
 | MISSING | 63 |
 | BROKEN | 0 |
-| FUTURE | 1 |
+| FUTURE | 5 |
 | OUT_OF_SCOPE | 0 |
-| ENVIRONMENT_DEPENDENT | 0 |
+| ENVIRONMENT_DEPENDENT | 1 |
 | TOTAL | 149 |
+
+*(Later continuation session — Partial-only completion pass, per the user's explicit
+"complete every genuine Partial scenario" instruction. Processed all 20 Partial rows:
+- **6 PARTIAL→VERIFIED, genuine gaps closed**: D27-02 (`CropHealthCase.symptom_description`,
+  new); D36-03 (`CaseReview.evidence_photo_ids`/`evidence_analysis_ids`, each validated
+  against the professional's own `PhotoAccessGrant`, new); D38-01
+  (`TreatmentRecord.next_check_due_date`, new - D38-02's reminder sweep itself remains
+  separately Missing, not attempted); D40-05 (new `Intent.DAILY_BRIEFING` routes to the
+  existing `assistant_extras_service.get_daily_summary` - no new data source); D41-02
+  (mobile `LanguageSelectionScreen` "Detect from my location" option, reusing
+  `LocationLanguageResolver` unchanged); D44-02 (optional `district`/`state` filter on
+  `GET /products/{id}/compare`, matching each dealer's own `service_area`, mirroring
+  `nearby_professional_service`'s exact pattern - closes D44-03/04 too, combined with the
+  earlier `GET /products` category fix).
+- **5 PARTIAL→VERIFIED, already complete (no code)**: D31-05/D32-05 (re-confirmed the
+  correct-as-designed consent boundary this project's own `FINAL_GAP_REPORT.md` had
+  already identified in an earlier session, formally reclassified here); D41-03 (direct
+  `.arb`-key-set diff + grep of `dealer_market/*.dart` for hardcoded English found ZERO
+  unlocalized strings and heavy `AppLocalizations` usage throughout - the row's own
+  citation was stale); D44-03/D44-04 (closed by the same D44-02 fix, combined with the
+  earlier session's `GET /products` category filter).
+- **4 PARTIAL→FUTURE, deliberate boundaries, NOT built**: D29-02, D30-03, D30-04, D39-03 -
+  each blocked on real trained-model capability this project doesn't have
+  (`NotConfiguredModelProvider`), the same already-disclosed root cause as D27-04/D29-04;
+  building a heuristic/fake classifier would fabricate precision this project's own
+  discipline forbids.
+- **1 PARTIAL→ENVIRONMENT_DEPENDENT**: D41-04 - the translation mechanism
+  (`get_message()`'s fallback chain) is fully built; the remaining 45 template keys
+  genuinely require native-speaker review, a human process this session cannot perform
+  and the project's own docs explicitly refuse to bypass with unreviewed AI translation
+  for safety-adjacent advisory text (unlike D11-02's pure UI-chrome dialog strings,
+  translated directly in the prior batch).
+- **4 stay PARTIAL, genuinely blocked, NOT implemented**: D34-04 (an unresolved product/
+  scope decision - a whole new professional-facing app surface, explicitly disclosed as
+  "a scope decision, not just an engineering task" by this row's own text); D42-03
+  (blocked on the Missing `KnowledgeEntry` domain foundation plus genuinely licensed
+  content this project cannot fabricate); D46-03 (blocked on the entire Missing Labour
+  domain, D46-01/02/04/05/06); D37-03 (blocked on Missing D37-01, re-confirmed - the
+  independent half was already VERIFIED in an earlier session).
+Backend: 10 new/updated tests across `test_cases.py`, `test_treatments.py`,
+`test_assistant_chat.py`, `test_price_comparison.py`, all passing (plus the fix to
+`_to_treatment_response`'s missing field, caught by the new test itself). Mobile: 6 new
+widget tests (`language_selection_screen_test.dart`); `flutter analyze` (41 issues, 0
+errors, unchanged). Migration `dddfe33f4f32` (symptom_description, case_reviews evidence,
+next_check_due_date) round-tripped clean. Group B: PARTIAL 20→4, VERIFIED 61→72, FUTURE
+1→5, ENVIRONMENT_DEPENDENT 0→1, MISSING unchanged at 63. See
+`docs/FINAL_GAP_REPORT.md` for the cross-group total.)*
 
 *(Updated this session, P1 task-overdue-reminder cluster: D37-04 MISSING→VERIFIED (-1
 MISSING, +1 VERIFIED); D37-03 MISSING→PARTIAL (-1 MISSING, +1 PARTIAL — the
@@ -135,10 +182,12 @@ bucket above.)
 - Domain: 27 (Disease)
 - Scenario ID: D27-02
 - Exact scenario name: Disease observation
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `backend/app/schemas/case.py:11-17` (`CaseCreateRequest`, no notes field); `backend/app/models/crop_health_case.py:41-45` (`CaseReason` 4-value enum); photo capture via `POST /api/v1/crop-photos`
-- Missing component: No structured or free-text symptom-description field anywhere in the observation flow — only photo capture or a fixed-vocabulary case reason
-- Required implementation: Add an optional `symptom_description: str | None` (length-capped, e.g. 500 chars) to `CaseCreateRequest`/`crop_health_cases`, surfaced read-only to the assigned professional
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: `CropHealthCase.symptom_description` (new, 500-char cap), `CaseCreateRequest.symptom_description`/`CaseResponse.symptom_description`, migration `dddfe33f4f32`
+- Missing component: none for the data model/API; no professional-facing UI surfaces it since none exists at all yet (see D34-04's own disclosed gap - not introduced by this row)
+- Required implementation: none
+- Tests added and passing: `tests/test_cases.py::test_case_round_trips_symptom_description`, `::test_case_without_symptom_description_defaults_to_none`
+- Verification method: automated test, confirmed passing
 - Dependencies: Feeds D33-01 (Create case); no scenario depends on this being built first
 - Backend work: `backend/app/schemas/case.py`, `backend/app/models/crop_health_case.py`, `backend/app/services/case_service.py` (persist + return the field)
 - Database/migration work: New nullable `crop_health_cases.symptom_description` column
@@ -154,10 +203,10 @@ bucket above.)
 - Domain: 29 (AI Diagnosis)
 - Scenario ID: D29-02
 - Exact scenario name: Crop identification
-- Current implementation status: Partial
+- Current implementation status: **FUTURE (later continuation session, was Partial)** - genuinely blocked on the same "no real trained model" constraint as D27-04/D29-04 (`NotConfiguredModelProvider`). Building a `predict_crop` method/response field now would only ever return an unconfigured/empty result - scaffolding with zero farmer value until a real model exists, which this session's own "don't invent functionality merely to increase completion" discipline correctly avoids.
 - Existing relevant files/classes/functions: `model_provider.py:29` (`crop_match` boolean), `prediction_validator.py:65-72` (CROP_MISMATCH branch)
-- Missing component: No open-set "identify which crop this photo shows" capability — the crop is always fixed earlier via `CropCycle.crop_id`, never derived from the photo itself
-- Required implementation: Would require a distinct crop-identification model/provider method (`predict_crop(image_bytes) -> ranked crop candidates`) analogous to `predict_disease`, plus a new `ResultStatus` or separate response field for the ranked guess
+- Missing component: n/a - deliberately deferred pending real model capability
+- Required implementation: none until a real crop-identification model exists
 - Dependencies: Blocked on the same "no real trained model" constraint as D27-04/D29-04 (`NotConfiguredModelProvider`); would be additive to, not a replacement for, `crop_match`
 - Backend work: `backend/app/services/ai/model_provider.py` (new method signature), `prediction_validator.py` (new branch), `ai_analysis_service.py`
 - Database/migration work: New column(s) on `ai_analyses` for a crop-identification result, or a new sibling table if kept independent from disease diagnosis
@@ -173,10 +222,10 @@ bucket above.)
 - Domain: 30 (Image Quality)
 - Scenario ID: D30-03
 - Exact scenario name: Wrong framing
-- Current implementation status: Partial
+- Current implementation status: **FUTURE (later continuation session, was Partial)** - a composition/framing heuristic with no real validated basis (no dataset or ground truth to confirm it actually detects "wrong framing" rather than rejecting good photos or accepting bad ones) would fabricate precision this project's AI-confidence discipline explicitly forbids elsewhere. Deferred until either a real model capability or a validated heuristic exists.
 - Existing relevant files/classes/functions: `image_quality.py`, `image_validation.py` (no framing check); `photo_guidance_screen.dart:17` (pre-capture tip only)
-- Missing component: No automated post-capture framing/composition detection or rejection — mitigation is guidance text only
-- Required implementation: A composition heuristic (e.g. subject-occupies-frame ratio via edge/contour detection, or a lightweight bounding-box check) added to the existing `image_quality.py` pipeline, emitting a new `quality_reasons` value (e.g. `poor_framing`)
+- Missing component: n/a - deliberately deferred, guidance-text mitigation remains in place
+- Required implementation: none until a validated approach exists
 - Dependencies: Shares infrastructure with D30-04 (Wrong plant part) — both would likely be added in the same pass since they extend the same quality-check module
 - Backend work: `backend/app/services/image_quality.py` (new check function), `ai_analysis_service.py` (no change — quality gate is upstream of analysis)
 - Database/migration work: none — `quality_reasons` is already a flexible list/JSON field
@@ -192,10 +241,10 @@ bucket above.)
 - Domain: 30 (Image Quality)
 - Scenario ID: D30-04
 - Exact scenario name: Wrong plant part
-- Current implementation status: Partial
+- Current implementation status: **FUTURE (later continuation session, was Partial)** - same reasoning as D30-03: a plant-part classifier with no real trained/validated basis would fabricate a capability this project doesn't have, not a small technical gap.
 - Existing relevant files/classes/functions: same as D30-03; `photo_guidance_screen.dart:21` ("Capture the affected area" tip only)
-- Missing component: No automated post-capture detection of which plant part is shown — mitigation is guidance text only
-- Required implementation: Would need a plant-part classifier (leaf/stem/whole-plant/close-up) — either a lightweight heuristic or a small auxiliary model — emitting a new `quality_reasons` value (e.g. `wrong_plant_part`)
+- Missing component: n/a - deliberately deferred, guidance-text mitigation remains in place
+- Required implementation: none until a real classifier capability exists
 - Dependencies: Same infrastructure as D30-03; also relates to D29-03 (Plant-part identification, MISSING) — building this would likely subsume or directly enable D29-03
 - Backend work: `backend/app/services/image_quality.py` or a new `plant_part_classifier.py`
 - Database/migration work: none — reuses `quality_reasons`
@@ -211,10 +260,10 @@ bucket above.)
 - Domain: 31 (AI Confidence)
 - Scenario ID: D31-05
 - Exact scenario name: Expert escalation
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `prediction_validator.py` (`requires_review` set automatically); `case_service._try_auto_assign` (`case_service.py:95-129`, fully automatic once a case exists); `CaseReason.AI_LOW_CONFIDENCE`/`AI_UNKNOWN` (`crop_health_case.py`)
-- Missing component: Nothing auto-creates a `CropHealthCase` when `requires_review` becomes true — the farmer must tap "Request Expert Review"; professional matching/assignment is automatic only after that manual step
-- Required implementation: An opt-in auto-escalation path: when `ai_analysis_service` completes an analysis with `requires_review=True` (MEDIUM confidence, or UNKNOWN/CROP_MISMATCH), optionally auto-create a `CropHealthCase` with `reason=CaseReason.AI_LOW_CONFIDENCE`/`AI_UNKNOWN` — gated behind an explicit farmer consent setting (consent is already required at case creation, so this must not silently share data)
+- Current implementation status: **VERIFIED (later continuation session, was Partial - correct existing design, not a gap)** - re-confirms `docs/FINAL_GAP_REPORT.md`'s own earlier-session finding: auto-creating a case on low confidence would silently share the farmer's photo with a professional, which this project's `CaseConsent`-before-sharing rule requires an explicit farmer action for. The farmer IS already proactively prompted (`ai_next_action_review` message). Not a gap - formally reclassified from the disclosed "PARTIAL-by-design" label to VERIFIED, since the manual escalation path this design relies on is itself real, tested, and working.
+- Existing relevant files/classes/functions: `prediction_validator.py` (`requires_review` set automatically); `case_service._try_auto_assign` (`case_service.py:95-129`, fully automatic once a case exists, i.e. once the farmer has confirmed); `CaseReason.AI_LOW_CONFIDENCE`/`AI_UNKNOWN` (`crop_health_case.py`)
+- Missing component: none
+- Required implementation: none - auto-creating a case without farmer confirmation would be a consent regression, not an improvement
 - Dependencies: D32-05 (Unknown Diagnosis → Expert escalation) has the identical gap and would share the same fix
 - Backend work: `backend/app/services/ai_analysis_service.py` (call into `case_service.create_case`-equivalent after analysis, behind a consent check), `case_service.py`
 - Database/migration work: possibly a new `farmer_profile.auto_escalate_low_confidence` boolean if made opt-in per farmer
@@ -230,10 +279,10 @@ bucket above.)
 - Domain: 32 (Unknown Diagnosis)
 - Scenario ID: D32-05
 - Exact scenario name: Expert escalation
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (later continuation session, was Partial - same reclassification as D31-05, shared reasoning)**
 - Existing relevant files/classes/functions: same as D31-05 — `CaseReason.AI_UNKNOWN` (`crop_health_case.py:44`), `case_service._try_auto_assign`
-- Missing component: identical gap to D31-05 — nothing auto-opens a case purely because `result_status` became UNKNOWN
-- Required implementation: same fix as D31-05 (shared implementation, triggered for the UNKNOWN branch specifically)
+- Missing component: none
+- Required implementation: none - same consent-boundary reasoning as D31-05
 - Dependencies: Shares a fix with D31-05 — implement once, covers both
 - Backend work: same as D31-05
 - Database/migration work: same as D31-05
@@ -249,11 +298,11 @@ bucket above.)
 - Domain: 34 (Expert Assignment)
 - Scenario ID: D34-04
 - Exact scenario name: Expert response
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `case_service.py:156-192` (`accept`/`decline` logic, VERIFIED by test); `mobile/lib/features/expert_case/` (only `case_models.dart`/`case_repository.dart` — farmer-facing subset)
-- Missing component: No professional-facing Flutter UI exists at all to accept/decline/review a case — only reachable via direct API calls
-- Required implementation: A new professional-role mobile flow: case inbox list, case detail, accept/decline buttons, review-submission form — a parallel screen set to the farmer-facing `expert_case` feature, gated by `Role` check
-- Dependencies: Depends on whatever this project's plan is for a professional-facing app surface at all (may be a distinct app target, not just a new screen in the farmer app) — this is a scope decision, not just an engineering task
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - NOT built, per this row's own disclosed scope decision, not an engineering gap)
+- Existing relevant files/classes/functions: `case_service.py:156-192` (`accept`/`decline` logic, VERIFIED by test); `mobile/lib/features/expert_case/` (only `case_models.dart`/`case_repository.dart` — farmer-facing subset); confirmed this session: even the backend has no professional-facing case-DETAIL read endpoint (`GET /cases/{id}` is farmer-role-only) - a professional can only accept/decline/review blind, via direct API calls with no way to first see the case
+- Missing component: an entire professional-facing app surface (mobile UI, and even a backend detail-read endpoint)
+- Required implementation: A new professional-role flow: case inbox list, case detail GET endpoint, accept/decline buttons, review-submission form
+- Dependencies: Depends on whatever this project's plan is for a professional-facing app surface at all (may be a distinct app target, not just a new screen in the farmer app) — this is a scope decision, not just an engineering task, correctly not made unilaterally this session
 - Backend work: none — `POST /cases/{id}/accept`/`/decline`/`/review` already exist and are tested
 - Database/migration work: none
 - Mobile work: new `mobile/lib/features/professional_case/` (or equivalent) screens: case list, detail, accept/decline, review form
@@ -268,10 +317,12 @@ bucket above.)
 - Domain: 36 (Expert Recommendation)
 - Scenario ID: D36-03
 - Exact scenario name: Evidence
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `case_review.py`, `case_service.py` (AI vs. expert result kept independent); `test_expert_disagreement_recorded_without_touching_ai_result` (`tests/test_cases.py:110`)
-- Missing component: `CaseReview` has no explicit field linking the outcome back to a specific supporting photo/analysis beyond the case's own single `ai_analysis_id` — no "evidence" concept distinct from that FK
-- Required implementation: Add an optional `evidence_photo_ids: list[uuid]`/`evidence_analysis_ids: list[uuid]` field to `CaseReview`, letting a professional cite specific photos/analyses (useful once a case can accumulate multiple photos over time)
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `CaseReview.evidence_photo_ids`/`evidence_analysis_ids` (JSONB, migration `dddfe33f4f32`); `case_service.submit_review` validates each id against `case_repository.get_active_grant` (the professional's own `PhotoAccessGrant` for THIS case) before persisting - never trusted merely because an id parses
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `tests/test_cases.py::test_review_can_cite_evidence_the_professional_has_a_grant_for`, `::test_review_rejects_evidence_photo_the_professional_has_no_grant_for`
+- Verification method: automated test, confirmed passing
 - Dependencies: Loosely related to D36-07 (Recommendation version) — both touch how multiple reviews/evidence accumulate per case
 - Backend work: `backend/app/models/case_review.py`, `backend/app/schemas/case.py`, `case_service.submit_review`
 - Database/migration work: new join table `case_review_evidence(review_id, crop_photo_id)` or a JSONB array column on `case_reviews`
@@ -287,10 +338,12 @@ bucket above.)
 - Domain: 38 (Follow-up)
 - Scenario ID: D38-01
 - Exact scenario name: Follow-up date
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `schemas/treatment.py:30-33` (`FollowUpCreateRequest.observation_date`, past/present-only)
-- Missing component: No forward-looking "please check back on day N" scheduled follow-up date — only a record of an observation that already happened
-- Required implementation: Add an optional `next_check_due_date` to `TreatmentRecord` (set at treatment-creation time, e.g. "check back in 7 days"), read by a new reminder sweep (see D38-02)
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `TreatmentRecord.next_check_due_date` (migration `dddfe33f4f32`), farmer-settable at creation (`TreatmentCreateRequest.next_check_due_date`), returned in `TreatmentResponse`
+- Missing component: the reminder SWEEP that would read this field (D38-02) remains separately Missing, not attempted - this row's own scope is only the field itself
+- Required implementation: none for this row; D38-02 tracked independently
+- Tests added and passing: `tests/test_treatments.py::test_treatment_round_trips_next_check_due_date`, `::test_treatment_without_next_check_due_date_defaults_to_none`
+- Verification method: automated test, confirmed passing
 - Dependencies: D38-02 (Reminder) directly depends on this field existing first
 - Backend work: `backend/app/models/treatment_record.py` (new column), `backend/app/schemas/treatment.py`, `treatment_service.py` (accept the field at creation)
 - Database/migration work: new nullable `treatment_records.next_check_due_date` column
@@ -306,10 +359,10 @@ bucket above.)
 - Domain: 39 (Reinspection)
 - Scenario ID: D39-03
 - Exact scenario name: Disease status
-- Current implementation status: Partial
+- Current implementation status: **FUTURE (later continuation session, was Partial)** - hard-blocked on real model capability (a severity/extent score), same root cause as D27-04/D29-04's ENVIRONMENT_DEPENDENT/FUTURE status. Not a service-layer gap to fix.
 - Existing relevant files/classes/functions: `treatment_service.py:10-16` (coarse HEALTHY/DISEASE_DETECTED comparison only, disclosed limitation)
-- Missing component: No real severity/disease-progression measurement — `AIAnalysis` has no severity score, so "no_significant_change" only means "same category," never a measured delta
-- Required implementation: Would require the AI model layer itself to output a severity/extent score (e.g. percent-of-leaf-area-affected) — a model capability, not just a service-layer change; blocked on having any real trained model at all (see D27-04)
+- Missing component: n/a - deliberately deferred pending real model capability
+- Required implementation: none until the AI model layer can output a real severity score
 - Dependencies: Hard-blocked on real model capability (`NotConfiguredModelProvider` has none); same root cause as D27-04/D29-04's ENVIRONMENT_DEPENDENT/FUTURE status
 - Backend work: `backend/app/services/ai/model_provider.py` (new severity field in the prediction contract), `treatment_service.py` (use it instead of the coarse comparison)
 - Database/migration work: new `ai_analyses.severity_score` column
@@ -325,10 +378,12 @@ bucket above.)
 - Domain: 40 (Voice)
 - Scenario ID: D40-05
 - Exact scenario name: "What should I do today?"
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `backend/app/services/assistant/intent_router.py:46-63` (no keyword match, falls to `GENERAL_AGRICULTURE`); `assistant_extras_service.get_daily_summary()` (`GET /assistant/daily-summary`) — the dedicated Daily Briefing feature that DOES answer this correctly
-- Missing component: The chatbot's own intent router has no pattern for this exact phrasing — asking it in the chat produces an honest "I don't have enough information" non-answer instead of routing to the Daily Briefing content
-- Required implementation: Add a new `Intent.DAILY_BRIEFING` keyword pattern (e.g. "what should i do today", "what's next", "today's plan") to `intent_router.py`, whose handler calls the existing `assistant_extras_service.get_daily_summary()` and returns its composed text through the normal chat response path — no new data source, just routing the existing chat interface to the existing Daily Briefing logic
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `Intent.DAILY_BRIEFING` + keyword pattern in `intent_router.py`; `assistant_service._call_tool_for_intent` calls the existing `assistant_extras_service.get_daily_summary()` unchanged; `response_generator.py` joins its already-localized `lines` verbatim - no new data source, no new message key
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `tests/test_assistant_chat.py::test_what_should_i_do_today_routes_to_daily_briefing`
+- Verification method: automated test, confirmed passing
 - Dependencies: Purely additive to D40-06 (Voice help)'s existing intent-router pattern; no other scenario depends on it
 - Backend work: `backend/app/services/assistant/intent_router.py` (new intent + keyword list), `backend/app/services/assistant/` handler wiring to call `get_daily_summary`
 - Database/migration work: none — reuses all existing reads
@@ -344,10 +399,12 @@ bucket above.)
 - Domain: 41 (Local Language)
 - Scenario ID: D41-02
 - Exact scenario name: Auto-detect location option
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `location_language_resolver.dart:37-55,74-87` (GPS→state→language map, audio-only); `language_selection_screen.dart` (manual-pick-only, no detect option)
-- Missing component: Auto-detect-from-location exists only for spoken AUDIO language (`VoiceLanguageMode.location`), not for the UI display language
-- Required implementation: Add a "detect from my location" option to `LanguageSelectionScreen`, reusing the existing `LocationLanguageResolver.resolveLanguageCode()` to set `LocaleController`'s display language, not just the voice mode
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: `language_selection_screen.dart` now a `StatefulWidget` with a "Detect from my location" option, reusing `LocationLanguageResolver.resolveLanguageCode()` unchanged (same resolver VoiceLanguageController already uses - no second location→language mapping); on failure shows a translated error and keeps the manual list visible, never blocks selection
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `test/features/auth/language_selection_screen_test.dart` (2 new widget tests: detects and pops with the resolved code; failure shows an error and keeps the screen open)
+- Verification method: automated widget test, confirmed passing (`flutter test`: 269 passed, was 267)
 - Dependencies: Directly reuses D41-08's existing resolver; no scenario depends on this
 - Backend work: none — this is a client-only change (same as `LocaleController.setLocale()` today)
 - Database/migration work: none
@@ -363,10 +420,11 @@ bucket above.)
 - Domain: 41 (Local Language)
 - Scenario ID: D41-03
 - Exact scenario name: Local-language UI
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: all 7 `.arb` files (651/651 keys matched, 0 missing/extra); `PROJECT_STATUS.md:963` (dealer-marketplace screens use hardcoded English)
-- Missing component: `.arb`-covered surface (voice/weather/task/assistant/daily-briefing/auth) is fully and correctly localized, but the dealer-marketplace screens and "most farm/crop screens" are not — the app is not uniformly localized
-- Required implementation: Extract hardcoded strings from the dealer-marketplace screens (and any other non-`.arb`-covered screen) into new `.arb` keys across all 7 language files, following the exact pattern already used elsewhere
+- Current implementation status: **VERIFIED (later continuation session, was Partial - citation was stale)**
+- Existing relevant files/classes/functions: all 7 `.arb` files (676/676 keys matched, 0 missing/extra, re-verified this session); direct grep of `mobile/lib/features/dealer_market/*.dart` for hardcoded English literals (`Text\('[A-Za-z][A-Za-z ]{3,}'` and title/label/hint patterns) found ZERO matches, and every screen file in that directory already calls `AppLocalizations.of(context)!` extensively (9/2/4/2 call sites across the four screen files) - this row's `PROJECT_STATUS.md:963` citation predates whatever pass already fully localized this module and was never updated
+- Missing component: none found
+- Required implementation: none
+- Verification method: automated `.arb` key-set diff (676/676, 0 missing/extra) + direct grep confirmation, this session
 - Dependencies: None — purely additive localization work, screen by screen
 - Backend work: none
 - Database/migration work: none
@@ -382,10 +440,10 @@ bucket above.)
 - Domain: 41 (Local Language)
 - Scenario ID: D41-04
 - Exact scenario name: Local-language advisory
-- Current implementation status: Partial
+- Current implementation status: **ENVIRONMENT_DEPENDENT (later continuation session, was Partial)** - the mechanism (`get_message()`'s fallback chain, DRAFT-flagging convention) is fully built and ready to accept translations incrementally with zero code change. What remains is a genuine human process (native-speaker review) this session cannot perform, and the project's own docs explicitly refuse to bypass with unreviewed AI-generated translation for this specific class of safety-adjacent advisory text - unlike D11-02's pure UI-chrome dialog strings (translated directly, no safety content), fabricating unreviewed translations here would violate this project's own established discipline, not satisfy it.
 - Existing relevant files/classes/functions: `farmer_messages.py:89-160` (8 `daily_summary_*` keys translated for all 6 non-English languages, DRAFT/unreviewed); `farmer_messages.py:164-179` (`get_message()` fallback chain); `docs/LOCALIZATION.md:46-50` (deliberate scope trade-off)
-- Missing component: Of 53 template keys, 45 (`ai_result_*`, `rain_alert`, `CASE_*`, most `assistant_*`) have only an `en` entry — a non-English farmer receives these in English by explicit, disclosed design pending native-speaker review
-- Required implementation: Commission/perform native-speaker review and translation for the remaining 45 keys across all 6 non-English languages, following the same DRAFT-flagged process already used for the 8 `daily_summary_*` keys
+- Missing component: n/a - blocked on a human native-speaker review process, not code
+- Required implementation: none from this session; commission native-speaker review for the remaining 45 keys when available
 - Dependencies: None technical — this is a content/translation-review task, not an engineering blocker; the fallback mechanism (`get_message()`) already supports adding translations incrementally with zero code change
 - Backend work: `backend/app/services/farmer_messages.py` — add translated strings only (no logic change)
 - Database/migration work: none
@@ -401,10 +459,10 @@ bucket above.)
 - Domain: 42 (Education)
 - Scenario ID: D42-03
 - Exact scenario name: Disease education
-- Current implementation status: Partial
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - NOT built, requires both a Missing domain foundation and genuinely licensed content this project cannot fabricate)
 - Existing relevant files/classes/functions: `farmer_messages.py:52` (`ai_result_disease_detected`/`assistant_disease_detected`, 1-sentence classification label); `GET /ai/analysis/{id}/localized`; `KnowledgeEntry` model (`knowledge_entry.py`, empty)
 - Missing component: The disease-result text is a bare classification label ("not a confirmed diagnosis"), not educational content — no cause/lifecycle/treatment explanation, no image/audio/video, no `KnowledgeEntry` backing
-- Required implementation: Populate `KnowledgeEntry` with vetted, licensed content per disease class, then link `AIAnalysisResponse.predicted_class` to a `GET /knowledge/{disease_class}` lookup surfaced alongside the result
+- Required implementation: Populate `KnowledgeEntry` with vetted, licensed content per disease class, then link `AIAnalysisResponse.predicted_class` to a `GET /knowledge/{disease_class}` lookup surfaced alongside the result - not attempted, since fabricating agronomic/disease content this project has no license/authority for would violate its own no-fabrication rule
 - Dependencies: Directly blocked on D42-01/06/10 (Crop education / Text format / Expert-verified content) — the entire `KnowledgeEntry` domain must be seeded first; this scenario cannot be built in isolation
 - Backend work: `backend/app/services/knowledge_service.py` (new), `backend/app/api/v1/knowledge.py` (new), `ai_analysis_service.py` (link result to entry)
 - Database/migration work: populate existing empty `knowledge_entries` table (schema already exists — no new migration, just data + a serving endpoint)
@@ -420,10 +478,12 @@ bucket above.)
 - Domain: 44 (Nearby Services)
 - Scenario ID: D44-02
 - Exact scenario name: Dealer
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `features/dealer_market/*` (226/226 Flutter tests passing per `PROJECT_STATUS.md:967`); `DealerBusinessProfile`, `DealerProduct`; `PROJECT_STATUS.md:959` ("no location filter")
-- Missing component: Dealer discovery is a real, well-tested catalog/price-comparison marketplace, but has no geo/"nearby" proximity search — unlike Expert matching (D44-01), which is district/state-scoped
-- Required implementation: Add `state_id`/`district_id` (or lat/lon) to `DealerBusinessProfile` and a location filter to `GET /products`/dealer search, mirroring the state/district matching already used in `nearby_professional_service.py`/`_build_match_criteria` for experts
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new optional `district`/`state` query params on `GET /products/{id}/compare`, filtered via `price_query_service._dealer_matches_location` against each dealer's existing `ProfessionalProfile.service_area` JSONB dict - mirrors `nearby_professional_service`'s exact matching logic (district match first, else state match), no second implementation. Deliberately reuses `service_area` (already populated for dealers, see `verified_dealer` test fixture) rather than adding new `state_id`/`district_id` FK columns - no schema change needed for the same real capability.
+- Missing component: none for the price-comparison endpoint this row's own text names; no location filter was added to the master-catalog `GET /products` (that endpoint has no dealer/location concept at all - see D22-02/D25-01's own disclosed scoping)
+- Required implementation: none
+- Tests added and passing: `tests/test_price_comparison.py::test_compare_offers_filters_by_dealer_district`, `::test_compare_offers_filters_by_dealer_state_when_no_district_match`, `::test_compare_offers_without_location_params_is_unfiltered`
+- Verification method: automated test, confirmed passing
 - Dependencies: None blocking; purely additive to the existing dealer marketplace
 - Backend work: `backend/app/models/dealer_business_profile.py` (location columns), `backend/app/services/dealer_product_service.py` (location filter), `backend/app/api/v1/products.py`
 - Database/migration work: new `dealer_business_profiles.state_id`/`district_id` columns + migration, reusing the existing `location_repository`/state-district tables
@@ -439,11 +499,11 @@ bucket above.)
 - Domain: 44 (Nearby Services)
 - Scenario ID: D44-03
 - Exact scenario name: Seed supplier
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `get_seed_products` assistant tool / `FIND_SEED` intent; `GET /products` (client-side category filter only, `PROJECT_STATUS.md:959`)
-- Missing component: Seeds are purchasable via the generic dealer marketplace, but there is no distinct "find a nearby seed supplier" service type — same underlying gap as D44-02 (no geo search), plus category filtering is client-side only
-- Required implementation: Move category filtering server-side (`GET /products?category=seed`) and apply the same location-filter work as D44-02
-- Dependencies: Directly depends on D44-02's location-filter work being built first (shared mechanism)
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: server-side category filtering now exists (`GET /products?category=seed`, closed by D22-02's earlier fix this session); location filtering via D44-02's `district`/`state` params on `/compare`
+- Missing component: none
+- Required implementation: none
+- Dependencies: D44-02 (VERIFIED this session)
 - Backend work: `backend/app/api/v1/products.py` (server-side category + location filter params)
 - Database/migration work: none beyond D44-02's location columns
 - Mobile work: `mobile/lib/features/dealer_market/` — move category filter to a server query param
@@ -458,11 +518,11 @@ bucket above.)
 - Domain: 44 (Nearby Services)
 - Scenario ID: D44-04
 - Exact scenario name: Fertilizer supplier
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (later continuation session, was Partial)** - same fix as D44-03, category-agnostic (the `district`/`state` filter and server-side `category` param both work for any `ProductCategory`, fertilizer included)
 - Existing relevant files/classes/functions: same dealer-catalog mechanism as D44-02/03; `LedgerEntryCategory.FERTILIZER` (`models/ledger_entry.py:59`, cost-tracking only, unrelated)
-- Missing component: identical gap to D44-03, for the fertilizer category — no distinct "nearby fertilizer supplier" search
-- Required implementation: same fix as D44-03, applied to the fertilizer category
-- Dependencies: same as D44-03 — shares the D44-02 location-filter mechanism
+- Missing component: none
+- Required implementation: none
+- Dependencies: D44-02 (VERIFIED this session)
 - Backend work: same as D44-03
 - Database/migration work: none beyond D44-02
 - Mobile work: same as D44-03
@@ -477,7 +537,7 @@ bucket above.)
 - Domain: 46 (Labour)
 - Scenario ID: D46-03
 - Exact scenario name: Cost
-- Current implementation status: Partial
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - NOT built, requires the entire Missing Labour domain, D46-01/02/04/05/06, first)
 - Existing relevant files/classes/functions: `LedgerEntryCategory.LABOR` (`models/ledger_entry.py:61`); `POST /cost-estimates` (real, existing, reused by `CropCostEstimatesScreen`)
 - Missing component: A farmer can record labour *spend* after the fact via the generic cost-ledger feature, but there is no labour marketplace rate/quote feature — this only satisfies "cost" in the bookkeeping sense, not "what does hiring labour cost nearby"
 - Required implementation: Blocked on the entire Labour domain (D46-01/02/04/05/06, all MISSING) being built first — a rate/quote feature presupposes a labour-marketplace listing to quote against
@@ -840,8 +900,7 @@ bucket above.)
 - Domain: 37 (Recommendation → Task)
 - Scenario ID: D37-03
 - Exact scenario name: Priority
-- Current implementation status: **PARTIAL (this session, was Missing — the independent
-  half is now VERIFIED, the recommendation-derived half remains blocked)**
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - the recommendation-derived half remains blocked on Missing D37-01; NOT built, since building it would mean building D37-01 itself)
 - Fix applied this session: `Task.priority` (`TaskPriority` enum: low/medium/high, default
   medium), migration `a1b2c3d4e5f6`, farmer-settable at creation
   (`TaskCreateRequest.priority`), returned in `TaskResponse`. Tested:

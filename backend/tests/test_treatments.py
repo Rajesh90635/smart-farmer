@@ -26,6 +26,26 @@ def _create_treatment(client, tokens, crop_cycle_id, application_date="2026-01-0
     )
 
 
+def test_treatment_round_trips_next_check_due_date(client, farmer_with_crop_cycle):
+    """D38-01 (docs/audit/FINAL_CANONICAL_group_B.md): a forward-looking
+    "check back on this date" field, distinct from FollowUp's own
+    observation_date (which records a check that already happened)."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"application_date": "2026-01-01", "next_check_due_date": "2026-01-08"},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 201
+    assert response.json()["next_check_due_date"] == "2026-01-08"
+
+
+def test_treatment_without_next_check_due_date_defaults_to_none(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    response = _create_treatment(client, tokens, crop_cycle_id)
+    assert response.json()["next_check_due_date"] is None
+
+
 def test_treatment_creation_snapshots_the_most_recent_existing_analysis(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     analysis = _analyze(client, tokens, crop_cycle_id, [TopKPrediction("Early Blight", 0.92)]).json()

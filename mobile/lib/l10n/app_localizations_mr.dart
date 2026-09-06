@@ -107,6 +107,14 @@ class AppLocalizationsMr extends AppLocalizations {
   String get chooseYourLanguageTitle => 'तुमची भाषा निवडा';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'माझ्या स्थानावरून ओळखा';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'तुमच्या स्थानासाठी भाषा ओळखता आली नाही. कृपया खालीलपैकी निवडा.';
+
+  @override
   String get profileScreenTitle => 'प्रोफाइल';
 
   @override
@@ -1625,6 +1633,23 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'पीक शोधा';
+
+  @override
+  String get addCropResowPromptTitle => 'अपयशानंतर पुन्हा पेरणी?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'या प्लॉटवरील तुमचे मागील $cropName पीक चक्र रद्द करण्यात आले होते. तुम्ही त्या अपयशानंतर पुन्हा पेरणी करत आहात का?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'नाही';
+
+  @override
+  String get addCropResowPromptYes => 'होय, जोडा';
+
+  @override
+  String get addCropResowLinkedLabel => 'मागील चक्राची पुनर्पेरणी म्हणून जोडले';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

@@ -64,6 +64,11 @@ def _call_tool_for_intent(db: Session, farmer_id: str, intent: Intent, weather_p
         return tools.get_expert_case_status(db, farmer_id), ["get_expert_case_status"]
     if intent in (Intent.FIND_SEED, Intent.PRICE_CHECK):
         return tools.get_seed_products(db), ["get_seed_products"]
+    if intent == Intent.DAILY_BRIEFING:
+        from app.services import assistant_extras_service
+
+        summary = assistant_extras_service.get_daily_summary(db, farmer_id, weather_provider, settings)
+        return {"available": True, "source": "Daily Briefing", "lines": summary.lines}, ["get_daily_summary"]
     return {}, []
 
 

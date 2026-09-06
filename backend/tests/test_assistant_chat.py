@@ -25,6 +25,19 @@ def test_crop_status_with_no_crop_says_no_data_not_a_guess(client, registered_fa
     assert "don't have" in body["assistant_message"]["content"].lower()
 
 
+def test_what_should_i_do_today_routes_to_daily_briefing(client, registered_farmer):
+    """D40-05 (docs/audit/FINAL_CANONICAL_group_B.md): this exact phrasing
+    previously fell through to the generic GENERAL_AGRICULTURE fallback
+    instead of routing to the existing Daily Briefing content."""
+    _, tokens = registered_farmer
+    response = _chat(client, tokens, "What should I do today?")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assistant_message"]["intent"] == "daily_briefing"
+    assert "get_daily_summary" in body["assistant_message"]["tools_called"]
+    assert body["assistant_message"]["content"]
+
+
 def test_yield_style_question_with_no_data_says_i_dont_know(client, registered_farmer):
     _, tokens = registered_farmer
     response = _chat(client, tokens, "When should I harvest?")

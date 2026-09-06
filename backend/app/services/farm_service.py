@@ -63,6 +63,27 @@ def get_my_farm(db: Session, farmer_id: str, farm_id: uuid.UUID) -> FarmResponse
     return FarmResponse.from_orm_farm(farm)
 
 
+def get_farm_history(db: Session, farmer_id: str, farm_id: uuid.UUID) -> list[dict]:
+    """D2-06 (docs/audit/FINAL_CANONICAL_group_A.md): reuses the existing
+    generic AuditLog table (entity='farm') rather than a new FarmHistory
+    table - mirrors cases.py's get_case_audit's exact pattern."""
+    from sqlalchemy import select
+
+    from app.models.audit_log import AuditLog
+
+    farm = farm_repository.get_owned(db, farm_id, uuid.UUID(farmer_id))
+    if farm is None:
+        raise AppError(error_codes.NOT_FOUND, "Farm not found.", 404)
+
+    rows = db.execute(
+        select(AuditLog).where(AuditLog.entity == "farm", AuditLog.entity_id == str(farm_id)).order_by(AuditLog.occurred_at_utc.asc())
+    ).scalars().all()
+    return [
+        {"action": r.action, "actor_role": r.actor_role, "occurred_at": r.occurred_at_utc.isoformat()}
+        for r in rows
+    ]
+
+
 def update_my_farm(db: Session, farmer_id: str, farm_id: uuid.UUID, payload: FarmUpdateRequest) -> FarmResponse:
     farm = farm_repository.get_owned(db, farm_id, uuid.UUID(farmer_id))
     if farm is None:

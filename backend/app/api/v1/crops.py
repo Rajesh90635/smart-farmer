@@ -20,6 +20,7 @@ from app.schemas.crop import (
     CropCycleUpdateRequest,
     CropFailureReportRequest,
     CropMasterResponse,
+    CropYearSummaryResponse,
 )
 from app.schemas.crop_grade_option import CropGradeOptionCreateRequest, CropGradeOptionResponse
 from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse
@@ -144,3 +145,14 @@ def get_crop_cycle_stage_history(
     """Read-only. Phase 2 infrastructure - no plan-generation here, just
     the actual recorded transition history for this crop cycle."""
     return crop_cycle_service.get_stage_history_for_crop_cycle(db, current_user.user_id, crop_cycle_id)
+
+
+@router.get("/crops/{crop_cycle_id}/year-summary", response_model=CropYearSummaryResponse)
+def get_crop_year_summary(
+    crop_cycle_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> CropYearSummaryResponse:
+    """D13-06 (docs/audit/FINAL_CANONICAL_group_A.md): calendar-year rollup
+    of this cycle's own harvests/stage changes - read-only aggregation."""
+    return crop_cycle_service.get_crop_year_summary(db, current_user.user_id, crop_cycle_id)

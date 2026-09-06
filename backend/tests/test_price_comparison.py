@@ -53,6 +53,51 @@ def test_compare_and_scam_shield_never_return_scientific_notation_price_fields(c
     assert scam["reference_price_per_unit"] == "100.00"
 
 
+def test_compare_offers_filters_by_dealer_district(client, registered_farmer, verified_dealer, approved_product):
+    """D44-02/03/04 (docs/audit/FINAL_CANONICAL_group_B.md): the
+    verified_dealer fixture's own service_area is Kerala/Thrissur - a
+    matching district returns the offer, a non-matching one excludes it."""
+    _, farmer_tokens = registered_farmer
+    tokens, _ = verified_dealer
+    client.post("/api/v1/dealer-products", json=valid_dealer_listing_payload(approved_product["id"], price="200.00"), headers=auth_headers(tokens))
+
+    matching = client.get(
+        f"/api/v1/products/{approved_product['id']}/compare?district=Thrissur", headers=auth_headers(farmer_tokens)
+    )
+    assert matching.status_code == 200
+    assert len(matching.json()["offers"]) == 1
+
+    non_matching = client.get(
+        f"/api/v1/products/{approved_product['id']}/compare?district=Ernakulam", headers=auth_headers(farmer_tokens)
+    )
+    assert non_matching.json()["offers"] == []
+
+
+def test_compare_offers_filters_by_dealer_state_when_no_district_match(client, registered_farmer, verified_dealer, approved_product):
+    _, farmer_tokens = registered_farmer
+    tokens, _ = verified_dealer
+    client.post("/api/v1/dealer-products", json=valid_dealer_listing_payload(approved_product["id"], price="200.00"), headers=auth_headers(tokens))
+
+    response = client.get(
+        f"/api/v1/products/{approved_product['id']}/compare?state=Kerala", headers=auth_headers(farmer_tokens)
+    )
+    assert len(response.json()["offers"]) == 1
+
+    response_other_state = client.get(
+        f"/api/v1/products/{approved_product['id']}/compare?state=Karnataka", headers=auth_headers(farmer_tokens)
+    )
+    assert response_other_state.json()["offers"] == []
+
+
+def test_compare_offers_without_location_params_is_unfiltered(client, registered_farmer, verified_dealer, approved_product):
+    _, farmer_tokens = registered_farmer
+    tokens, _ = verified_dealer
+    client.post("/api/v1/dealer-products", json=valid_dealer_listing_payload(approved_product["id"], price="200.00"), headers=auth_headers(tokens))
+
+    response = client.get(f"/api/v1/products/{approved_product['id']}/compare", headers=auth_headers(farmer_tokens))
+    assert len(response.json()["offers"]) == 1
+
+
 def test_compare_offers_excludes_unverified_dealer(client, registered_farmer, verified_dealer, approved_product):
     _, farmer_tokens = registered_farmer
     tokens, _ = verified_dealer

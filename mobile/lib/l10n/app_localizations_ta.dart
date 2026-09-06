@@ -111,6 +111,14 @@ class AppLocalizationsTa extends AppLocalizations {
   String get chooseYourLanguageTitle => 'உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'எனது இருப்பிடத்திலிருந்து கண்டறியவும்';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'உங்கள் இருப்பிடத்திற்கான மொழியைக் கண்டறிய முடியவில்லை. கீழே இருந்து தேர்ந்தெடுக்கவும்.';
+
+  @override
   String get profileScreenTitle => 'சுயவிவரம்';
 
   @override
@@ -1652,6 +1660,25 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'பயிரை தேடு';
+
+  @override
+  String get addCropResowPromptTitle =>
+      'தோல்விக்குப் பிறகு மீண்டும் விதைக்கவா?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'இந்த நிலத்தில் உங்கள் முந்தைய $cropName பயிர் சுழற்சி ரத்து செய்யப்பட்டது. அந்த தோல்விக்குப் பிறகு நீங்கள் மீண்டும் விதைக்கிறீர்களா?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'இல்லை';
+
+  @override
+  String get addCropResowPromptYes => 'ஆம், இணைக்கவும்';
+
+  @override
+  String get addCropResowLinkedLabel =>
+      'முந்தைய சுழற்சியின் மறுவிதைப்பாக இணைக்கப்பட்டது';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

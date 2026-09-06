@@ -58,6 +58,11 @@ class CropHealthCase(Base):
     ai_analysis_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("ai_analyses.id", ondelete="SET NULL"), nullable=True)
 
     requested_professional_role: Mapped[str] = mapped_column(String(50), nullable=False)
+    # D27-02 (docs/audit/FINAL_CANONICAL_group_B.md): optional free-text
+    # symptom description at case-creation time - farmer-entered, never
+    # inferred/fabricated. Surfaced read-only to the assigned professional
+    # alongside the existing photo/reason context.
+    symptom_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     reason: Mapped[CaseReason] = mapped_column(
         SAEnum(CaseReason, name="case_reason", native_enum=True, values_callable=lambda e: [x.value for x in e]), nullable=False

@@ -107,6 +107,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseYourLanguageTitle => 'Choose your language';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'Detect from my location';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'Could not detect a language for your location. Please choose one below.';
+
+  @override
   String get profileScreenTitle => 'Profile';
 
   @override
@@ -1622,6 +1630,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'Search crop';
+
+  @override
+  String get addCropResowPromptTitle => 'Re-sow after failure?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'Your previous $cropName crop cycle on this plot was cancelled. Are you re-sowing after that failure?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'No';
+
+  @override
+  String get addCropResowPromptYes => 'Yes, link it';
+
+  @override
+  String get addCropResowLinkedLabel =>
+      'Linked as re-sow of the previous cycle';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

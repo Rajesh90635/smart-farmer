@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -43,6 +43,13 @@ class CaseReview(Base):
     outcome: Mapped[str] = mapped_column(String(50), nullable=False)
     alternative_disease_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # D36-03 (docs/audit/FINAL_CANONICAL_group_B.md): lets a professional
+    # cite the SPECIFIC photos/analyses their outcome is based on, beyond
+    # the case's own single ai_analysis_id - each id is validated against
+    # the professional's own PhotoAccessGrant at submission time (see
+    # case_service.submit_review), never trusted merely because it parses.
+    evidence_photo_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    evidence_analysis_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 

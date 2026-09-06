@@ -74,6 +74,24 @@ def list_all_for_farmer(db: Session, farmer_id: uuid.UUID) -> list[CropCycle]:
     )
 
 
+def get_most_recent_for_plot(db: Session, plot_id: uuid.UUID, *, exclude_id: uuid.UUID) -> CropCycle | None:
+    """D3-12 (docs/audit/FINAL_CANONICAL_group_A.md): the plot's own most
+    recent prior cycle (any status - not just cancelled/harvested), for
+    read-only farmer context when creating a new one. `exclude_id` is the
+    cycle just created, so it never shows up as its own "previous crop"."""
+    return (
+        db.execute(
+            select(CropCycle)
+            .where(CropCycle.plot_id == plot_id, CropCycle.id != exclude_id)
+            .options(joinedload(CropCycle.crop))
+            .order_by(CropCycle.sowing_date.desc())
+            .limit(1)
+        )
+        .unique()
+        .scalar_one_or_none()
+    )
+
+
 def count_active_for_plot(db: Session, plot_id: uuid.UUID) -> int:
     return db.execute(
         select(func.count())

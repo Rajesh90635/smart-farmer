@@ -17,7 +17,24 @@ from app.schemas.price import DealerOfferComparisonResponse, PriceComparisonResp
 from app.services.price_comparison import compare_price, price_per_unit
 
 
-def compare_offers_for_product(db: Session, product_id: uuid.UUID, settings: Settings) -> PriceComparisonResponse:
+def _dealer_matches_location(dealer, *, district: str | None, state: str | None) -> bool:
+    """D44-02/03/04 (docs/audit/FINAL_CANONICAL_group_B.md): mirrors
+    nearby_professional_service's own service_area matching exactly - no
+    second location-matching implementation. No criteria given -> every
+    dealer matches (today's unfiltered behavior, unchanged)."""
+    if district is None and state is None:
+        return True
+    area = dealer.service_area or {}
+    if district is not None and area.get("district") == district:
+        return True
+    if state is not None and area.get("state") == state:
+        return True
+    return False
+
+
+def compare_offers_for_product(
+    db: Session, product_id: uuid.UUID, settings: Settings, *, district: str | None = None, state: str | None = None
+) -> PriceComparisonResponse:
     product = product_repository.get_approved_product(db, product_id)
     if product is None:
         raise AppError(error_codes.NOT_FOUND, "Product not found.", 404)
@@ -30,6 +47,8 @@ def compare_offers_for_product(db: Session, product_id: uuid.UUID, settings: Set
         dealer = professional_repository.get_by_id(db, listing.dealer_id)
         if dealer is None or dealer.verification_status != VerificationStatus.VERIFIED:
             continue  # never surface an unverified dealer's offer
+        if not _dealer_matches_location(dealer, district=district, state=state):
+            continue
         result = compare_price(
             dealer_price=listing.price, pack_size_value=product.pack_size_value, pack_size_unit=product.pack_size_unit,
             reference_price=ref.price if ref else None, reference_pack_size_value=product.pack_size_value if ref else None, settings=settings,

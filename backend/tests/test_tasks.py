@@ -2,7 +2,15 @@ from datetime import date, timedelta
 
 from tests.conftest import auth_headers, override_weather_provider
 from tests.fake_weather_provider import FakeWeatherProvider
+from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
 from app.services.weather.weather_provider import WeatherReading
+
+
+def _create_plot(client, tokens):
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    return client.post(
+        f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)
+    ).json()
 
 
 def test_create_task(client, farmer_with_crop_cycle):
@@ -17,6 +25,67 @@ def test_create_task(client, farmer_with_crop_cycle):
     assert body["status"] == "pending"
     assert body["display_status"] == "pending"
     assert body["title"] == "Check drip lines"
+
+
+def test_task_calendar_groups_tasks_by_date_across_crop_cycles(client, registered_farmer, sample_crop_id):
+    """D8-01 (docs/audit/FINAL_CANONICAL_group_A.md): a farmer-level,
+    date-grouped view spanning two different plots/crop cycles."""
+    _, tokens = registered_farmer
+    headers = auth_headers(tokens)
+    plot_a = _create_plot(client, tokens)
+    plot_b = _create_plot(client, tokens)
+    cycle_a = client.post(
+        f"/api/v1/plots/{plot_a['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers
+    ).json()
+    cycle_b = client.post(
+        f"/api/v1/plots/{plot_b['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers
+    ).json()
+
+    client.post(
+        f"/api/v1/crop-cycles/{cycle_a['id']}/tasks",
+        json={"title": "Weed plot A", "due_date": "2026-07-01"},
+        headers=headers,
+    )
+    client.post(
+        f"/api/v1/crop-cycles/{cycle_b['id']}/tasks",
+        json={"title": "Weed plot B", "due_date": "2026-07-01"},
+        headers=headers,
+    )
+    client.post(
+        f"/api/v1/crop-cycles/{cycle_a['id']}/tasks",
+        json={"title": "Fertilize plot A", "due_date": "2026-07-15"},
+        headers=headers,
+    )
+    client.post(
+        f"/api/v1/crop-cycles/{cycle_a['id']}/tasks", json={"title": "No due date yet"}, headers=headers
+    )
+
+    response = client.get("/api/v1/farmers/me/tasks/calendar", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 4
+    dated_groups = [g for g in body["groups"] if g["due_date"] is not None]
+    assert [g["due_date"] for g in dated_groups] == ["2026-07-01", "2026-07-15"]
+    assert len(dated_groups[0]["tasks"]) == 2
+    assert {t["crop_cycle_id"] for t in dated_groups[0]["tasks"]} == {cycle_a["id"], cycle_b["id"]}
+    undated_group = next(g for g in body["groups"] if g["due_date"] is None)
+    assert len(undated_group["tasks"]) == 1
+
+
+def test_task_calendar_never_leaks_another_farmers_tasks(client, registered_farmer, another_farmer, sample_crop_id):
+    _, tokens_a = registered_farmer
+    plot = _create_plot(client, tokens_a)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens_a)
+    ).json()
+    client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks", json={"title": "Farmer A's task"}, headers=auth_headers(tokens_a)
+    )
+
+    _, tokens_b = another_farmer
+    response = client.get("/api/v1/farmers/me/tasks/calendar", headers=auth_headers(tokens_b))
+    assert response.status_code == 200
+    assert response.json() == {"groups": [], "total": 0}
 
 
 def test_cannot_create_task_under_another_farmers_crop_cycle(client, farmer_with_crop_cycle, another_farmer):

@@ -110,6 +110,14 @@ class AppLocalizationsMl extends AppLocalizations {
   String get chooseYourLanguageTitle => 'നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'എന്റെ സ്ഥലത്ത് നിന്ന് കണ്ടെത്തുക';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'നിങ്ങളുടെ സ്ഥലത്തിന് ഭാഷ കണ്ടെത്താനായില്ല. ദയവായി താഴെ നിന്ന് തിരഞ്ഞെടുക്കുക.';
+
+  @override
   String get profileScreenTitle => 'പ്രൊഫൈൽ';
 
   @override
@@ -1647,6 +1655,24 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'വിള തിരയുക';
+
+  @override
+  String get addCropResowPromptTitle => 'പരാജയത്തിന് ശേഷം വീണ്ടും വിതയ്ക്കണോ?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'ഈ പ്ലോട്ടിലെ നിങ്ങളുടെ മുൻ $cropName വിള സൈക്കിൾ റദ്ദാക്കിയിരുന്നു. ആ പരാജയത്തിന് ശേഷം നിങ്ങൾ വീണ്ടും വിതയ്ക്കുകയാണോ?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'ഇല്ല';
+
+  @override
+  String get addCropResowPromptYes => 'അതെ, ലിങ്ക് ചെയ്യുക';
+
+  @override
+  String get addCropResowLinkedLabel =>
+      'മുൻ സൈക്കിളിന്റെ പുനർവിതയായി ലിങ്ക് ചെയ്തു';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

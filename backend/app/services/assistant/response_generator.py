@@ -117,6 +117,14 @@ def generate_response(intent: Intent, tool_result: dict, language_code: str) -> 
             return get_message("assistant_no_data_harvest", language_code), None, sources
         return get_message("assistant_harvest_status", language_code, status=tool_result.get("status", "unknown")), ConfidenceLevel.HIGH_CONFIDENCE, sources
 
+    if intent == Intent.DAILY_BRIEFING:
+        # Lines are already rendered in the farmer's language by
+        # get_daily_summary itself - joined verbatim, never reworded here.
+        lines = tool_result.get("lines") or []
+        if not lines:
+            return get_message("assistant_no_data_crop", language_code), None, sources
+        return " ".join(lines), ConfidenceLevel.HIGH_CONFIDENCE, sources
+
     if intent == Intent.HELP:
         return get_message("assistant_help", language_code), ConfidenceLevel.HIGH_CONFIDENCE, []
 

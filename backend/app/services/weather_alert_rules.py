@@ -111,6 +111,44 @@ def evaluate_extreme_weather_alerts(current: WeatherReading | None, settings: Se
     return candidates
 
 
+def evaluate_severe_weather_co_occurrence(
+    current: "WeatherReading | None", forecast_today: "WeatherReading | None", settings: Settings
+) -> "AlertCandidate | None":
+    """D14-09 (docs/audit/FINAL_CANONICAL_group_A.md): escalates when 2 or
+    more of the already-independently-validated conditions below (high
+    wind, extreme heat/cold, heavy rain) co-occur - reuses each
+    condition's own existing threshold exactly, invents no new
+    meteorological classification (storm/cyclone/hail/flood, D15-05..08,
+    remain correctly unclassified pending a real external data source)."""
+    active_conditions = 0
+
+    if current is not None and current.wind_speed_kmh is not None and current.wind_speed_kmh >= settings.weather_high_wind_kmh_threshold:
+        active_conditions += 1
+
+    if current is not None and current.temperature_c is not None and (
+        current.temperature_c >= settings.weather_extreme_heat_celsius_threshold
+        or current.temperature_c <= settings.weather_extreme_cold_celsius_threshold
+    ):
+        active_conditions += 1
+
+    if forecast_today is not None and forecast_today.rain_probability_percent is not None and (
+        forecast_today.rain_probability_percent >= settings.weather_heavy_rain_probability_threshold
+        or (forecast_today.rainfall_mm is not None and forecast_today.rainfall_mm >= settings.weather_heavy_rain_mm_threshold)
+    ):
+        active_conditions += 1
+
+    if active_conditions < 2:
+        return None
+
+    return AlertCandidate(
+        category=NotificationCategory.SEVERE_WEATHER_ALERT,
+        priority=NotificationPriority.CRITICAL,
+        message_key="severe_weather_co_occurrence_alert",
+        message_params={},
+        dedup_suffix="severe_weather_co_occurrence",
+    )
+
+
 def _magnus_dew_point_c(temperature_c: float, humidity_percent: float) -> float | None:
     """Magnus-formula dew-point approximation - standard meteorological
     formula, not an invented one. Undefined/meaningless below 0% humidity."""

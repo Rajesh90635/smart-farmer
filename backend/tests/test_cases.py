@@ -1,4 +1,5 @@
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, override_model_provider
+from tests.fake_model_provider import FakeModelProvider
 from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
 from tests.professional_factories import valid_case_payload
 
@@ -43,6 +44,36 @@ def test_invalid_professional_role_requested_is_rejected(client, registered_farm
         "/api/v1/cases", json=valid_case_payload(crop_cycle_id, requested_professional_role="dealer"), headers=auth_headers(farmer_tokens)
     )
     assert response.status_code == 422
+
+
+def test_case_round_trips_symptom_description(client, registered_farmer, sample_crop_id):
+    """D27-02 (docs/audit/FINAL_CANONICAL_group_B.md): optional free-text
+    symptom description, persisted and readable back by the farmer. (No
+    professional-facing case-detail endpoint exists yet - see D34-04 -
+    so "surfaced to the professional" is verified only up to the point
+    the data model/API make it available, not through a UI that doesn't
+    exist.)"""
+    _, farmer_tokens = registered_farmer
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+
+    response = client.post(
+        "/api/v1/cases",
+        json=valid_case_payload(crop_cycle_id, symptom_description="Yellow spots on lower leaves, spreading upward"),
+        headers=auth_headers(farmer_tokens),
+    )
+    assert response.status_code == 201
+    case_id = response.json()["id"]
+    assert response.json()["symptom_description"] == "Yellow spots on lower leaves, spreading upward"
+
+    detail = client.get(f"/api/v1/cases/{case_id}", headers=auth_headers(farmer_tokens)).json()
+    assert detail["symptom_description"] == "Yellow spots on lower leaves, spreading upward"
+
+
+def test_case_without_symptom_description_defaults_to_none(client, registered_farmer, sample_crop_id):
+    _, farmer_tokens = registered_farmer
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    response = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens))
+    assert response.json()["symptom_description"] is None
 
 
 def test_professional_accepts_case(client, registered_farmer, sample_crop_id, verified_expert):
@@ -124,6 +155,52 @@ def test_expert_disagreement_recorded_without_touching_ai_result(client, registe
     case_after = client.get(f"/api/v1/cases/{case['id']}", headers=auth_headers(farmer_tokens)).json()
     assert case_after["final_verified_class"] == "Late Blight"
     assert case_after["final_verification_source"] == "expert"
+
+
+def test_review_can_cite_evidence_the_professional_has_a_grant_for(
+    client, registered_farmer, sample_crop_id, verified_expert, uploaded_photo
+):
+    """D36-03 (docs/audit/FINAL_CANONICAL_group_B.md): a professional can
+    cite the specific photo/analysis their outcome is based on."""
+    expert_tokens, _ = verified_expert
+    farmer_tokens_2, crop_cycle_id, photo_id, _ = uploaded_photo
+    fake = FakeModelProvider()
+    with override_model_provider(fake):
+        analysis = client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(farmer_tokens_2)).json()
+
+    case = client.post(
+        "/api/v1/cases", json=valid_case_payload(crop_cycle_id, crop_photo_id=photo_id), headers=auth_headers(farmer_tokens_2)
+    ).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+
+    response = client.post(
+        f"/api/v1/cases/{case['id']}/review",
+        json={"outcome": "confirmed", "evidence_photo_ids": [photo_id], "evidence_analysis_ids": [analysis["id"]]},
+        headers=auth_headers(expert_tokens),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["evidence_photo_ids"] == [photo_id]
+    assert body["evidence_analysis_ids"] == [analysis["id"]]
+
+
+def test_review_rejects_evidence_photo_the_professional_has_no_grant_for(
+    client, registered_farmer, sample_crop_id, verified_expert, uploaded_photo
+):
+    expert_tokens, _ = verified_expert
+    farmer_tokens_2, crop_cycle_id, photo_id, _ = uploaded_photo
+    # No crop_photo_id on the case -> no PhotoAccessGrant is ever created.
+    case = client.post(
+        "/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens_2)
+    ).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+
+    response = client.post(
+        f"/api/v1/cases/{case['id']}/review",
+        json={"outcome": "confirmed", "evidence_photo_ids": [photo_id]},
+        headers=auth_headers(expert_tokens),
+    )
+    assert response.status_code == 403
 
 
 def test_invalid_outcome_for_expert_role_is_rejected(client, registered_farmer, sample_crop_id, verified_expert):

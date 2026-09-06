@@ -30,7 +30,55 @@ class _AddCropScreenState extends State<AddCropScreen> {
   CropVariety? _selectedVariety;
   bool _loadingVarieties = false;
 
+  // D11-02 (docs/audit/FINAL_CANONICAL_group_A.md): a re-sow-aware
+  // confirmation distinct from generic crop creation - only ever set by
+  // the farmer's explicit "Yes" on the prompt below, never inferred.
+  CropCycle? _recentCancelledCycle;
+  String? _confirmedResowFromCycleId;
+  bool _resowPromptShown = false;
+
   static const _seasons = ['kharif', 'rabi', 'zaid', 'perennial', 'other'];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForRecentCancelledCycle();
+  }
+
+  Future<void> _checkForRecentCancelledCycle() async {
+    try {
+      final cycles = await context.read<CropRepository>().listCropCyclesForPlot(widget.plotId);
+      final cancelled = cycles.where((c) => c.cultivationStatus == 'cancelled').firstOrNull;
+      if (!mounted || cancelled == null) return;
+      setState(() => _recentCancelledCycle = cancelled);
+      _maybeShowResowPrompt();
+    } catch (_) {
+      // Non-blocking context, same as variety loading below - a farmer
+      // must always be able to add a crop even if this check fails.
+    }
+  }
+
+  Future<void> _maybeShowResowPrompt() async {
+    if (_resowPromptShown || _recentCancelledCycle == null) return;
+    _resowPromptShown = true;
+    final l10n = AppLocalizations.of(context)!;
+    final cycle = _recentCancelledCycle!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.addCropResowPromptTitle),
+        content: Text(l10n.addCropResowPromptMessage(cycle.crop.name)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.addCropResowPromptNo)),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: Text(l10n.addCropResowPromptYes)),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed == true) {
+      setState(() => _confirmedResowFromCycleId = cycle.id);
+    }
+  }
 
   Future<void> _pickCrop() async {
     final selected = await showModalBottomSheet<CropMaster>(
@@ -95,6 +143,7 @@ class _AddCropScreenState extends State<AddCropScreen> {
             sowingDate: _isoDate(_sowingDate!),
             expectedHarvestDate: _expectedHarvestDate != null ? _isoDate(_expectedHarvestDate!) : null,
             varietyId: _selectedVariety?.id,
+            resownFromCropCycleId: _confirmedResowFromCycleId,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.addCropAddedMessage)));
@@ -161,6 +210,14 @@ class _AddCropScreenState extends State<AddCropScreen> {
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedVariety = v),
+              ),
+            ],
+            if (_confirmedResowFromCycleId != null) ...[
+              const SizedBox(height: 16),
+              ListTile(
+                tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                leading: const Icon(Icons.link),
+                title: Text(l10n.addCropResowLinkedLabel),
               ),
             ],
             const SizedBox(height: 32),

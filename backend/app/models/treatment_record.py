@@ -43,5 +43,11 @@ class TreatmentRecord(Base):
 
     application_date: Mapped[date] = mapped_column(Date, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # D38-01 (docs/audit/FINAL_CANONICAL_group_B.md): forward-looking
+    # "check back on this date" - farmer-settable at creation, distinct
+    # from FollowUp.observation_date (which records a check that already
+    # happened). No reminder sweep reads this yet (D38-02 remains
+    # Missing/FUTURE) - this row's own scope is only the field itself.
+    next_check_due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

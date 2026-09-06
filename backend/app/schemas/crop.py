@@ -2,10 +2,11 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from app.models.crop_cycle import CultivationStatus, FailureReason, Season
 from app.models.plot import SoilCategory
+from app.schemas.crop_stage_history import CropCycleStageHistoryResponse
 
 
 class CropMasterResponse(BaseModel):
@@ -117,11 +118,58 @@ class CropCycleResponse(BaseModel):
     lessons_learned: str | None = None
     # Only ever set by close_my_crop_cycle() - None before closure, frozen after.
     closure_snapshot: CropCycleClosureSnapshotResponse | None = None
+    # D3-12 (docs/audit/FINAL_CANONICAL_group_A.md): the plot's own most
+    # recent prior cycle (any status), surfaced only on create_crop_cycle's
+    # response for farmer context - read-only, never a stored column.
+    previous_crop_cycle_id: uuid.UUID | None = None
+    previous_crop_name: str | None = None
+    # D5-04: sowing_date + the selected variety's typical_duration_days,
+    # only when the farmer didn't supply their own expected_harvest_date -
+    # a suggestion for the mobile form to pre-fill, never auto-written into
+    # expected_harvest_date itself (the farmer's own value, or lack of one,
+    # is never silently overridden).
+    suggested_expected_harvest_date: date | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_closed(self) -> bool:
+        """D7-11 (docs/audit/FINAL_CANONICAL_group_A.md): HARVESTED and
+        CANCELLED are both terminal (ALLOWED_TRANSITIONS[...] == set()) -
+        this is a read-only convenience over that existing fact, not a new
+        state."""
+        return self.cultivation_status in (CultivationStatus.HARVESTED, CultivationStatus.CANCELLED)
 
 
 class CropCycleListResponse(BaseModel):
     items: list[CropCycleResponse]
     total: int
+
+
+class CropYearHarvestSummary(BaseModel):
+    id: uuid.UUID
+    actual_harvest_date: date | None
+    expected_harvest_date: date | None
+    actual_quantity: Decimal | None
+    unit: str
+
+    model_config = {"from_attributes": True}
+
+
+class CropYearSummaryItem(BaseModel):
+    """D13-06 (docs/audit/FINAL_CANONICAL_group_A.md): one calendar year's
+    harvests/stage-changes for one long-running crop cycle - pure
+    aggregation over existing timestamped rows, no new source data.
+    Scoped to calendar-year grouping only; a true season-boundary rollup
+    depends on D13-02 (Missing - historical season tracking), disclosed,
+    not built here."""
+    year: int
+    harvests: list[CropYearHarvestSummary]
+    stage_changes: list[CropCycleStageHistoryResponse]
+
+
+class CropYearSummaryResponse(BaseModel):
+    crop_cycle_id: uuid.UUID
+    years: list[CropYearSummaryItem]

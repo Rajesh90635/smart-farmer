@@ -61,3 +61,17 @@ class TaskResponse(BaseModel):
 class TaskListResponse(BaseModel):
     items: list[TaskResponse]
     total: int
+
+
+class TaskCalendarGroupResponse(BaseModel):
+    """D8-01 (docs/audit/FINAL_CANONICAL_group_A.md): one day's pending
+    tasks, aggregated across every one of the farmer's crop cycles/farms -
+    due_date is None only for the genuinely-undated group, never a
+    fabricated bucket."""
+    due_date: date | None
+    tasks: list[TaskResponse]
+
+
+class TaskCalendarResponse(BaseModel):
+    groups: list[TaskCalendarGroupResponse]
+    total: int

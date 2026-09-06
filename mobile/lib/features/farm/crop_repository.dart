@@ -46,6 +46,7 @@ class CropRepository {
     String? expectedHarvestDate,
     String? seedVariety,
     String? varietyId,
+    String? resownFromCropCycleId,
   }) async {
     final response = await _apiClient.post('/plots/$plotId/crops', body: {
       'crop_id': cropId,
@@ -54,6 +55,10 @@ class CropRepository {
       if (expectedHarvestDate != null) 'expected_harvest_date': expectedHarvestDate,
       if (seedVariety != null) 'seed_variety': seedVariety,
       if (varietyId != null) 'variety_id': varietyId,
+      // D11-02 (docs/audit/FINAL_CANONICAL_group_A.md): only ever sent
+      // when the farmer explicitly confirms the re-sow prompt below -
+      // never inferred or auto-set.
+      if (resownFromCropCycleId != null) 'resown_from_crop_cycle_id': resownFromCropCycleId,
     });
     return CropCycle.fromJson(response);
   }

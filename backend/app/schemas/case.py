@@ -15,6 +15,9 @@ class CaseCreateRequest(BaseModel):
     requested_professional_role: str
     reason: CaseReason
     consent_shared_items: list[str] = Field(min_length=1)
+    # D27-02 (docs/audit/FINAL_CANONICAL_group_B.md): optional, farmer-
+    # entered free-text symptom description - never inferred.
+    symptom_description: str | None = Field(default=None, max_length=500)
 
 
 class CaseResponse(BaseModel):
@@ -24,6 +27,7 @@ class CaseResponse(BaseModel):
     ai_analysis_id: uuid.UUID | None
     requested_professional_role: str
     reason: CaseReason
+    symptom_description: str | None = None
     status: CaseStatus
     priority: CasePriority
     final_verified_class: str | None
@@ -50,6 +54,12 @@ class CaseReviewCreateRequest(BaseModel):
     outcome: str
     alternative_disease_name: str | None = None
     notes: str | None = Field(default=None, max_length=1000)
+    # D36-03 (docs/audit/FINAL_CANONICAL_group_B.md): optional - each id is
+    # validated against the professional's own PhotoAccessGrant for this
+    # case at submission time (case_service.submit_review), not trusted
+    # merely because it parses as a UUID.
+    evidence_photo_ids: list[uuid.UUID] = Field(default_factory=list)
+    evidence_analysis_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
 class CaseReviewResponse(BaseModel):
@@ -59,6 +69,8 @@ class CaseReviewResponse(BaseModel):
     outcome: str
     alternative_disease_name: str | None
     notes: str | None
+    evidence_photo_ids: list[uuid.UUID] | None = None
+    evidence_analysis_ids: list[uuid.UUID] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

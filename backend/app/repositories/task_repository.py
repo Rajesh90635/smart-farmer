@@ -44,6 +44,21 @@ def list_for_farmer(db: Session, farmer_id: uuid.UUID, *, limit: int, offset: in
     return list(items), total
 
 
+def list_pending_for_farmer(db: Session, farmer_id: uuid.UUID) -> list[Task]:
+    """D8-01 (docs/audit/FINAL_CANONICAL_group_A.md): every PENDING task
+    across every one of the farmer's crop cycles/farms, unpaginated - the
+    farmer-level calendar aggregation this row asked for, reusing the same
+    Task.farmer_id scoping every other farmer-wide task query already
+    uses (never a new relationship)."""
+    return list(
+        db.execute(
+            select(Task)
+            .where(Task.farmer_id == farmer_id, Task.status == TaskStatus.PENDING)
+            .order_by(Task.due_date.asc().nulls_last(), Task.created_at.asc())
+        ).scalars().all()
+    )
+
+
 def list_overdue_for_farmer(db: Session, farmer_id: uuid.UUID, *, today: date) -> list[Task]:
     """Reused by the Daily Briefing integration - overdue is computed
     here (pending + due_date in the past), never a stored flag."""

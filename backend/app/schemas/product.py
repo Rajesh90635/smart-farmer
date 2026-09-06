@@ -17,6 +17,9 @@ class ProductCreateRequest(BaseModel):
     description: str | None = None
     usage_information: str | None = None
     regulatory_info: str | None = None
+    # D21-03 (docs/audit/FINAL_CANONICAL_group_A.md): optional, only
+    # meaningful for category=SEED - links to an existing CropVariety row.
+    variety_id: uuid.UUID | None = None
 
 
 class ProductResponse(BaseModel):
@@ -29,6 +32,11 @@ class ProductResponse(BaseModel):
     pack_size_unit: str
     description: str | None
     usage_information: str | None
+    variety_id: uuid.UUID | None = None
+    # D26-02 (docs/audit/FINAL_CANONICAL_group_A.md): non-None once an
+    # admin has uploaded one via POST /admin/products/{id}/image - the
+    # client fetches the actual bytes from GET /products/{id}/image.
+    image_storage_key: str | None = None
     status: ProductStatus
     is_test_product: bool
     created_at: datetime

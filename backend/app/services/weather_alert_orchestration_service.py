@@ -36,6 +36,7 @@ from app.services.weather_alert_rules import (
     evaluate_extreme_weather_alerts,
     evaluate_frost_risk,
     evaluate_rain_alerts,
+    evaluate_severe_weather_co_occurrence,
     evaluate_spray_condition_warning,
 )
 
@@ -87,6 +88,15 @@ def generate_alerts_for_farm_weather(
     if frost_candidate:
         n = notification_service.create_alert_notification(
             db, farmer_id, frost_candidate, dedup_scope=dedup_scope, language_code=language_code,
+            related_entity_type="farm", related_entity_id=str(farm.id), rule_version=RULE_VERSION,
+        )
+        if n:
+            created.append(n)
+
+    severe_candidate = evaluate_severe_weather_co_occurrence(current_reading, forecast_today, settings)
+    if severe_candidate:
+        n = notification_service.create_alert_notification(
+            db, farmer_id, severe_candidate, dedup_scope=dedup_scope, language_code=language_code,
             related_entity_type="farm", related_entity_id=str(farm.id), rule_version=RULE_VERSION,
         )
         if n:

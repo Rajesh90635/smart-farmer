@@ -31,6 +31,7 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "flood_risk_alert": {"en": "Heavy cumulative rainfall ({total_rainfall_mm} mm recently) may cause flooding in your area."},
     "waterlogging_risk_alert": {"en": "Recent rainfall ({total_rainfall_mm} mm) may cause waterlogging in your fields."},
     "drought_risk_alert": {"en": "No significant rain for {dry_days} days - drought risk in your area. Consider checking irrigation availability."},
+    "severe_weather_co_occurrence_alert": {"en": "Multiple severe weather conditions are expected in your area at once. Take extra precautions with your crops and equipment."},
     # D16-11 (docs/FINAL_GAP_REPORT.md): the inspection prompt reuses the
     # existing crop-photo capture flow (never a new "damage log" entity,
     # never an auto-created task) - just an added sentence pointing the

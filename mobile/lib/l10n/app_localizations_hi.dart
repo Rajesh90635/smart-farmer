@@ -107,6 +107,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get chooseYourLanguageTitle => 'अपनी भाषा चुनें';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'मेरे स्थान से पहचानें';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'आपके स्थान के लिए भाषा पहचानी नहीं जा सकी। कृपया नीचे से चुनें।';
+
+  @override
   String get profileScreenTitle => 'प्रोफ़ाइल';
 
   @override
@@ -1623,6 +1631,24 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'फसल खोजें';
+
+  @override
+  String get addCropResowPromptTitle => 'विफलता के बाद पुनः बुवाई?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'इस प्लॉट पर आपकी पिछली $cropName फसल चक्र रद्द कर दी गई थी। क्या आप उस विफलता के बाद पुनः बुवाई कर रहे हैं?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'नहीं';
+
+  @override
+  String get addCropResowPromptYes => 'हाँ, जोड़ें';
+
+  @override
+  String get addCropResowLinkedLabel =>
+      'पिछले चक्र की पुनः बुवाई के रूप में जोड़ा गया';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

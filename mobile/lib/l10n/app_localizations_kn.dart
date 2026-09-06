@@ -108,6 +108,14 @@ class AppLocalizationsKn extends AppLocalizations {
   String get chooseYourLanguageTitle => 'ನಿಮ್ಮ ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'ನನ್ನ ಸ್ಥಳದಿಂದ ಪತ್ತೆ ಮಾಡಿ';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಭಾಷೆಯನ್ನು ಪತ್ತೆ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಕೆಳಗಿನಿಂದ ಆಯ್ಕೆಮಾಡಿ.';
+
+  @override
   String get profileScreenTitle => 'ಪ್ರೊಫೈಲ್';
 
   @override
@@ -1633,6 +1641,24 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'ಬೆಳೆ ಹುಡುಕಿ';
+
+  @override
+  String get addCropResowPromptTitle => 'ವಿಫಲತೆಯ ನಂತರ ಮರುಬಿತ್ತನೆ?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'ಈ ಪ್ಲಾಟ್‌ನಲ್ಲಿ ನಿಮ್ಮ ಹಿಂದಿನ $cropName ಬೆಳೆ ಚಕ್ರವನ್ನು ರದ್ದುಗೊಳಿಸಲಾಗಿತ್ತು. ನೀವು ಆ ವೈಫಲ್ಯದ ನಂತರ ಮರುಬಿತ್ತನೆ ಮಾಡುತ್ತಿದ್ದೀರಾ?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'ಇಲ್ಲ';
+
+  @override
+  String get addCropResowPromptYes => 'ಹೌದು, ಲಿಂಕ್ ಮಾಡಿ';
+
+  @override
+  String get addCropResowLinkedLabel =>
+      'ಹಿಂದಿನ ಚಕ್ರದ ಮರುಬಿತ್ತನೆಯಾಗಿ ಲಿಂಕ್ ಮಾಡಲಾಗಿದೆ';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

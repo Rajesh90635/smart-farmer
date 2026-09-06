@@ -300,6 +300,18 @@ abstract class AppLocalizations {
   /// **'Choose your language'**
   String get chooseYourLanguageTitle;
 
+  /// No description provided for @languageSelectionDetectFromLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect from my location'**
+  String get languageSelectionDetectFromLocationLabel;
+
+  /// No description provided for @languageSelectionDetectFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not detect a language for your location. Please choose one below.'**
+  String get languageSelectionDetectFailedMessage;
+
   /// No description provided for @profileScreenTitle.
   ///
   /// In en, this message translates to:
@@ -3198,6 +3210,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search crop'**
   String get addCropSearchCropLabel;
+
+  /// No description provided for @addCropResowPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-sow after failure?'**
+  String get addCropResowPromptTitle;
+
+  /// No description provided for @addCropResowPromptMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your previous {cropName} crop cycle on this plot was cancelled. Are you re-sowing after that failure?'**
+  String addCropResowPromptMessage(String cropName);
+
+  /// No description provided for @addCropResowPromptNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get addCropResowPromptNo;
+
+  /// No description provided for @addCropResowPromptYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, link it'**
+  String get addCropResowPromptYes;
+
+  /// No description provided for @addCropResowLinkedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked as re-sow of the previous cycle'**
+  String get addCropResowLinkedLabel;
 
   /// No description provided for @addEditFarmLocationPermissionRequiredMessage.
   ///

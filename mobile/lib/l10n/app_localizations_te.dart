@@ -110,6 +110,14 @@ class AppLocalizationsTe extends AppLocalizations {
   String get chooseYourLanguageTitle => 'మీ భాషను ఎంచుకోండి';
 
   @override
+  String get languageSelectionDetectFromLocationLabel =>
+      'నా స్థానం నుండి గుర్తించండి';
+
+  @override
+  String get languageSelectionDetectFailedMessage =>
+      'మీ స్థానానికి భాషను గుర్తించలేకపోయాము. దయచేసి దిగువ నుండి ఎంచుకోండి.';
+
+  @override
   String get profileScreenTitle => 'ప్రొఫైల్';
 
   @override
@@ -1632,6 +1640,24 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get addCropSearchCropLabel => 'పంట వెతకండి';
+
+  @override
+  String get addCropResowPromptTitle => 'వైఫల్యం తర్వాత మళ్లీ విత్తనం వేయాలా?';
+
+  @override
+  String addCropResowPromptMessage(String cropName) {
+    return 'ఈ ప్లాట్‌లో మీ మునుపటి $cropName పంట చక్రం రద్దు చేయబడింది. ఆ వైఫల్యం తర్వాత మీరు మళ్లీ విత్తనం వేస్తున్నారా?';
+  }
+
+  @override
+  String get addCropResowPromptNo => 'లేదు';
+
+  @override
+  String get addCropResowPromptYes => 'అవును, లింక్ చేయండి';
+
+  @override
+  String get addCropResowLinkedLabel =>
+      'మునుపటి చక్రం యొక్క పునః విత్తనంగా లింక్ చేయబడింది';
 
   @override
   String get addEditFarmLocationPermissionRequiredMessage =>

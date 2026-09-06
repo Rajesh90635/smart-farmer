@@ -16,6 +16,7 @@ from app.core import error_codes
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.core.roles import Role
+from app.models.ai_analysis import AIAnalysis
 from app.models.case_assignment import AssignmentStatus, CaseAssignment
 from app.models.case_consent import CaseConsent
 from app.models.case_review import EXPERT_OUTCOMES, FIELD_AGENT_OUTCOMES, CaseReview, ReviewerRole
@@ -69,6 +70,7 @@ def create_case(db: Session, farmer_id: str, payload: CaseCreateRequest, setting
         ai_analysis_id=payload.ai_analysis_id,
         requested_professional_role=payload.requested_professional_role,
         reason=payload.reason,
+        symptom_description=payload.symptom_description,
         status=CaseStatus.WAITING_FOR_ASSIGNMENT,
         priority=_PRIORITY_BY_REASON.get(payload.reason.value, CasePriority.MEDIUM),
     )
@@ -267,6 +269,21 @@ def submit_review(db: Session, user_id: str, case_id: uuid.UUID, payload: CaseRe
     if payload.outcome not in allowed_outcomes:
         raise AppError(error_codes.VALIDATION_ERROR, f"'{payload.outcome}' is not a valid outcome for role {reviewer_role.value}.", 422)
 
+    # D36-03 (docs/audit/FINAL_CANONICAL_group_B.md): every cited photo (and
+    # every photo an cited analysis belongs to) must have an active grant
+    # for THIS professional - never trusted merely because the id parses.
+    for photo_id in payload.evidence_photo_ids:
+        grant = case_repository.get_active_grant(db, photo_id, professional.id)
+        if grant is None or not grant.is_active(datetime.now(timezone.utc)) or grant.case_id != case.id:
+            raise AppError(error_codes.VALIDATION_ERROR, "You do not have access to one or more cited evidence photos.", 403)
+    for analysis_id in payload.evidence_analysis_ids:
+        analysis = db.get(AIAnalysis, analysis_id)
+        if analysis is None:
+            raise AppError(error_codes.NOT_FOUND, "One or more cited evidence analyses were not found.", 404)
+        grant = case_repository.get_active_grant(db, analysis.crop_photo_id, professional.id)
+        if grant is None or not grant.is_active(datetime.now(timezone.utc)) or grant.case_id != case.id:
+            raise AppError(error_codes.VALIDATION_ERROR, "You do not have access to one or more cited evidence analyses.", 403)
+
     review = CaseReview(
         case_id=case.id,
         assignment_id=assignment.id,
@@ -275,6 +292,8 @@ def submit_review(db: Session, user_id: str, case_id: uuid.UUID, payload: CaseRe
         outcome=payload.outcome,
         alternative_disease_name=payload.alternative_disease_name,
         notes=payload.notes,
+        evidence_photo_ids=[str(pid) for pid in payload.evidence_photo_ids] or None,
+        evidence_analysis_ids=[str(aid) for aid in payload.evidence_analysis_ids] or None,
     )
     case_repository.create_review(db, review)
 

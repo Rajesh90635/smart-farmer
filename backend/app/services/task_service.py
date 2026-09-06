@@ -24,7 +24,16 @@ from app.models.crop_cycle import CultivationStatus
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.task import Task, TaskStatus, TaskType
 from app.repositories import crop_cycle_repository, farm_repository, plot_repository, task_repository, user_repository
-from app.schemas.task import TaskActionRequest, TaskCreateRequest, TaskListResponse, TaskResponse, TaskUpdateRequest, WeatherAdvisoryResponse
+from app.schemas.task import (
+    TaskActionRequest,
+    TaskCalendarGroupResponse,
+    TaskCalendarResponse,
+    TaskCreateRequest,
+    TaskListResponse,
+    TaskResponse,
+    TaskUpdateRequest,
+    WeatherAdvisoryResponse,
+)
 from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.weather.weather_provider import WeatherProvider
@@ -151,6 +160,26 @@ def list_tasks_for_crop_cycle(
         items.append(response)
 
     return TaskListResponse(items=items, total=len(items))
+
+
+def get_my_task_calendar(db: Session, farmer_id: str) -> TaskCalendarResponse:
+    """D8-01 (docs/audit/FINAL_CANONICAL_group_A.md): a farmer-level,
+    date-grouped view across every active crop cycle/farm - a pure read
+    aggregation over the same PENDING tasks list_for_crop_cycle's
+    per-cycle callers already see, grouped rather than flattened."""
+    today = datetime.now(timezone.utc).date()
+    tasks = task_repository.list_pending_for_farmer(db, uuid.UUID(farmer_id))
+
+    groups: dict[date | None, list[TaskResponse]] = {}
+    for task in tasks:
+        groups.setdefault(task.due_date, []).append(_to_response(db, task, today=today))
+
+    ordered_dates = sorted((d for d in groups if d is not None))
+    response_groups = [TaskCalendarGroupResponse(due_date=d, tasks=groups[d]) for d in ordered_dates]
+    if None in groups:
+        response_groups.append(TaskCalendarGroupResponse(due_date=None, tasks=groups[None]))
+
+    return TaskCalendarResponse(groups=response_groups, total=len(tasks))
 
 
 def _get_current_spray_advisory(

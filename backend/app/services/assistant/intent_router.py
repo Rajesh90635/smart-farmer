@@ -41,9 +41,15 @@ class Intent(str, enum.Enum):
     # enum/router rather than building a competing one.
     TREATMENT_STATUS = "treatment_status"
     FINANCIAL_STATUS = "financial_status"
+    # D40-05 (docs/audit/FINAL_CANONICAL_group_B.md): routes to the
+    # existing, already-built Daily Briefing (assistant_extras_service.
+    # get_daily_summary) - no new data source, just a chat entry point
+    # into content that already exists behind GET /assistant/daily-summary.
+    DAILY_BRIEFING = "daily_briefing"
 
 
 _INTENT_KEYWORDS: list[tuple[Intent, list[str]]] = [
+    (Intent.DAILY_BRIEFING, ["what should i do today", "what's next", "whats next", "today's plan", "todays plan", "what do i need to do today"]),
     (Intent.TREATMENT_STATUS, ["treatment", "did it help", "did the spray work", "follow-up", "follow up"]),
     (Intent.FINANCIAL_STATUS, ["how much have i spent", "spent on this crop", "my expenses", "over budget", "under budget", "cost so far", "am i making a profit", "expected profit"]),
     (Intent.DISEASE_STATUS, ["disease", "spots", "spot on", "sick crop", "what is wrong", "what's wrong", "infection", "fungal", "pest on my"]),

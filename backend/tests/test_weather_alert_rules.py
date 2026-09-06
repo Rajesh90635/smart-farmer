@@ -8,6 +8,7 @@ from app.services.weather_alert_rules import (
     evaluate_extreme_weather_alerts,
     evaluate_frost_risk,
     evaluate_rain_alerts,
+    evaluate_severe_weather_co_occurrence,
     evaluate_spray_condition_warning,
 )
 
@@ -69,6 +70,35 @@ class TestExtremeWeatherAlerts:
 
     def test_no_data_produces_no_alert(self):
         assert evaluate_extreme_weather_alerts(None, settings) == []
+
+
+class TestSevereWeatherCoOccurrence:
+    """D14-09 (docs/audit/FINAL_CANONICAL_group_A.md): escalates only when
+    2+ of the existing independent conditions co-occur - never a single
+    condition alone (that's already its own, lower-priority alert)."""
+
+    def test_single_condition_alone_does_not_escalate(self):
+        current = WeatherReading(wind_speed_kmh=settings.weather_high_wind_kmh_threshold)
+        assert evaluate_severe_weather_co_occurrence(current, None, settings) is None
+
+    def test_wind_and_heat_co_occurring_escalates(self):
+        current = WeatherReading(
+            wind_speed_kmh=settings.weather_high_wind_kmh_threshold,
+            temperature_c=settings.weather_extreme_heat_celsius_threshold,
+        )
+        candidate = evaluate_severe_weather_co_occurrence(current, None, settings)
+        assert candidate is not None
+        assert candidate.category.value == "severe_weather_alert"
+        assert candidate.priority.value == "critical"
+
+    def test_wind_and_heavy_rain_co_occurring_escalates(self):
+        current = WeatherReading(wind_speed_kmh=settings.weather_high_wind_kmh_threshold)
+        forecast = WeatherReading(rain_probability_percent=settings.weather_heavy_rain_probability_threshold)
+        candidate = evaluate_severe_weather_co_occurrence(current, forecast, settings)
+        assert candidate is not None
+
+    def test_no_data_produces_no_alert(self):
+        assert evaluate_severe_weather_co_occurrence(None, None, settings) is None
 
 
 class TestCropWeatherAlert:

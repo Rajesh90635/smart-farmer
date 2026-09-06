@@ -46,6 +46,15 @@ def get_farm(
     return farm_service.get_my_farm(db, current_user.user_id, farm_id)
 
 
+@router.get("/{farm_id}/history")
+def get_farm_history(
+    farm_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    return farm_service.get_farm_history(db, current_user.user_id, farm_id)
+
+
 @router.put("/{farm_id}", response_model=FarmResponse)
 def update_farm(
     farm_id: uuid.UUID,

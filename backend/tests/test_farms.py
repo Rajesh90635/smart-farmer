@@ -80,6 +80,30 @@ def test_update_own_farm(client, registered_farmer):
     assert response.json()["farm_name"] == "Renamed Farm"
 
 
+def test_farm_history_shows_created_and_updated_events_in_order(client, registered_farmer):
+    """D2-06 (docs/audit/FINAL_CANONICAL_group_A.md): the existing internal
+    audit trail, now exposed farmer-facing, mirroring the case-audit
+    endpoint's own pattern."""
+    _, tokens = registered_farmer
+    created = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    client.put(f"/api/v1/farms/{created['id']}", json={"farm_name": "Renamed Farm"}, headers=auth_headers(tokens))
+    client.delete(f"/api/v1/farms/{created['id']}", headers=auth_headers(tokens))
+
+    response = client.get(f"/api/v1/farms/{created['id']}/history", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    actions = [event["action"] for event in response.json()]
+    assert actions == ["FARM_CREATED", "FARM_UPDATED", "FARM_DEACTIVATED"]
+
+
+def test_farm_history_is_not_visible_to_another_farmer(client, registered_farmer, another_farmer):
+    _, tokens_a = registered_farmer
+    created = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens_a)).json()
+
+    _, tokens_b = another_farmer
+    response = client.get(f"/api/v1/farms/{created['id']}/history", headers=auth_headers(tokens_b))
+    assert response.status_code == 404
+
+
 def test_update_area_recomputes_canonical_value_consistently(client, registered_farmer):
     _, tokens = registered_farmer
     created = client.post(

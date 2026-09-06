@@ -57,6 +57,7 @@ def create_treatment(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payl
         before_analysis_id=before_analysis.id if before_analysis else None,
         application_date=payload.application_date,
         notes=payload.notes,
+        next_check_due_date=payload.next_check_due_date,
     )
     treatment_repository.create_treatment(db, treatment)
     db.commit()
@@ -175,6 +176,7 @@ def _to_treatment_response(treatment: TreatmentRecord, before_analysis) -> Treat
         before_result_status=before_analysis.result_status.value if before_analysis else None,
         application_date=treatment.application_date,
         notes=treatment.notes,
+        next_check_due_date=treatment.next_check_due_date,
         created_at=treatment.created_at,
     )
 

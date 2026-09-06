@@ -1,3 +1,10 @@
+import uuid
+from datetime import date, datetime, timezone
+
+from app.models.crop_variety import CropVariety
+from app.models.crop_cycle_stage_history import CropCycleStageHistory
+from app.models.crop_cycle import CultivationStatus
+from app.models.harvest_record import HarvestRecord
 from tests.conftest import auth_headers
 from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
 
@@ -30,6 +37,156 @@ def test_create_crop_cycle(client, registered_farmer, sample_crop_id):
     body = response.json()
     assert body["cultivation_status"] == "planned"
     assert body["crop"]["name"] == "Tomato"
+
+
+def test_crop_cycle_response_includes_is_closed_flag(client, registered_farmer, sample_crop_id):
+    """D7-11 (docs/audit/FINAL_CANONICAL_group_A.md): a read-only
+    convenience over the existing HARVESTED/CANCELLED terminal facts."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    assert cycle["is_closed"] is False
+
+    cancelled = client.put(
+        f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": "cancelled"}, headers=auth_headers(tokens)
+    ).json()
+    assert cancelled["is_closed"] is True
+
+
+def test_create_crop_cycle_response_includes_previous_crop_cycle(client, registered_farmer, sample_crop_id):
+    """D3-12 (docs/audit/FINAL_CANONICAL_group_A.md): the plot's own most
+    recent prior cycle, for read-only farmer context - never returned for
+    a plot's very first cycle."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    headers = auth_headers(tokens)
+
+    first = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers
+    ).json()
+    assert first["previous_crop_cycle_id"] is None
+
+    client.put(f"/api/v1/crops/{first['id']}", json={"cultivation_status": "cancelled"}, headers=headers)
+
+    second = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, sowing_date="2026-10-01", expected_harvest_date="2027-01-01"),
+        headers=headers,
+    ).json()
+    assert second["previous_crop_cycle_id"] == first["id"]
+    assert second["previous_crop_name"] == "Tomato"
+
+
+def test_create_crop_cycle_suggests_expected_harvest_date_from_variety_duration(client, registered_farmer, sample_crop_id, db_session):
+    """D5-04 (docs/audit/FINAL_CANONICAL_group_A.md): a suggestion only,
+    never silently written into the farmer's own expected_harvest_date."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    variety = CropVariety(
+        crop_id=uuid.UUID(sample_crop_id), name=f"90-Day Hybrid {uuid.uuid4().hex[:8]}", typical_duration_days=90
+    )
+    db_session.add(variety)
+    db_session.commit()
+    db_session.refresh(variety)
+
+    response = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(
+            sample_crop_id, variety_id=str(variety.id), sowing_date="2026-06-01", expected_harvest_date=None
+        ),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["expected_harvest_date"] is None
+    assert body["suggested_expected_harvest_date"] == "2026-08-30"
+
+
+def test_create_crop_cycle_does_not_suggest_a_harvest_date_when_the_farmer_supplied_their_own(
+    client, registered_farmer, sample_crop_id, db_session
+):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    variety = CropVariety(
+        crop_id=uuid.UUID(sample_crop_id), name=f"90-Day Hybrid {uuid.uuid4().hex[:8]}", typical_duration_days=90
+    )
+    db_session.add(variety)
+    db_session.commit()
+    db_session.refresh(variety)
+
+    response = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, variety_id=str(variety.id), sowing_date="2026-06-01"),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 201
+    assert response.json()["suggested_expected_harvest_date"] is None
+
+
+def test_crop_year_summary_groups_harvests_and_stage_changes_by_year(client, registered_farmer, sample_crop_id, db_session):
+    """D13-06 (docs/audit/FINAL_CANONICAL_group_A.md): a long-running cycle
+    with real harvest/stage-change rows spanning two calendar years."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    cycle_id = uuid.UUID(cycle["id"])
+
+    from app.models.crop_cycle import CropCycle
+
+    crop_cycle_row = db_session.get(CropCycle, cycle_id)
+    db_session.add(
+        HarvestRecord(
+            farmer_id=crop_cycle_row.plot.farm.farmer_id,
+            farm_id=crop_cycle_row.plot.farm_id,
+            plot_id=crop_cycle_row.plot_id,
+            crop_cycle_id=cycle_id,
+            crop_id=crop_cycle_row.crop_id,
+            actual_harvest_date=date(2026, 9, 10),
+            actual_quantity="50.00",
+            unit="kg",
+        )
+    )
+    db_session.add(
+        HarvestRecord(
+            farmer_id=crop_cycle_row.plot.farm.farmer_id,
+            farm_id=crop_cycle_row.plot.farm_id,
+            plot_id=crop_cycle_row.plot_id,
+            crop_cycle_id=cycle_id,
+            crop_id=crop_cycle_row.crop_id,
+            actual_harvest_date=date(2027, 9, 10),
+            actual_quantity="60.00",
+            unit="kg",
+        )
+    )
+    db_session.add(
+        CropCycleStageHistory(
+            crop_cycle_id=cycle_id,
+            status=CultivationStatus.SOWN,
+            entered_at=datetime(2026, 6, 5, tzinfo=timezone.utc),
+        )
+    )
+    db_session.add(
+        CropCycleStageHistory(
+            crop_cycle_id=cycle_id,
+            status=CultivationStatus.SOWN,
+            entered_at=datetime(2027, 6, 5, tzinfo=timezone.utc),
+        )
+    )
+    db_session.commit()
+
+    response = client.get(f"/api/v1/crops/{cycle['id']}/year-summary", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    body = response.json()
+    assert [y["year"] for y in body["years"]] == [2026, 2027]
+    assert len(body["years"][0]["harvests"]) == 1
+    assert body["years"][0]["harvests"][0]["actual_quantity"] == "50.00"
+    assert len(body["years"][0]["stage_changes"]) == 1
+    assert len(body["years"][1]["harvests"]) == 1
+    assert body["years"][1]["harvests"][0]["actual_quantity"] == "60.00"
 
 
 def test_crop_cycle_response_includes_plot_soil_type(client, registered_farmer, sample_crop_id):

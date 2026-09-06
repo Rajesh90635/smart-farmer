@@ -24,7 +24,17 @@ def get_approved_product(db: Session, product_id: uuid.UUID) -> Product | None:
     return product
 
 
-def list_products(db: Session, *, status: ProductStatus | None, query: str | None, category=None, limit: int, offset: int) -> tuple[list[Product], int]:
+def list_products(
+    db: Session,
+    *,
+    status: ProductStatus | None,
+    query: str | None,
+    category=None,
+    manufacturer: str | None = None,
+    variety_id: uuid.UUID | None = None,
+    limit: int,
+    offset: int,
+) -> tuple[list[Product], int]:
     stmt = select(Product)
     if status is not None:
         stmt = stmt.where(Product.status == status)
@@ -32,6 +42,15 @@ def list_products(db: Session, *, status: ProductStatus | None, query: str | Non
         stmt = stmt.where(Product.name.ilike(f"%{query}%"))
     if category is not None:
         stmt = stmt.where(Product.category == category)
+    # D22-02/D25-01 (docs/audit/FINAL_CANONICAL_group_A.md): manufacturer
+    # filter, mirroring the existing name-search's case-insensitive style.
+    if manufacturer:
+        stmt = stmt.where(Product.manufacturer.ilike(f"%{manufacturer}%"))
+    # D21-03: structured variety filter, only meaningful for category=SEED
+    # products that have one set - never fabricates a value products
+    # without a linked variety don't have.
+    if variety_id is not None:
+        stmt = stmt.where(Product.variety_id == variety_id)
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     items = db.execute(stmt.order_by(Product.name).limit(limit).offset(offset)).scalars().all()
     return list(items), total

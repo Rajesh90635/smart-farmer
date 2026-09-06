@@ -35,6 +35,7 @@ class NotificationCategory(str, enum.Enum):
     TASK_ALERT = "task_alert"  # D9-16/D9-03/D78-01/D37-04 (docs/audit/FINAL_CANONICAL_group_A.md): task overdue
     DISPUTE_ALERT = "dispute_alert"  # D78-08 (docs/audit/FINAL_CANONICAL_group_D.md): dispute resolution
     SECURITY_ALERT = "security_alert"  # D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): password change, new-device login
+    SEVERE_WEATHER_ALERT = "severe_weather_alert"  # D14-09 (docs/audit/FINAL_CANONICAL_group_A.md): 2+ conditions co-occur
     # ORDER_ALERT, MARKET_ALERT deliberately NOT included - future phases only.
 
 

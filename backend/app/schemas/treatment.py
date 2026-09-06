@@ -9,6 +9,10 @@ class TreatmentCreateRequest(BaseModel):
     product_id: uuid.UUID | None = None
     application_date: date
     notes: str | None = None
+    # D38-01 (docs/audit/FINAL_CANONICAL_group_B.md): optional, forward-
+    # looking "check back on this date" - distinct from FollowUp's own
+    # observation_date, which records a check that already happened.
+    next_check_due_date: date | None = None
 
 
 class TreatmentResponse(BaseModel):
@@ -20,6 +24,7 @@ class TreatmentResponse(BaseModel):
     before_result_status: str | None
     application_date: date
     notes: str | None
+    next_check_due_date: date | None = None
     created_at: datetime
 
 

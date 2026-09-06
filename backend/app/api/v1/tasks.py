@@ -12,7 +12,14 @@ from app.core.current_user import CurrentUser, require_role
 from app.core.roles import Role
 from app.core.weather_provider_dependency import get_weather_provider
 from app.db.session import get_db
-from app.schemas.task import TaskActionRequest, TaskCreateRequest, TaskListResponse, TaskResponse, TaskUpdateRequest
+from app.schemas.task import (
+    TaskActionRequest,
+    TaskCalendarResponse,
+    TaskCreateRequest,
+    TaskListResponse,
+    TaskResponse,
+    TaskUpdateRequest,
+)
 from app.services import task_service
 from app.services.weather.weather_provider import WeatherProvider
 
@@ -38,6 +45,14 @@ def list_tasks(
     settings: Settings = Depends(get_settings),
 ) -> TaskListResponse:
     return task_service.list_tasks_for_crop_cycle(db, current_user.user_id, crop_cycle_id, weather_provider, settings)
+
+
+@router.get("/farmers/me/tasks/calendar", response_model=TaskCalendarResponse)
+def get_my_task_calendar(
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> TaskCalendarResponse:
+    return task_service.get_my_task_calendar(db, current_user.user_id)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse)

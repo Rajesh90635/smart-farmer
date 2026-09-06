@@ -3,14 +3,18 @@ Product catalog + dealer listing + price comparison/Scam Shield endpoints.
 """
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core import error_codes
 from app.core.config import Settings, get_settings
 from app.core.current_user import CurrentUser, require_role
+from app.core.errors import AppError
 from app.core.roles import Role
+from app.core.storage_dependency import get_file_storage
 from app.db.session import get_db
-from app.models.product import ProductStatus
+from app.models.product import ProductCategory, ProductStatus
 from app.schemas.price import PriceComparisonResponse, ReferencePriceCreateRequest, ReferencePriceResponse, ScamShieldStatusResponse
 from app.schemas.product import (
     DealerProductCreateRequest,
@@ -22,6 +26,7 @@ from app.schemas.product import (
     ProductResponse,
 )
 from app.services import dealer_product_service, price_query_service, product_service
+from app.services.storage.base import FileStorage
 
 router = APIRouter(tags=["products"])
 
@@ -29,13 +34,24 @@ router = APIRouter(tags=["products"])
 @router.get("/products", response_model=ProductListResponse)
 def list_products(
     q: str | None = Query(default=None),
+    category: ProductCategory | None = Query(default=None),
+    manufacturer: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
 ) -> ProductListResponse:
-    """Only APPROVED products are ever returned here - see product_service."""
-    return product_service.list_approved_products(db, query=q, limit=limit, offset=offset)
+    """Only APPROVED products are ever returned here - see product_service.
+    D22-02/D25-01 (docs/audit/FINAL_CANONICAL_group_A.md): category and
+    manufacturer filters, exposing what product_repository.list_products
+    already supported internally. price_min/price_max deliberately NOT
+    added here - price lives on DealerProduct (a dealer-specific listing),
+    never on this master-catalog row, so a catalog-level price filter
+    would be architecturally wrong; that belongs on a dealer-listing
+    search endpoint, a distinct feature not attempted here."""
+    return product_service.list_approved_products(
+        db, query=q, category=category, manufacturer=manufacturer, limit=limit, offset=offset
+    )
 
 
 @router.post("/products", response_model=ProductResponse, status_code=201)
@@ -73,6 +89,44 @@ def get_product(
     db: Session = Depends(get_db),
 ) -> ProductResponse:
     return product_service.get_product(db, product_id)
+
+
+@router.post("/admin/products/{product_id}/image", response_model=ProductResponse)
+async def upload_product_image(
+    product_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+    settings: Settings = Depends(get_settings),
+) -> ProductResponse:
+    """D26-02 (docs/audit/FINAL_CANONICAL_group_A.md): admin-only, mirrors
+    the existing admin-gated product-creation pattern."""
+    if not file.content_type:
+        raise AppError(error_codes.VALIDATION_ERROR, "Missing file content type.", 422)
+    content = await file.read()
+    return product_service.upload_product_image(
+        db, current_user.user_id, product_id, content, file.content_type, storage, settings
+    )
+
+
+@router.get("/products/{product_id}/image")
+def get_product_image(
+    product_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value, Role.ADMIN.value, Role.DEALER.value, Role.TRADER.value)),
+    db: Session = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+) -> StreamingResponse:
+    """Not privacy-gated by ownership like crop-photos - a catalog image
+    is meant to be visible to every authenticated farmer, same as the
+    product's name/description."""
+    from app.repositories import product_repository
+
+    product = product_repository.get_product(db, product_id)
+    if product is None or product.image_storage_key is None:
+        raise AppError(error_codes.NOT_FOUND, "Product image not found.", 404)
+    file_stream = storage.open_read(product.image_storage_key)
+    return StreamingResponse(file_stream, media_type="image/jpeg")
 
 
 @router.post("/products/{product_id}/approve", response_model=ProductResponse)
@@ -153,11 +207,18 @@ def add_reference_price(
 @router.get("/products/{product_id}/compare", response_model=PriceComparisonResponse)
 def compare_product_prices(
     product_id: uuid.UUID,
+    district: str | None = Query(default=None),
+    state: str | None = Query(default=None),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> PriceComparisonResponse:
-    return price_query_service.compare_offers_for_product(db, product_id, settings)
+    """D44-02/03/04 (docs/audit/FINAL_CANONICAL_group_B.md): optional
+    location filter (dealer's own service_area), mirroring the state/
+    district matching nearby_professional_service already uses for
+    experts - no location given returns every verified dealer's offer,
+    same as before this filter existed."""
+    return price_query_service.compare_offers_for_product(db, product_id, settings, district=district, state=state)
 
 
 @router.get("/dealer-products/{dealer_product_id}/scam-shield", response_model=ScamShieldStatusResponse)
@@ -204,6 +265,7 @@ def list_my_dealer_listings(
 @router.get("/seeds", response_model=ProductListResponse)
 def list_seeds(
     q: str | None = Query(default=None),
+    variety_id: uuid.UUID | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
@@ -212,10 +274,11 @@ def list_seeds(
     """Seeds are just Products with category=SEED - reuses the entire
     existing product catalog/approval system (Prompt 9), no duplicate
     seed-specific catalog. Only APPROVED seed products are ever returned,
-    same as any other product category."""
-    from app.models.product import ProductCategory
-
-    return product_service.list_approved_products(db, query=q, category=ProductCategory.SEED, limit=limit, offset=offset)
+    same as any other product category. D21-03: variety_id filters to
+    seeds linked to a specific structured CropVariety row."""
+    return product_service.list_approved_products(
+        db, query=q, category=ProductCategory.SEED, variety_id=variety_id, limit=limit, offset=offset
+    )
 
 
 @router.get("/seeds/{product_id}", response_model=ProductResponse)
