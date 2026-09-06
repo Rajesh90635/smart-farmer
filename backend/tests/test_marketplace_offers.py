@@ -450,6 +450,53 @@ def test_farmer_a_cannot_see_farmer_bs_sale(client, farmer_with_crop_cycle, veri
     assert response.status_code == 404
 
 
+# --- D59-04: quality-mismatch warning at accept-offer time (informational only) ---
+
+def test_accept_offer_flags_a_quality_mismatch_but_never_blocks_it(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quality_grade="Grade A")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers",
+        json=valid_offer_payload(quality_requirements="Grade B"),
+        headers=auth_headers(buyer_tokens),
+    ).json()
+
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens))
+    assert sale.status_code == 200  # acceptance succeeds despite the mismatch - informational only, never blocking
+    body = sale.json()
+    assert body["status"] == "pending"
+    assert body["quality_grade_snapshot"] == "Grade A"
+    assert "Grade B" in body["quality_mismatch_warning"]
+    assert "Grade A" in body["quality_mismatch_warning"]
+
+
+def test_accept_offer_has_no_mismatch_warning_when_grades_match(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quality_grade="Grade A")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers",
+        json=valid_offer_payload(quality_requirements="grade a"),
+        headers=auth_headers(buyer_tokens),
+    ).json()
+
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens)).json()
+    assert sale["quality_mismatch_warning"] is None
+
+
+def test_accept_offer_has_no_mismatch_warning_when_buyer_specified_no_requirement(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quality_grade="Grade A")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(farmer_tokens)).json()
+    assert sale["quality_mismatch_warning"] is None
+
+
 def test_sale_payment_fails_honestly_when_no_gateway_is_configured(client, farmer_with_crop_cycle, verified_buyer):
     """D90-10: same provider-abstraction guarantee as the dealer-order
     payment path (tests/test_payments.py), for marketplace sales."""

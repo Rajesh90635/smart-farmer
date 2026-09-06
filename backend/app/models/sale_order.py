@@ -67,6 +67,11 @@ class SaleOrder(Base):
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     unit: Mapped[str] = mapped_column(String(20), nullable=False)
     quality_grade_snapshot: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # D59-04 (docs/audit/FINAL_CANONICAL_group_C.md): set once at
+    # accept-offer time by comparing the buyer's free-text
+    # BuyerOffer.quality_requirements against this snapshot - informational
+    # only, never blocks acceptance, never re-computed afterward.
+    quality_mismatch_warning: Mapped[str | None] = mapped_column(String(300), nullable=True)
     price_per_unit: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     gross_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     charges: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)

@@ -102,6 +102,11 @@ class SaleOrderResponse(BaseModel):
     collection_method: str
     status: SaleOrderStatus
     cancellation_reason: str | None
+    quality_grade_snapshot: str | None = None
+    # D59-04 (docs/audit/FINAL_CANONICAL_group_C.md): informational only,
+    # set at accept-offer time - never blocks acceptance, never re-computed
+    # after the fact.
+    quality_mismatch_warning: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

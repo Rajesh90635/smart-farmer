@@ -116,6 +116,21 @@ def create_counter_offer(db: Session, user_id: str, offer_id: uuid.UUID, role: s
     return CounterOfferResponse.model_validate(counter)
 
 
+def _quality_mismatch_warning(quality_requirements: str | None, quality_grade: str | None) -> str | None:
+    """D59-04 (docs/audit/FINAL_CANONICAL_group_C.md): both fields are
+    free text today (see the crop-grading-engine cluster for the
+    structured alternative), so this is a case-insensitive exact-string
+    comparison, not a fabricated semantic match - a farmer with a real
+    but differently-worded match will still see a false-positive warning,
+    disclosed here rather than hidden. Informational only - never blocks
+    acceptance, never raises."""
+    if not quality_requirements or not quality_grade:
+        return None
+    if quality_requirements.strip().casefold() == quality_grade.strip().casefold():
+        return None
+    return f"The buyer requested quality '{quality_requirements}', but this listing is graded '{quality_grade}'."
+
+
 def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: AcceptOfferRequest | None = None) -> SaleOrderResponse:
     offer = buyer_offer_repository.get_offer_by_id(db, offer_id)
     if offer is None:
@@ -172,6 +187,7 @@ def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: Acce
         quantity=final_quantity,
         unit=listing.unit,
         quality_grade_snapshot=listing.quality_grade,
+        quality_mismatch_warning=_quality_mismatch_warning(offer.quality_requirements, listing.quality_grade),
         price_per_unit=final_price,
         gross_value=gross_value,
         charges=charges,
