@@ -32,6 +32,27 @@ def test_create_crop_cycle(client, registered_farmer, sample_crop_id):
     assert body["crop"]["name"] == "Tomato"
 
 
+def test_crop_cycle_response_includes_plot_soil_type(client, registered_farmer, sample_crop_id):
+    """D19-05 (docs/audit/FINAL_CANONICAL_group_A.md): pure surfacing of
+    the plot's soil descriptors on the crop-cycle response."""
+    _, tokens = registered_farmer
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(
+        f"/api/v1/farms/{farm['id']}/plots",
+        json=valid_plot_payload(soil_type="black soil", soil_category="black_cotton"),
+        headers=headers,
+    ).json()
+
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers
+    )
+    assert cycle.status_code == 201
+    body = cycle.json()
+    assert body["plot_soil_type"] == "black soil"
+    assert body["plot_soil_category"] == "black_cotton"
+
+
 def test_list_crop_cycles_for_plot(client, registered_farmer, sample_crop_id):
     _, tokens = registered_farmer
     plot = _create_plot(client, tokens)
@@ -127,6 +148,55 @@ def test_valid_status_transition_sequence(client, registered_farmer, sample_crop
     ).json()
 
     for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        response = client.put(
+            f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens)
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["cultivation_status"] == target_status
+
+
+def test_crop_cycle_can_start_in_land_preparation_and_transition_to_planned(client, registered_farmer, sample_crop_id):
+    """D7-01 (docs/audit/FINAL_CANONICAL_group_A.md): an optional
+    pre-sowing stage - creation still defaults to PLANNED unless a farmer
+    explicitly asks to start earlier."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, initial_status="land_preparation"),
+        headers=auth_headers(tokens),
+    )
+    assert cycle.status_code == 201
+    assert cycle.json()["cultivation_status"] == "land_preparation"
+
+    response = client.put(
+        f"/api/v1/crops/{cycle.json()['id']}", json={"cultivation_status": "planned"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    assert response.json()["cultivation_status"] == "planned"
+
+
+def test_initial_status_cannot_skip_past_land_preparation_or_planned(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    response = client.post(
+        f"/api/v1/plots/{plot['id']}/crops",
+        json=valid_crop_cycle_payload(sample_crop_id, initial_status="sown"),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_sown_can_optionally_pass_through_germinating_before_growing(client, registered_farmer, sample_crop_id):
+    """D7-03: SOWN can still go directly to GROWING (unchanged) - this
+    just proves the optional GERMINATING waypoint also works."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+
+    for target_status in ["sown", "germinating", "growing"]:
         response = client.put(
             f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens)
         )
@@ -324,6 +394,47 @@ def test_report_crop_failure_captures_reason_and_recommendation(client, register
     assert "resistant" in body["recommended_next_action"].lower()
 
 
+def test_report_failure_accepts_drought_flood_and_weather_damage_reasons(client, registered_farmer, sample_crop_id):
+    """D10-04/D10-05/D10-06 (docs/audit/FINAL_CANONICAL_group_A.md): all
+    three enum values already existed in FailureReason - this closes the
+    gap of having no test specifically asserting each is accepted."""
+    for reason in ["drought", "flood", "weather_damage"]:
+        _, tokens = registered_farmer
+        plot = _create_plot(client, tokens)
+        cycle = client.post(
+            f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+        ).json()
+
+        response = client.post(
+            f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": reason}, headers=auth_headers(tokens)
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["failure_reason"] == reason
+
+
+def test_report_failure_other_reason_requires_a_note(client, registered_farmer, sample_crop_id):
+    """D10-07: OTHER is a catch-all with no reason text of its own - a
+    note is the only way it carries any real information."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+
+    without_note = client.post(
+        f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "other"}, headers=auth_headers(tokens)
+    )
+    assert without_note.status_code == 422
+
+    with_note = client.post(
+        f"/api/v1/crops/{cycle['id']}/report-failure",
+        json={"failure_reason": "other", "failure_reason_note": "Farmer relocated mid-season"},
+        headers=auth_headers(tokens),
+    )
+    assert with_note.status_code == 200
+    assert with_note.json()["failure_reason_note"] == "Farmer relocated mid-season"
+
+
 def test_report_crop_failure_is_distinguishable_from_a_plain_cancel(client, registered_farmer, sample_crop_id):
     """A plain PUT cancel (farmer changed their mind) must leave
     failure_reason unset - only report-failure sets it."""
@@ -402,6 +513,38 @@ def test_resowing_rejects_a_source_cycle_from_a_different_plot(client, registere
     assert response.status_code == 422
 
 
+def test_cannot_create_a_second_active_crop_cycle_on_the_same_plot(client, registered_farmer, sample_crop_id):
+    """D6-07/D11-05 (docs/audit/FINAL_CANONICAL_group_A.md): nothing
+    previously stopped two non-terminal CropCycle rows existing on one
+    plot at once - a real offline-replay/double-tap data-integrity risk."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    )
+
+    response = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    )
+    assert response.status_code == 409
+
+
+def test_can_start_a_new_crop_cycle_once_the_old_one_is_closed(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+    client.post(f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=auth_headers(tokens))
+
+    response = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    )
+    assert response.status_code == 201
+
+
 def test_reporting_failure_auto_cancels_pending_tasks(client, registered_farmer, sample_crop_id):
     """D9-15: a task still PENDING for a crop cycle that just ended must
     not stay open/overdue forever with no crop cycle left to act on."""
@@ -451,7 +594,11 @@ def test_auto_cancel_never_touches_an_already_completed_task(client, registered_
     ).json()
     client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
 
-    client.post(f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "other"}, headers=auth_headers(tokens))
+    client.post(
+        f"/api/v1/crops/{cycle['id']}/report-failure",
+        json={"failure_reason": "other", "failure_reason_note": "unrelated to this test"},
+        headers=auth_headers(tokens),
+    )
 
     task_after = client.get(f"/api/v1/tasks/{task['id']}", headers=auth_headers(tokens)).json()
     assert task_after["status"] == "completed"

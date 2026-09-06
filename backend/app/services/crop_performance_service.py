@@ -23,8 +23,13 @@ from app.schemas.crop_performance import PerformanceComponent, PerformanceScoreR
 from app.services import crop_financial_service, treatment_service
 
 _STAGE_SCORES = {
+    # D7-01/D7-03 (docs/audit/FINAL_CANONICAL_group_A.md): both optional
+    # stages inserted this session - scored just before the stage they
+    # precede, since neither represents more progress than it.
+    CultivationStatus.LAND_PREPARATION: 5,
     CultivationStatus.PLANNED: 10,
     CultivationStatus.SOWN: 20,
+    CultivationStatus.GERMINATING: 30,
     CultivationStatus.GROWING: 40,
     CultivationStatus.FLOWERING: 60,
     CultivationStatus.FRUITING: 70,

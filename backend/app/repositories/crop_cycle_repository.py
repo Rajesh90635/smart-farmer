@@ -74,6 +74,14 @@ def list_all_for_farmer(db: Session, farmer_id: uuid.UUID) -> list[CropCycle]:
     )
 
 
+def count_active_for_plot(db: Session, plot_id: uuid.UUID) -> int:
+    return db.execute(
+        select(func.count())
+        .select_from(CropCycle)
+        .where(CropCycle.plot_id == plot_id, CropCycle.cultivation_status.notin_(_TERMINAL_STATUSES))
+    ).scalar_one()
+
+
 def count_active_for_farmer(db: Session, farmer_id: uuid.UUID) -> int:
     return db.execute(
         select(func.count())

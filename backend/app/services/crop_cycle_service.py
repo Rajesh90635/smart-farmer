@@ -89,6 +89,20 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
             )
         resown_from_id = previous_cycle.id
 
+    # D6-07/D11-05 (docs/audit/FINAL_CANONICAL_group_A.md): nothing previously
+    # stopped two non-terminal CropCycle rows existing on one plot at once -
+    # a real offline-replay/double-tap data-integrity risk. Checked after the
+    # resowing block above (not before) so a legitimate re-sow's own
+    # not-cancelled validation still reports its specific 422, not this
+    # generic 409 - by the time this runs, resowing's source cycle (if any)
+    # is already confirmed CANCELLED and so no longer counts as active.
+    if crop_cycle_repository.count_active_for_plot(db, plot_id) > 0:
+        raise AppError(
+            error_codes.VALIDATION_ERROR,
+            "This plot already has an active crop cycle. Close it before starting a new one.",
+            409,
+        )
+
     crop_cycle = CropCycle(
         plot_id=plot_id,
         crop_id=payload.crop_id,
@@ -97,7 +111,7 @@ def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: 
         expected_harvest_date=payload.expected_harvest_date,
         seed_variety=payload.seed_variety,
         variety_id=payload.variety_id,
-        cultivation_status=CultivationStatus.PLANNED,
+        cultivation_status=payload.initial_status,
         resown_from_crop_cycle_id=resown_from_id,
     )
     crop_cycle_repository.create(db, crop_cycle)
@@ -238,8 +252,17 @@ def report_crop_failure(
 
     _validate_transition(crop_cycle.cultivation_status, CultivationStatus.CANCELLED)
 
+    # D10-07 (docs/audit/FINAL_CANONICAL_group_A.md): OTHER is a catch-all
+    # with no reason text of its own - a note is the only way it carries
+    # any real information, so it's required specifically for this one
+    # value, unlike every other reason where the enum value is self-
+    # explanatory and a note is a genuinely optional extra.
+    if payload.failure_reason == FailureReason.OTHER and not (payload.failure_reason_note or "").strip():
+        raise AppError(error_codes.VALIDATION_ERROR, "failure_reason_note is required when failure_reason is 'other'.", 422)
+
     crop_cycle.cultivation_status = CultivationStatus.CANCELLED
     crop_cycle.failure_reason = payload.failure_reason.value
+    crop_cycle.failure_reason_note = payload.failure_reason_note
 
     audit = AuditLogger(db)
     audit.log(

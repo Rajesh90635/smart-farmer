@@ -27,8 +27,18 @@ from app.db.session import Base
 
 
 class CultivationStatus(str, enum.Enum):
+    # D7-01 (docs/audit/FINAL_CANONICAL_group_A.md): optional pre-sowing
+    # stage - creation still defaults to PLANNED unchanged (see
+    # CropCycleCreateRequest.initial_status), so this is purely additive,
+    # never a behavior change for an existing/unaware caller.
+    LAND_PREPARATION = "land_preparation"
     PLANNED = "planned"
     SOWN = "sown"
+    # D7-03: optional waypoint between SOWN and GROWING - SOWN can still
+    # go directly to GROWING (unchanged, every existing caller/test that
+    # does this keeps working), GERMINATING is available for a farmer who
+    # wants to record it as a distinct moment.
+    GERMINATING = "germinating"
     GROWING = "growing"
     FLOWERING = "flowering"
     FRUITING = "fruiting"
@@ -66,8 +76,10 @@ class FailureReason(str, enum.Enum):
 # transitions are permitted. See app/services/crop_cycle_service.py for
 # the enforcement code and docs/CROP_MODULE.md for the diagram.
 ALLOWED_TRANSITIONS: dict[CultivationStatus, set[CultivationStatus]] = {
+    CultivationStatus.LAND_PREPARATION: {CultivationStatus.PLANNED, CultivationStatus.CANCELLED},
     CultivationStatus.PLANNED: {CultivationStatus.SOWN, CultivationStatus.CANCELLED},
-    CultivationStatus.SOWN: {CultivationStatus.GROWING, CultivationStatus.CANCELLED},
+    CultivationStatus.SOWN: {CultivationStatus.GERMINATING, CultivationStatus.GROWING, CultivationStatus.CANCELLED},
+    CultivationStatus.GERMINATING: {CultivationStatus.GROWING, CultivationStatus.CANCELLED},
     CultivationStatus.GROWING: {CultivationStatus.FLOWERING, CultivationStatus.CANCELLED},
     CultivationStatus.FLOWERING: {CultivationStatus.FRUITING, CultivationStatus.CANCELLED},
     CultivationStatus.FRUITING: {CultivationStatus.READY_FOR_HARVEST, CultivationStatus.CANCELLED},
@@ -129,6 +141,11 @@ class CropCycle(Base):
     # their mind." resown_from_crop_cycle_id links a NEW cycle back to
     # the one it replaced - set only at creation time, never retroactively.
     failure_reason: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # D10-07 (docs/audit/FINAL_CANONICAL_group_A.md): a detail field for
+    # the OTHER catch-all reason - optional even then (a farmer may not
+    # have more to add), and only ever set alongside failure_reason by
+    # report_crop_failure(), same as failure_reason itself.
+    failure_reason_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     resown_from_crop_cycle_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("crop_cycles.id", ondelete="SET NULL"), nullable=True
     )
@@ -154,3 +171,15 @@ class CropCycle(Base):
     plot: Mapped["Plot"] = relationship(back_populates="crop_cycles")
     crop: Mapped["CropMaster"] = relationship(back_populates="crop_cycles")
     variety: Mapped["CropVariety | None"] = relationship()
+
+    # D19-05 (docs/audit/FINAL_CANONICAL_group_A.md): pure surfacing, no
+    # new logic - a crop-specific soil-suitability recommendation would
+    # need an authoritative per-crop soil-preference dataset and stays
+    # unbuilt, same anti-fabrication boundary as D5-05/D21-01.
+    @property
+    def plot_soil_type(self) -> str | None:
+        return self.plot.soil_type
+
+    @property
+    def plot_soil_category(self):
+        return self.plot.soil_category
