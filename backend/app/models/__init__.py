@@ -38,6 +38,9 @@ from app.models.crop_cost_estimate import CropCostEstimate  # noqa: F401
 from app.models.harvest_record import HarvestRecord  # noqa: F401
 from app.models.input_inventory import InputInventoryItem  # noqa: F401
 from app.models.invoice import Invoice  # noqa: F401
+from app.models.irrigation_record import IrrigationRecord  # noqa: F401
+from app.models.soil_sample import SoilSample  # noqa: F401
+from app.models.soil_test_result import SoilTestResult  # noqa: F401
 from app.models.ledger_entry import LedgerEntry  # noqa: F401
 from app.models.knowledge_entry import AIEvaluationRecord, KnowledgeEntry  # noqa: F401
 from app.models.location import District, Mandal, State, Village  # noqa: F401

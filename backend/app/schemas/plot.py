@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.core.area_units import AreaUnit
 from app.models.farm import FarmStatus
+from app.models.plot import IrrigationSource, SoilCategory
 
 
 class PlotCreateRequest(BaseModel):
@@ -16,6 +17,11 @@ class PlotCreateRequest(BaseModel):
     longitude: Decimal | None = None
     soil_type: str | None = Field(default=None, max_length=100)
     irrigation_type: str | None = Field(default=None, max_length=100)
+    # D3-08/D3-09/D17-01 (docs/audit/FINAL_CANONICAL_group_A.md): validated,
+    # purely additive alongside the free-text fields above - None means
+    # "not yet classified," never a fabricated guess.
+    irrigation_source: IrrigationSource | None = None
+    soil_category: SoilCategory | None = None
 
     @field_validator("latitude")
     @classmethod
@@ -40,6 +46,8 @@ class PlotUpdateRequest(BaseModel):
     longitude: Decimal | None = None
     soil_type: str | None = Field(default=None, max_length=100)
     irrigation_type: str | None = Field(default=None, max_length=100)
+    irrigation_source: IrrigationSource | None = None
+    soil_category: SoilCategory | None = None
 
 
 class PlotResponse(BaseModel):
@@ -52,6 +60,8 @@ class PlotResponse(BaseModel):
     longitude: Decimal | None
     soil_type: str | None
     irrigation_type: str | None
+    irrigation_source: IrrigationSource | None
+    soil_category: SoilCategory | None
     status: FarmStatus
     created_at: datetime
 

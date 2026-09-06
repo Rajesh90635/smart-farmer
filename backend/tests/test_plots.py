@@ -56,6 +56,58 @@ def test_update_plot(client, registered_farmer):
     assert response.json()["plot_name"] == "Renamed Plot"
 
 
+def test_plot_irrigation_source_and_soil_category_are_validated_enums(client, registered_farmer):
+    """D3-08/D3-09/D17-01 (docs/audit/FINAL_CANONICAL_group_A.md): purely
+    additive alongside the existing free-text soil_type/irrigation_type -
+    None (not fabricated) for a plot that never sets them."""
+    _, tokens = registered_farmer
+    farm = _create_farm(client, tokens)
+
+    unset = client.post(
+        f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)
+    ).json()
+    assert unset["irrigation_source"] is None
+    assert unset["soil_category"] is None
+
+    classified = client.post(
+        f"/api/v1/farms/{farm['id']}/plots",
+        json=valid_plot_payload(plot_name="Classified Plot", irrigation_source="drip", soil_category="black_cotton"),
+        headers=auth_headers(tokens),
+    )
+    assert classified.status_code == 201
+    assert classified.json()["irrigation_source"] == "drip"
+    assert classified.json()["soil_category"] == "black_cotton"
+
+
+def test_plot_irrigation_source_rejects_an_invalid_value(client, registered_farmer):
+    _, tokens = registered_farmer
+    farm = _create_farm(client, tokens)
+
+    response = client.post(
+        f"/api/v1/farms/{farm['id']}/plots",
+        json=valid_plot_payload(irrigation_source="tube_well"),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 422
+
+
+def test_update_plot_irrigation_source_and_soil_category(client, registered_farmer):
+    _, tokens = registered_farmer
+    farm = _create_farm(client, tokens)
+    plot = client.post(
+        f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)
+    ).json()
+
+    response = client.put(
+        f"/api/v1/plots/{plot['id']}",
+        json={"irrigation_source": "borewell", "soil_category": "loamy"},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 200
+    assert response.json()["irrigation_source"] == "borewell"
+    assert response.json()["soil_category"] == "loamy"
+
+
 def test_deactivate_plot(client, registered_farmer):
     _, tokens = registered_farmer
     farm = _create_farm(client, tokens)

@@ -1,13 +1,15 @@
 """
 Plot: belongs to exactly one Farm. A farm may have multiple plots.
 
-soil_type / irrigation_type are deliberately plain free-text fields, not a
-controlled vocabulary/enum - the approved architecture doesn't define an
-authoritative taxonomy for either yet, and inventing one here would be
-guessing at a decision that belongs to whoever designs the future soil
-report OCR / irrigation advisor modules. Flagged as an assumption, not a
-silent design choice.
+soil_type / irrigation_type remain plain free-text fields, unchanged, for
+any plot that already has one - no lossy backfill migration was invented
+here to guess at a new controlled vocabulary from arbitrary old free text.
+D3-08/D3-09/D17-01 (docs/audit/FINAL_CANONICAL_group_A.md) added the
+validated enum as NEW, separate, purely additive fields instead
+(irrigation_source/soil_category, both nullable - None for every existing
+plot, honestly "not yet classified" rather than a fabricated mapping).
 """
+import enum
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -20,6 +22,25 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.area_units import AreaUnit
 from app.models.farm import FarmStatus  # Plot reuses the same active/inactive vocabulary
 from app.db.session import Base
+
+
+class IrrigationSource(str, enum.Enum):
+    RAIN_FED = "rain_fed"
+    BOREWELL = "borewell"
+    CANAL = "canal"
+    DRIP = "drip"
+    SPRINKLER = "sprinkler"
+    OTHER = "other"
+
+
+class SoilCategory(str, enum.Enum):
+    LOAMY = "loamy"
+    CLAYEY = "clayey"
+    SANDY = "sandy"
+    BLACK_COTTON = "black_cotton"
+    RED = "red"
+    ALLUVIAL = "alluvial"
+    OTHER = "other"
 
 
 class Plot(Base):
@@ -47,6 +68,15 @@ class Plot(Base):
 
     soil_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     irrigation_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    irrigation_source: Mapped[IrrigationSource | None] = mapped_column(
+        SAEnum(IrrigationSource, name="irrigation_source", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+    soil_category: Mapped[SoilCategory | None] = mapped_column(
+        SAEnum(SoilCategory, name="soil_category", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
 
     status: Mapped[FarmStatus] = mapped_column(
         SAEnum(FarmStatus, name="farm_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),

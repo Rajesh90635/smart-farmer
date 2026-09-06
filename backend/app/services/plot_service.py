@@ -37,6 +37,8 @@ def create_plot(db: Session, farmer_id: str, farm_id: uuid.UUID, payload: PlotCr
         longitude=payload.longitude,
         soil_type=payload.soil_type,
         irrigation_type=payload.irrigation_type,
+        irrigation_source=payload.irrigation_source,
+        soil_category=payload.soil_category,
     )
     plot_repository.create(db, plot)
     db.flush()
@@ -78,6 +80,10 @@ def update_my_plot(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: Plo
         plot.soil_type = payload.soil_type
     if payload.irrigation_type is not None:
         plot.irrigation_type = payload.irrigation_type
+    if payload.irrigation_source is not None:
+        plot.irrigation_source = payload.irrigation_source
+    if payload.soil_category is not None:
+        plot.soil_category = payload.soil_category
 
     if payload.area_value is not None or payload.area_unit is not None:
         new_value = payload.area_value if payload.area_value is not None else plot.area_value
