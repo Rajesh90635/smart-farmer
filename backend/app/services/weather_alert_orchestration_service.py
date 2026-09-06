@@ -26,9 +26,10 @@ from app.models.farm import Farm
 from app.models.plot import Plot
 from app.repositories import farm_repository, user_repository, weather_repository
 from app.schemas.weather import FarmWeatherResponse
-from app.services import notification_service
+from app.services import notification_service, rule_version_service
 from app.services.weather.weather_provider import WeatherProvider, WeatherReading
 from app.services.weather_alert_rules import (
+    RULE_ID,
     RULE_VERSION,
     evaluate_consecutive_dry_days_risk,
     evaluate_crop_weather_alert,
@@ -38,6 +39,23 @@ from app.services.weather_alert_rules import (
     evaluate_rain_alerts,
     evaluate_severe_weather_co_occurrence,
     evaluate_spray_condition_warning,
+)
+
+# D89-03 (docs/audit/FINAL_CANONICAL_group_D.md): the real Settings fields
+# every evaluate_* function in weather_alert_rules.py actually reads -
+# kept here (the orchestration layer, which already touches the DB) rather
+# than inside the pure rule module, which stays DB-free by design.
+_THRESHOLD_SETTINGS_FIELDS = (
+    "weather_rain_probability_threshold",
+    "weather_heavy_rain_probability_threshold",
+    "weather_heavy_rain_mm_threshold",
+    "weather_high_wind_kmh_threshold",
+    "weather_extreme_heat_celsius_threshold",
+    "weather_extreme_cold_celsius_threshold",
+    "weather_frost_dewpoint_celsius_threshold",
+    "weather_flood_risk_cumulative_rainfall_mm_threshold",
+    "weather_waterlogging_risk_cumulative_rainfall_mm_threshold",
+    "weather_drought_risk_consecutive_dry_days_threshold",
 )
 
 _ACTIVE_STATUSES = tuple(s for s in CultivationStatus if s not in (CultivationStatus.HARVESTED, CultivationStatus.CANCELLED))
@@ -50,6 +68,10 @@ def generate_alerts_for_farm_weather(
 ) -> list:
     if not weather.available:
         return []
+
+    rule_version_service.record_snapshot_if_changed(
+        db, RULE_ID, RULE_VERSION, {field: getattr(settings, field) for field in _THRESHOLD_SETTINGS_FIELDS}
+    )
 
     today_bucket = datetime.now(timezone.utc).date().isoformat()
     dedup_scope = f"farm:{farm.id}:{today_bucket}"

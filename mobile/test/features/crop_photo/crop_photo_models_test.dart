@@ -42,6 +42,54 @@ void main() {
       expect(photo.isLowQuality, isTrue);
       expect(photo.qualityReasons, ['too_dark', 'too_blurry']);
     });
+
+    test('D30-05/D30-06: possible_duplicate/old_photo are warnings, never a hard block', () {
+      final photo = CropPhoto.fromJson({
+        'id': 'p3',
+        'session_id': 's1',
+        'crop_cycle_id': 'c1',
+        'original_filename': null,
+        'mime_type': 'image/jpeg',
+        'file_size_bytes': 500,
+        'width_px': 600,
+        'height_px': 600,
+        'capture_timestamp': '2026-01-01T10:00:00Z',
+        'upload_timestamp': '2026-06-01T10:00:00Z',
+        'source': 'camera',
+        'upload_status': 'ready',
+        'image_quality_status': 'accepted',
+        'quality_reasons': ['possible_duplicate', 'old_photo'],
+      });
+      expect(photo.isLowQuality, isFalse);
+      expect(photo.qualityReasons, ['possible_duplicate', 'old_photo']);
+      expect(photo.captureTimestamp, '2026-01-01T10:00:00Z');
+    });
+
+    test('captureTimestamp is null when the backend never received one', () {
+      final photo = CropPhoto.fromJson({
+        'id': 'p4',
+        'session_id': 's1',
+        'crop_cycle_id': 'c1',
+        'original_filename': null,
+        'mime_type': 'image/jpeg',
+        'file_size_bytes': 500,
+        'width_px': 600,
+        'height_px': 600,
+        'upload_timestamp': '2026-06-01T10:00:00Z',
+        'source': 'camera',
+        'upload_status': 'ready',
+        'image_quality_status': 'accepted',
+        'quality_reasons': [],
+      });
+      expect(photo.captureTimestamp, isNull);
+    });
+  });
+
+  group('qualityFriendlyMessages', () {
+    test('maps possible_duplicate and old_photo to real l10n keys, not the raw code', () {
+      expect(qualityReasonMessageKeys['possible_duplicate'], 'photoPossibleDuplicate');
+      expect(qualityReasonMessageKeys['old_photo'], 'photoOldPhoto');
+    });
   });
 
   group('CropPhotoSession.fromJson', () {

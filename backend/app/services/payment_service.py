@@ -8,6 +8,7 @@ app/services/payment/payment_gateway_provider.py, D90-10).
 """
 import uuid
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,7 @@ from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.order import OrderStatus
 from app.models.payment import Payment, PaymentProvider, PaymentStatus
 from app.repositories import order_repository, sale_order_repository, user_repository
-from app.schemas.order import PaymentCompleteRequest, PaymentInitiateResponse
+from app.schemas.order import PaymentCompleteRequest, PaymentInitiateResponse, PaymentListResponse, PaymentResponse
 from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.order_transitions import apply_transition
@@ -28,7 +29,9 @@ from app.services.weather_alert_rules import AlertCandidate
 _PROVIDER_NAME_TO_ENUM = {"sandbox": PaymentProvider.SANDBOX}
 
 
-def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID, payment_provider: PaymentGatewayProvider) -> PaymentInitiateResponse:
+def initiate_payment(
+    db: Session, farmer_id: str, order_id: uuid.UUID, payment_provider: PaymentGatewayProvider, amount: Decimal | None = None
+) -> PaymentInitiateResponse:
     order = order_repository.get_order_owned_by_farmer(db, order_id, uuid.UUID(farmer_id))
     if order is None:
         raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)
@@ -37,7 +40,21 @@ def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID, payment_p
     if existing_payment is not None and existing_payment.status == PaymentStatus.PENDING:
         raise AppError(error_codes.VALIDATION_ERROR, "A payment is already in progress for this order.", 409)
 
-    result = payment_provider.initiate_payment(amount=order.final_amount, reference_hint=str(order.id))
+    # D65-01/D65-02: `amount` is the actually-tendered amount, not always
+    # the full order value - a farmer may pay in installments (D65-03).
+    # Omitted amount defaults to the full remaining balance, so a single
+    # full payment (the only case before this scenario) still behaves
+    # identically to before.
+    paid_so_far = order_repository.sum_successful_payment_amount_for_order(db, order.id)
+    remaining = order.final_amount - paid_so_far
+    if remaining <= 0:
+        raise AppError(error_codes.VALIDATION_ERROR, "This order is already fully paid.", 409)
+
+    tendered = amount if amount is not None else remaining
+    if tendered > remaining:
+        raise AppError(error_codes.VALIDATION_ERROR, f"Amount exceeds the remaining balance of {remaining}.", 422)
+
+    result = payment_provider.initiate_payment(amount=tendered, reference_hint=str(order.id))
     if not result.available:
         raise AppError(error_codes.PAYMENT_PROVIDER_UNAVAILABLE, "Payment is temporarily unavailable. Please try again shortly.", 503)
 
@@ -51,11 +68,13 @@ def initiate_payment(db: Session, farmer_id: str, order_id: uuid.UUID, payment_p
     if order.status != OrderStatus.PAYMENT_PENDING:
         apply_transition(order, OrderStatus.PAYMENT_PENDING)
 
+    installment_number = order_repository.count_payments_for_order(db, order.id) + 1
     payment = Payment(
         order_id=order.id,
         provider=_PROVIDER_NAME_TO_ENUM[result.provider_name],
         status=PaymentStatus.PENDING,
-        amount=order.final_amount,
+        amount=tendered,
+        installment_number=installment_number,
         external_reference=result.external_reference,
     )
     order_repository.create_payment(db, payment)
@@ -93,7 +112,14 @@ def complete_payment(
     if payload.succeed:
         payment.status = PaymentStatus.SUCCESS
         payment.completed_at = datetime.now(timezone.utc)
-        apply_transition(order, OrderStatus.PAID)
+        db.flush()  # so the balance sum below sees this payment as SUCCESS (autoflush is off for this session)
+        # D65-03: a partial payment leaves genuine balance remaining - the
+        # order stays PAYMENT_PENDING so the farmer can pay the rest via
+        # another initiate_payment call, rather than being force-marked
+        # PAID on the first (possibly partial) successful attempt.
+        paid_so_far = order_repository.sum_successful_payment_amount_for_order(db, order.id)
+        if paid_so_far >= order.final_amount:
+            apply_transition(order, OrderStatus.PAID)
         AuditLogger(db).log("PAYMENT_SUCCESS", actor_id=farmer_id, actor_role="farmer", entity="order", entity_id=str(order.id))
     else:
         payment.status = PaymentStatus.FAILED
@@ -109,6 +135,18 @@ def complete_payment(
         _notify_payment_failed(db, farmer_id, payment)
     db.refresh(payment)
     return PaymentInitiateResponse.model_validate(payment)
+
+
+def list_payments_for_order(db: Session, farmer_id: str, order_id: uuid.UUID) -> PaymentListResponse:
+    """D65-05: every attempt against this order's balance, successful or
+    not - existing failed/retry Payment rows already accumulate in the DB
+    today, just previously unreachable via any API."""
+    order = order_repository.get_order_owned_by_farmer(db, order_id, uuid.UUID(farmer_id))
+    if order is None:
+        raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)
+
+    payments = order_repository.list_payments_for_order(db, order.id)
+    return PaymentListResponse(items=[PaymentResponse.model_validate(p) for p in payments], total=len(payments))
 
 
 def run_payment_timeout_sweep(db: Session, settings: Settings) -> int:

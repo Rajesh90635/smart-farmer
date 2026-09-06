@@ -94,6 +94,12 @@ class PhotoUploadMetadata(BaseModel):
     # reported only - never inferred/guessed server-side.
     device_model: str | None = Field(default=None, max_length=150)
     capture_condition: str | None = Field(default=None, max_length=30)
+    # D30-06 (docs/audit/FINAL_CANONICAL_group_B.md): the device clock at
+    # the moment of capture, read client-side BEFORE EXIF stripping - never
+    # inferred from upload_timestamp, which only tells you when the file
+    # reached the server (possibly much later, e.g. an offline-queued
+    # upload). None for an older client that doesn't send it yet.
+    capture_timestamp: datetime | None = None
 
     @field_validator("latitude")
     @classmethod

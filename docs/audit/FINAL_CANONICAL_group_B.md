@@ -39,14 +39,26 @@ discussed in `FINAL_GAP_REPORT.md` as a borderline case but its resolution is "k
 MISSING, not FUTURE" — i.e. **no status change** — so it appears below with no delta-table
 row, unchanged from the cluster file.)
 
+*(Later continuation session — Missing Backlog Batch 2, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. 2 approved Batch 2 items in
+this group both became VERIFIED with genuine new code: D30-05 (-1 MISSING,
++1 VERIFIED - a perceptual-hash duplicate-photo warning) and D30-06 (-1
+MISSING, +1 VERIFIED - a real, client-captured `capture_timestamp` and a
+staleness warning). Both are informational warnings only, never a hard
+upload block, per the row text's own explicit instruction. Total unchanged
+at 149 - every change here is an internal status move, zero new/removed
+rows. Full backend suite: 931 passed, 0 failed/errored. Full flutter
+suite: 301 passed, 0 failed. See docs/FINAL_GAP_REPORT.md and
+docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
+
 ## Count summary (this group)
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 72 |
+| VERIFIED | 74 |
 | IMPLEMENTED | 4 |
 | PARTIAL | 4 |
-| MISSING | 63 |
+| MISSING | 61 |
 | BROKEN | 0 |
 | FUTURE | 5 |
 | OUT_OF_SCOPE | 0 |
@@ -748,7 +760,7 @@ bucket above.)
 - Domain: 30 (Image Quality)
 - Scenario ID: D30-05
 - Exact scenario name: Duplicate photo
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `CropPhoto.perceptual_hash` (migration `f31007107fbd`), a standard average-hash (`app/core/image_quality.py::compute_average_hash`/`hamming_distance`), compared against recent hashed photos in the SAME crop cycle (`crop_photo_repository.list_recent_hashed_for_crop_cycle`, capped at 20). `possible_duplicate` is appended to `quality_reasons` as a warning only - `image_quality_status` is driven solely by the real technical `too_dark`/`too_bright`/`too_blurry` verdict, never by this. Mobile: new `qualityReasonMessageKeys`/`qualityFriendlyMessages` entries, translated into all 7 languages. Tests: `tests/test_crop_photos.py` (4 new), `tests/test_image_pipeline.py` (3 new), `crop_photo_models_test.dart`
 - Existing relevant files/classes/functions: `crop_photo.py:67,97` (`client_upload_id` uniqueness — dedupes retries of the same upload attempt only); repo-wide search for `phash`/`perceptual`/`image_hash` returns nothing
 - Missing component: No perceptual-hashing or similar mechanism to detect a farmer photographing the same subject twice as two distinct captures
 - Required implementation: Add a perceptual hash (e.g. average-hash or dHash) computed at upload time, stored on `CropPhoto`, with a similarity check against recent photos for the same crop cycle flagged as `quality_reasons: possible_duplicate` (a warning, not a hard block)
@@ -767,7 +779,7 @@ bucket above.)
 - Domain: 30 (Image Quality)
 - Scenario ID: D30-06
 - Exact scenario name: Old photo
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `capture_timestamp` is now actually populated: the mobile `camera_capture_screen.dart` reads the device clock at the moment of capture/pick (`_capturedAt`), persists it through the offline `PendingUpload` queue (`capturedAt`, surviving an app restart/delayed sync unchanged), and sends it explicitly via the new `PhotoUploadMetadata.capture_timestamp` form field - never inferred from `upload_timestamp`. `app/core/image_quality.py::is_capture_stale` flags `old_photo` (a warning, never a hard block, same as D30-05) when capture-to-upload age exceeds `settings.photo_stale_capture_days`; never flags a photo with no real capture_timestamp (an older client). Tests: `tests/test_crop_photos.py` (4 new), `tests/test_image_pipeline.py` (3 new), `pending_upload_queue_test.dart` (2 new)
 - Existing relevant files/classes/functions: `crop_photo.py:109` (EXIF stripped before capture-time metadata is read); `CROP_PHOTO_MODULE.md` "Known limitations"
 - Missing component: `capture_timestamp` is never populated, so no staleness/age check is possible even in principle
 - Required implementation: Populate `capture_timestamp` from the device clock at the moment of capture (before EXIF stripping, client-side), store it on `CropPhoto`, then add a staleness check (e.g. flag if capture_timestamp is more than N days before upload) to `image_quality.py`

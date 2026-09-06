@@ -29,6 +29,11 @@ class CropPhotoRepository {
     bool shareLocation = false,
     double? latitude,
     double? longitude,
+    // D30-06 (docs/audit/FINAL_CANONICAL_group_B.md): the device clock at
+    // the moment of capture (set by camera_capture_screen.dart BEFORE this
+    // upload call, possibly much earlier if the photo sat in the offline
+    // queue) - never the time of this HTTP call itself.
+    DateTime? captureTimestamp,
   }) async {
     final response = await _apiClient.uploadMultipart(
       '/crop-photo-sessions/$sessionId/photos',
@@ -41,6 +46,7 @@ class CropPhotoRepository {
         'share_location': shareLocation.toString(),
         if (latitude != null) 'latitude': latitude.toString(),
         if (longitude != null) 'longitude': longitude.toString(),
+        if (captureTimestamp != null) 'capture_timestamp': captureTimestamp.toUtc().toIso8601String(),
       },
     );
     return CropPhoto.fromJson(response);

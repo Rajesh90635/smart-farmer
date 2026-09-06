@@ -9,6 +9,7 @@ File bytes are served through an authenticated endpoint
 docs/CROP_PHOTO_MODULE.md "Privacy" section for why.
 """
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -72,6 +73,7 @@ async def upload_photo(
     longitude: float | None = Form(None),
     device_model: str | None = Form(None),
     capture_condition: str | None = Form(None),
+    capture_timestamp: datetime | None = Form(None),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     storage: FileStorage = Depends(get_file_storage),
@@ -89,6 +91,7 @@ async def upload_photo(
         longitude=longitude,
         device_model=device_model,
         capture_condition=capture_condition,
+        capture_timestamp=capture_timestamp,
     )
 
     return crop_photo_service.upload_photo(

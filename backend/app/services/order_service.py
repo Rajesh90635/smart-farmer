@@ -183,12 +183,22 @@ def get_my_order(db: Session, farmer_id: str, order_id: uuid.UUID) -> OrderRespo
     order = order_repository.get_order_owned_by_farmer(db, order_id, uuid.UUID(farmer_id))
     if order is None:
         raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)
-    return OrderResponse.model_validate(order)
+    return _build_order_response(db, order)
 
 
 def list_my_orders(db: Session, farmer_id: str, *, limit: int = 50, offset: int = 0) -> OrderListResponse:
     items, total = order_repository.list_orders_for_farmer(db, uuid.UUID(farmer_id), limit=limit, offset=offset)
-    return OrderListResponse(items=[OrderResponse.model_validate(o) for o in items], total=total)
+    return OrderListResponse(items=[_build_order_response(db, o) for o in items], total=total)
+
+
+def _build_order_response(db: Session, order: Order) -> OrderResponse:
+    """D65-02: amount_paid/amount_remaining are computed from successful
+    Payment rows, never stored - only worth the extra query on the
+    farmer-facing detail/list reads that actually surface them."""
+    response = OrderResponse.model_validate(order)
+    response.amount_paid = order_repository.sum_successful_payment_amount_for_order(db, order.id)
+    response.amount_remaining = (order.final_amount - response.amount_paid) if order.final_amount is not None else None
+    return response
 
 
 def cancel_order(db: Session, farmer_id: str, order_id: uuid.UUID) -> OrderResponse:

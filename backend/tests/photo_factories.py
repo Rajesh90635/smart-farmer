@@ -26,6 +26,22 @@ def make_test_jpeg(*, width: int = 600, height: int = 600, color=(128, 128, 128)
     return buf.getvalue()
 
 
+def make_random_noise_jpeg(*, seed: int, width: int = 600, height: int = 600) -> bytes:
+    """A real JPEG filled with seeded random noise - used for D30-05
+    duplicate-photo tests where two calls with different seeds must
+    produce genuinely dissimilar images (unlike two `make_test_jpeg` calls
+    with different `color`, whose shared checkerboard geometry can survive
+    average-hash downscaling almost unchanged)."""
+    import random
+
+    rng = random.Random(seed)
+    img = Image.new("L", (width, height))
+    img.putdata([rng.randint(0, 255) for _ in range(width * height)])
+    buf = BytesIO()
+    img.convert("RGB").save(buf, format="JPEG")
+    return buf.getvalue()
+
+
 def make_test_png(*, width: int = 600, height: int = 600, color=(200, 50, 50)) -> bytes:
     img = Image.new("RGB", (width, height), color=color)
     buf = BytesIO()

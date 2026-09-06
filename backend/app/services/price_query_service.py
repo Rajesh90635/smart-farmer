@@ -16,6 +16,7 @@ from app.models.professional_profile import VerificationStatus
 from app.models.reference_price import ReferencePrice
 from app.repositories import dealer_product_repository, product_repository, professional_repository
 from app.schemas.price import DealerOfferComparisonResponse, PriceComparisonResponse, ScamShieldStatusResponse
+from app.services.market.market_provider import MarketProvider
 from app.services.price_comparison import compare_price, price_per_unit
 
 
@@ -45,13 +46,13 @@ def _dealer_matches_location(dealer, *, district: str | None, state: str | None)
 
 
 def compare_offers_for_product(
-    db: Session, product_id: uuid.UUID, settings: Settings, *, district: str | None = None, state: str | None = None
+    db: Session, product_id: uuid.UUID, settings: Settings, market_provider: MarketProvider, *, district: str | None = None, state: str | None = None
 ) -> PriceComparisonResponse:
     product = product_repository.get_approved_product(db, product_id)
     if product is None:
         raise AppError(error_codes.NOT_FOUND, "Product not found.", 404)
 
-    ref = product_repository.get_latest_reference_price(db, product_id)
+    ref = market_provider.get_reference_price(db, product_id=product_id)
     listings = dealer_product_repository.list_listings_for_product(db, product_id, available_only=True)
 
     offers = []
@@ -63,7 +64,7 @@ def compare_offers_for_product(
             continue
         result = compare_price(
             dealer_price=listing.price, pack_size_value=product.pack_size_value, pack_size_unit=product.pack_size_unit,
-            reference_price=ref.price if ref else None, reference_pack_size_value=product.pack_size_value if ref else None, settings=settings,
+            reference_price=ref.price if ref.available else None, reference_pack_size_value=product.pack_size_value if ref.available else None, settings=settings,
         )
         offers.append(DealerOfferComparisonResponse(
             dealer_product_id=listing.id, dealer_id=listing.dealer_id, dealer_price=listing.price,
@@ -74,33 +75,33 @@ def compare_offers_for_product(
 
     return PriceComparisonResponse(
         product_id=product_id,
-        reference_price=ref.price if ref else None,
+        reference_price=ref.price if ref.available else None,
         # Reuses the same helper every offer's own per-unit price already
         # goes through (see compare_price above) - a second, duplicated raw
         # division here previously bypassed that function's rounding and
         # could return scientific notation (e.g. "1.0E+2") straight into
         # the farmer-facing response.
-        reference_price_per_unit=price_per_unit(ref.price, product.pack_size_value) if ref else None,
-        reference_source=ref.source_name if ref else None,
+        reference_price_per_unit=price_per_unit(ref.price, product.pack_size_value) if ref.available else None,
+        reference_source=ref.source_name if ref.available else None,
         offers=offers,
     )
 
 
-def get_scam_shield_status(db: Session, dealer_product_id: uuid.UUID, settings: Settings) -> ScamShieldStatusResponse:
+def get_scam_shield_status(db: Session, dealer_product_id: uuid.UUID, settings: Settings, market_provider: MarketProvider) -> ScamShieldStatusResponse:
     listing = dealer_product_repository.get_by_id(db, dealer_product_id)
     if listing is None:
         raise AppError(error_codes.NOT_FOUND, "Listing not found.", 404)
 
     product = product_repository.get_product(db, listing.product_id)
-    ref = product_repository.get_latest_reference_price(db, listing.product_id)
+    ref = market_provider.get_reference_price(db, product_id=listing.product_id)
 
     result = compare_price(
         dealer_price=listing.price, pack_size_value=product.pack_size_value, pack_size_unit=product.pack_size_unit,
-        reference_price=ref.price if ref else None, reference_pack_size_value=product.pack_size_value if ref else None, settings=settings,
+        reference_price=ref.price if ref.available else None, reference_pack_size_value=product.pack_size_value if ref.available else None, settings=settings,
     )
 
     if result.anomaly_level is None:
-        message = "This price is within the normal range for this product." if ref else "No reference price is available for comparison yet."
+        message = "This price is within the normal range for this product." if ref.available else "No reference price is available for comparison yet."
     else:
         message = f"This price is {result.percent_above_reference:.0f}% above the reference price for this product. Consider comparing with other dealers."
 

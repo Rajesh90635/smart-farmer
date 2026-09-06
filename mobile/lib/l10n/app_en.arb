@@ -381,6 +381,8 @@
   "photoTooDark": "Photo is too dark. Please take another photo.",
   "photoTooBright": "Photo is too bright. Please take another photo.",
   "photoTooBlurry": "Photo may be blurry. Please take another photo.",
+  "photoPossibleDuplicate": "This looks similar to a photo you already took for this crop. It was still saved.",
+  "photoOldPhoto": "This photo was taken a while ago. For the most accurate check, use a recent photo.",
   "sharePhotoLocationQuestion": "Share this photo's location?",
   "myCropPhotosTitle": "Crop Photos",
   "noPhotosYet": "No photos yet. Tap below to check your crop.",

@@ -2,7 +2,7 @@ import uuid
 
 from app.models.location import Mandal, Village
 from tests.conftest import auth_headers
-from tests.farm_factories import valid_farm_payload
+from tests.farm_factories import valid_farm_payload, valid_plot_payload
 
 
 def _ap_state_id(client, tokens) -> int:
@@ -277,3 +277,54 @@ def test_update_farm_location_validates_against_existing_stored_chain(client, re
     assert body["mandal_id"] == mandal_id
     assert body["district_id"] == district_id  # untouched levels are preserved, not cleared
     assert body["state_id"] == state_id
+
+
+# --- D2-08/D2-09: farm-level irrigation/soil summary rollup ---
+
+def test_farm_detail_includes_irrigation_summary_from_plots(client, registered_farmer):
+    _, tokens = registered_farmer
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(irrigation_type="drip"), headers=auth_headers(tokens))
+    client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(plot_name="South Plot", irrigation_type="canal"), headers=auth_headers(tokens))
+    client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(plot_name="East Plot", irrigation_type="drip"), headers=auth_headers(tokens))
+
+    response = client.get(f"/api/v1/farms/{farm['id']}", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    assert sorted(response.json()["irrigation_summary"]) == ["canal", "drip"]  # distinct values only
+
+
+def test_farm_detail_includes_soil_summary_from_plots(client, registered_farmer):
+    _, tokens = registered_farmer
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(soil_type="loamy"), headers=auth_headers(tokens))
+    client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(plot_name="South Plot", soil_type="clay"), headers=auth_headers(tokens))
+
+    response = client.get(f"/api/v1/farms/{farm['id']}", headers=auth_headers(tokens))
+    assert sorted(response.json()["soil_summary"]) == ["clay", "loamy"]
+
+
+def test_farm_with_no_plots_has_empty_irrigation_and_soil_summaries(client, registered_farmer):
+    _, tokens = registered_farmer
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+
+    response = client.get(f"/api/v1/farms/{farm['id']}", headers=auth_headers(tokens))
+    assert response.json()["irrigation_summary"] == []
+    assert response.json()["soil_summary"] == []
+
+
+def test_irrigation_and_soil_summary_also_includes_the_validated_enum_fields(client, registered_farmer):
+    """D2-08/D2-09: a plot classified only via D3-08/D3-09's later,
+    separate irrigation_source/soil_category enum fields (never via the
+    legacy free-text irrigation_type/soil_type) must still surface in the
+    farm-level rollup - not silently dropped."""
+    _, tokens = registered_farmer
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    client.post(
+        f"/api/v1/farms/{farm['id']}/plots",
+        json=valid_plot_payload(irrigation_type=None, soil_type=None, irrigation_source="borewell", soil_category="black_cotton"),
+        headers=auth_headers(tokens),
+    )
+
+    response = client.get(f"/api/v1/farms/{farm['id']}", headers=auth_headers(tokens))
+    assert response.json()["irrigation_summary"] == ["borewell"]
+    assert response.json()["soil_summary"] == ["black_cotton"]

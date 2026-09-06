@@ -222,3 +222,29 @@ def test_expiry_sweep_ignores_stock_expiring_far_in_the_future(client, registere
 def test_unauthenticated_request_is_rejected(client):
     response = client.get("/api/v1/input-inventory")
     assert response.status_code == 401
+
+
+# --- D24-10: item history ---
+
+def test_item_history_shows_every_mutation_in_order(client, registered_farmer):
+    """D24-10 (docs/audit/FINAL_CANONICAL_group_A.md): reuses the existing
+    AuditLog rows every mutation already writes - mirrors D2-06's
+    get_farm_history pattern exactly."""
+    _, tokens = registered_farmer
+    item = client.post("/api/v1/input-inventory", json=_valid_payload(), headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/input-inventory/{item['id']}/usage", json={"quantity_used": "5"}, headers=auth_headers(tokens))
+    client.post(f"/api/v1/input-inventory/{item['id']}/restock", json={"quantity_added": "10"}, headers=auth_headers(tokens))
+
+    response = client.get(f"/api/v1/input-inventory/{item['id']}/history", headers=auth_headers(tokens))
+    assert response.status_code == 200
+    actions = [event["action"] for event in response.json()]
+    assert actions == ["INPUT_INVENTORY_CREATED", "INPUT_INVENTORY_USAGE_RECORDED", "INPUT_INVENTORY_RESTOCKED"]
+
+
+def test_item_history_is_not_visible_to_another_farmer(client, registered_farmer, another_farmer):
+    _, tokens_a = registered_farmer
+    item = client.post("/api/v1/input-inventory", json=_valid_payload(), headers=auth_headers(tokens_a)).json()
+
+    _, tokens_b = another_farmer
+    response = client.get(f"/api/v1/input-inventory/{item['id']}/history", headers=auth_headers(tokens_b))
+    assert response.status_code == 404

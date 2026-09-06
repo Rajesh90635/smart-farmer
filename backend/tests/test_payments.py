@@ -170,3 +170,102 @@ def test_sandbox_completion_is_refused_when_provider_is_not_sandbox_completable(
 
     order_after = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers(farmer_tokens)).json()
     assert order_after["status"] != "paid"
+
+
+# --- D65-01/02/03/05: partial payments ---
+
+def test_order_detail_reports_full_remaining_balance_before_any_payment(client, registered_farmer, verified_dealer, approved_product):
+    """D65-02: amount_remaining defaults to the full final_amount, amount_paid to 0."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+
+    detail = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert float(detail["amount_paid"]) == 0
+    assert float(detail["amount_remaining"]) == float(detail["final_amount"])
+
+
+def test_farmer_can_pay_a_partial_amount_and_order_stays_payment_pending(client, registered_farmer, verified_dealer, approved_product):
+    """D65-01: a partial payment is accepted; D65-03: the order stays
+    PAYMENT_PENDING (not force-marked PAID) since a genuine balance
+    remains, so a second payment can still be initiated against it."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    final_amount = order["final_amount"]
+    half = str(round(float(final_amount) / 2, 2))
+
+    initiated = client.post(f"/api/v1/orders/{order['id']}/pay", json={"amount": half}, headers=auth_headers(farmer_tokens))
+    assert initiated.status_code == 200
+    assert float(initiated.json()["amount"]) == float(half)
+
+    completed = client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+    assert completed.json()["status"] == "success"
+
+    order_after = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert order_after["status"] == "payment_pending"  # not yet PAID - balance remains
+    assert float(order_after["amount_paid"]) == float(half)
+    assert float(order_after["amount_remaining"]) == round(float(final_amount) - float(half), 2)
+
+
+def test_second_installment_completes_the_order_once_balance_is_fully_paid(client, registered_farmer, verified_dealer, approved_product):
+    """D65-03: a second Payment row against the same order, made once the
+    first is no longer PENDING, completes the balance and moves the
+    order to PAID."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    final_amount = order["final_amount"]
+    half = str(round(float(final_amount) / 2, 2))
+
+    client.post(f"/api/v1/orders/{order['id']}/pay", json={"amount": half}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+
+    second = client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))  # no amount = remaining balance
+    assert second.status_code == 200
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+
+    order_after = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert order_after["status"] == "paid"
+    assert float(order_after["amount_remaining"]) == 0
+
+
+def test_cannot_pay_more_than_the_remaining_balance(client, registered_farmer, verified_dealer, approved_product):
+    """D65-01: the tendered amount is validated against the real remaining
+    balance, never trusted blindly from the client."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    too_much = str(round(float(order["final_amount"]) * 2, 2))
+
+    response = client.post(f"/api/v1/orders/{order['id']}/pay", json={"amount": too_much}, headers=auth_headers(farmer_tokens))
+    assert response.status_code == 422
+
+
+def test_cannot_initiate_payment_against_an_already_fully_paid_order(client, registered_farmer, verified_dealer, approved_product):
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+
+    response = client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    assert response.status_code == 409
+
+
+def test_payment_history_lists_every_attempt_in_order(client, registered_farmer, verified_dealer, approved_product):
+    """D65-05: failed + successful attempts both show up, oldest first."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    final_amount = order["final_amount"]
+    half = str(round(float(final_amount) / 2, 2))
+
+    client.post(f"/api/v1/orders/{order['id']}/pay", json={"amount": half}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": False}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay", json={"amount": half}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+
+    history = client.get(f"/api/v1/orders/{order['id']}/payments", headers=auth_headers(farmer_tokens)).json()
+    assert history["total"] == 2
+    assert [p["status"] for p in history["items"]] == ["failed", "success"]
+    assert [p["installment_number"] for p in history["items"]] == [1, 2]
+
+
+def test_payment_history_is_scoped_to_the_owning_farmer(client, registered_farmer, verified_dealer, approved_product, another_farmer):
+    """No cross-farmer leakage: another farmer requesting this order's
+    payment history gets a 404, not the real farmer's payment data."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+
+    _, other_tokens = another_farmer
+    response = client.get(f"/api/v1/orders/{order['id']}/payments", headers=auth_headers(other_tokens))
+    assert response.status_code == 404

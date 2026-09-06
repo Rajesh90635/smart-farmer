@@ -3,9 +3,9 @@ import pytest
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.image_processing import process_image
-from app.core.image_quality import check_quality
+from app.core.image_quality import check_quality, compute_average_hash, hamming_distance, is_capture_stale
 from app.core.image_validation import validate_upload
-from tests.photo_factories import make_test_jpeg, make_test_png
+from tests.photo_factories import make_random_noise_jpeg, make_test_jpeg, make_test_png
 
 settings = get_settings()
 
@@ -127,3 +127,52 @@ def test_process_image_thumbnail_within_configured_bounds():
     validated = validate_upload(content=make_test_jpeg(width=2000, height=1000), declared_mime_type="image/jpeg", settings=settings)
     processed = process_image(validated.image, settings=settings)
     assert max(processed.thumbnail_width, processed.thumbnail_height) <= settings.photo_thumbnail_max_dimension_px
+
+
+# --- D30-05: perceptual hash ---
+
+def test_average_hash_is_identical_for_the_exact_same_image():
+    validated = validate_upload(content=make_random_noise_jpeg(seed=1), declared_mime_type="image/jpeg", settings=settings)
+    a = compute_average_hash(validated.image)
+    b = compute_average_hash(validated.image)
+    assert a == b
+    assert hamming_distance(a, b) == 0
+
+
+def test_average_hash_is_a_16_character_hex_string():
+    validated = validate_upload(content=make_test_jpeg(), declared_mime_type="image/jpeg", settings=settings)
+    h = compute_average_hash(validated.image)
+    assert len(h) == 16
+    int(h, 16)  # raises if not valid hex
+
+
+def test_average_hash_differs_substantially_for_unrelated_images():
+    a_img = validate_upload(content=make_random_noise_jpeg(seed=1), declared_mime_type="image/jpeg", settings=settings).image
+    b_img = validate_upload(content=make_random_noise_jpeg(seed=2), declared_mime_type="image/jpeg", settings=settings).image
+    distance = hamming_distance(compute_average_hash(a_img), compute_average_hash(b_img))
+    assert distance > settings.photo_duplicate_hash_max_distance
+
+
+# --- D30-06: capture staleness ---
+
+def test_capture_stale_returns_false_when_capture_timestamp_is_missing():
+    """Never fabricated: no real timestamp means no staleness judgment."""
+    from datetime import datetime, timezone
+
+    assert is_capture_stale(None, datetime.now(timezone.utc), settings) is False
+
+
+def test_capture_stale_flags_a_capture_well_before_the_configured_threshold():
+    from datetime import datetime, timedelta, timezone
+
+    upload_time = datetime.now(timezone.utc)
+    old_capture = upload_time - timedelta(days=settings.photo_stale_capture_days + 1)
+    assert is_capture_stale(old_capture, upload_time, settings) is True
+
+
+def test_capture_stale_does_not_flag_a_recent_capture():
+    from datetime import datetime, timedelta, timezone
+
+    upload_time = datetime.now(timezone.utc)
+    recent_capture = upload_time - timedelta(days=1)
+    assert is_capture_stale(recent_capture, upload_time, settings) is False

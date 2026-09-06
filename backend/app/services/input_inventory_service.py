@@ -58,6 +58,13 @@ def create_item(db: Session, farmer_id: str, payload: InputInventoryItemCreateRe
         acquired_at=payload.acquired_at or date.today(),
     )
     input_inventory_repository.create(db, item)
+    # D24-10 (docs/audit/FINAL_CANONICAL_group_A.md): a real bug this
+    # surfaced - item.id (a Python-side uuid.uuid4 default) is only
+    # populated at flush time, so logging entity_id=str(item.id) before
+    # flushing recorded the literal string "None", permanently
+    # unreachable via any entity_id lookup. Mirrors farm_service.create_farm's
+    # own db.flush()-before-audit-log pattern.
+    db.flush()
     AuditLogger(db).log("INPUT_INVENTORY_CREATED", actor_id=farmer_id, actor_role="farmer", entity="input_inventory_item", entity_id=str(item.id))
     db.commit()
     db.refresh(item)
@@ -114,6 +121,26 @@ def correct_quantity(db: Session, farmer_id: str, item_id: uuid.UUID, payload: Q
     _check_low_stock(db, farmer_id, item)
     db.refresh(item)
     return _to_response(item, _resolve_product(db, item))
+
+
+def get_item_history(db: Session, farmer_id: str, item_id: uuid.UUID) -> list[dict]:
+    """D24-10 (docs/audit/FINAL_CANONICAL_group_A.md): every mutation
+    already logs via AuditLogger(entity="input_inventory_item") - this is
+    a pure read over that existing table, mirroring farm_service.get_farm_history
+    exactly, no new database work."""
+    from sqlalchemy import select
+
+    from app.models.audit_log import AuditLog
+
+    _get_owned_or_404(db, farmer_id, item_id)
+
+    rows = db.execute(
+        select(AuditLog).where(AuditLog.entity == "input_inventory_item", AuditLog.entity_id == str(item_id)).order_by(AuditLog.occurred_at_utc.asc())
+    ).scalars().all()
+    return [
+        {"action": r.action, "actor_role": r.actor_role, "occurred_at": r.occurred_at_utc.isoformat()}
+        for r in rows
+    ]
 
 
 def _get_owned_or_404(db: Session, farmer_id: str, item_id: uuid.UUID) -> InputInventoryItem:

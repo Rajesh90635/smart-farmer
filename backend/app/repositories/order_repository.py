@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, joinedload
@@ -80,6 +81,20 @@ def get_payment(db: Session, payment_id: uuid.UUID) -> Payment | None:
 
 def get_latest_payment_for_order(db: Session, order_id: uuid.UUID) -> Payment | None:
     return db.execute(select(Payment).where(Payment.order_id == order_id).order_by(Payment.created_at.desc()).limit(1)).scalar_one_or_none()
+
+
+def sum_successful_payment_amount_for_order(db: Session, order_id: uuid.UUID) -> Decimal:
+    return db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.order_id == order_id, Payment.status == PaymentStatus.SUCCESS)
+    ).scalar_one()
+
+
+def count_payments_for_order(db: Session, order_id: uuid.UUID) -> int:
+    return db.execute(select(func.count()).select_from(Payment).where(Payment.order_id == order_id)).scalar_one()
+
+
+def list_payments_for_order(db: Session, order_id: uuid.UUID) -> list[Payment]:
+    return list(db.execute(select(Payment).where(Payment.order_id == order_id).order_by(Payment.created_at.asc())).scalars().all())
 
 
 def list_stale_pending_payments(db: Session, cutoff: datetime) -> list[Payment]:

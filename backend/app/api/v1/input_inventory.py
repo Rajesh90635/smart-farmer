@@ -49,6 +49,16 @@ def get_item(
     return input_inventory_service.get_item(db, current_user.user_id, item_id)
 
 
+@router.get("/input-inventory/{item_id}/history")
+def get_item_history(
+    item_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """D24-10 (docs/audit/FINAL_CANONICAL_group_A.md)."""
+    return input_inventory_service.get_item_history(db, current_user.user_id, item_id)
+
+
 @router.post("/input-inventory/{item_id}/usage", response_model=InputInventoryItemResponse)
 def record_usage(
     item_id: uuid.UUID,

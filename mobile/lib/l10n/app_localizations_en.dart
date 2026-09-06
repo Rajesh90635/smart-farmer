@@ -1163,6 +1163,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Photo may be blurry. Please take another photo.';
 
   @override
+  String get photoPossibleDuplicate =>
+      'This looks similar to a photo you already took for this crop. It was still saved.';
+
+  @override
+  String get photoOldPhoto =>
+      'This photo was taken a while ago. For the most accurate check, use a recent photo.';
+
+  @override
   String get sharePhotoLocationQuestion => 'Share this photo\'s location?';
 
   @override

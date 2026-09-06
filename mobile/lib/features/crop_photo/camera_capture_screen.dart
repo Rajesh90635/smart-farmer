@@ -41,6 +41,7 @@ enum _CaptureUiState { idle, previewing, uploading, uploaded, qualityRejected, f
 class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   final ImagePicker _picker = ImagePicker();
   XFile? _capturedFile;
+  DateTime? _capturedAt;
   String _source = 'camera';
   _CaptureUiState _state = _CaptureUiState.idle;
   String? _errorMessage;
@@ -59,6 +60,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     setState(() {
       _capturedFile = picked;
       _source = source == ImageSource.camera ? 'camera' : 'gallery';
+      // D30-06 (docs/audit/FINAL_CANONICAL_group_B.md): captured HERE, at
+      // the moment the photo is taken/picked - not later at upload time,
+      // which could be much later for an offline-queued photo.
+      _capturedAt = DateTime.now();
       _state = _CaptureUiState.previewing;
     });
   }
@@ -66,6 +71,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   void _retake() {
     setState(() {
       _capturedFile = null;
+      _capturedAt = null;
       _state = _CaptureUiState.idle;
     });
   }
@@ -90,6 +96,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       fileName: _capturedFile!.name,
       mimeType: 'image/jpeg',
       source: _source,
+      capturedAt: _capturedAt,
     );
     await queue.enqueue(pending);
 
@@ -124,6 +131,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
             mimeType: pending.mimeType,
             clientUploadId: pending.clientUploadId,
             source: pending.source,
+            captureTimestamp: pending.capturedAt,
           );
       // Transport succeeded either way - a quality rejection is a
       // successful HTTP response with image_quality_status=rejected in

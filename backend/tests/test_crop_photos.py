@@ -1,7 +1,8 @@
 import io
+from datetime import datetime, timedelta, timezone
 
 from tests.conftest import auth_headers
-from tests.photo_factories import make_test_jpeg, make_test_png, valid_photo_session_payload
+from tests.photo_factories import make_random_noise_jpeg, make_test_jpeg, make_test_png, valid_photo_session_payload
 
 
 def _create_session(client, tokens, crop_cycle_id):
@@ -276,3 +277,90 @@ def test_upload_rate_limit_is_scoped_per_farmer_not_global(client, farmer_with_c
 
     response = _upload(client, tokens_b, session_b["id"], content=make_test_jpeg(), client_upload_id="farmer-b-1")
     assert response.status_code == 201
+
+
+# --- D30-05: duplicate photo detection ---
+
+def test_uploading_the_exact_same_photo_twice_in_one_crop_cycle_flags_possible_duplicate(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    content = make_random_noise_jpeg(seed=1)
+    session_a = _create_session(client, tokens, crop_cycle_id)
+    first = _upload(client, tokens, session_a["id"], content=content, client_upload_id="dup-1")
+    assert "possible_duplicate" not in first.json()["quality_reasons"]
+
+    session_b = _create_session(client, tokens, crop_cycle_id)  # a farmer can span sessions within one crop cycle
+    second = _upload(client, tokens, session_b["id"], content=content, client_upload_id="dup-2")
+    assert second.status_code == 201
+    assert "possible_duplicate" in second.json()["quality_reasons"]
+    assert second.json()["image_quality_status"] == "accepted"  # a warning, never a hard block
+
+
+def test_uploading_a_genuinely_different_photo_does_not_flag_duplicate(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+    _upload(client, tokens, session["id"], content=make_random_noise_jpeg(seed=1), client_upload_id="a")
+
+    response = _upload(client, tokens, session["id"], content=make_random_noise_jpeg(seed=2), client_upload_id="b")
+    assert "possible_duplicate" not in response.json()["quality_reasons"]
+
+
+def test_duplicate_check_is_scoped_to_the_same_crop_cycle(client, farmer_with_crop_cycle, sample_crop_id):
+    """The same photo uploaded against a DIFFERENT crop cycle is never
+    flagged - duplicate detection must not leak across crop cycles."""
+    tokens, crop_cycle_id_a = farmer_with_crop_cycle
+    content = make_random_noise_jpeg(seed=3)
+    session_a = _create_session(client, tokens, crop_cycle_id_a)
+    _upload(client, tokens, session_a["id"], content=content, client_upload_id="a")
+
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    cycle_b = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+    session_b = _create_session(client, tokens, cycle_b["id"])
+
+    response = _upload(client, tokens, session_b["id"], content=content, client_upload_id="b")
+    assert "possible_duplicate" not in response.json()["quality_reasons"]
+
+
+# --- D30-06: old photo (stale capture_timestamp) ---
+
+def test_capture_timestamp_is_stored_verbatim_from_upload_metadata(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+    captured_at = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+
+    response = _upload(client, tokens, session["id"], content=make_test_jpeg(), capture_timestamp=captured_at)
+    assert response.status_code == 201
+    assert response.json()["capture_timestamp"] is not None
+
+
+def test_photo_captured_long_before_upload_is_flagged_old_photo(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+    long_ago = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
+
+    response = _upload(client, tokens, session["id"], content=make_test_jpeg(), capture_timestamp=long_ago)
+    assert "old_photo" in response.json()["quality_reasons"]
+    assert response.json()["image_quality_status"] == "accepted"  # a warning, never a hard block
+
+
+def test_photo_captured_recently_is_not_flagged_old_photo(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+    recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+
+    response = _upload(client, tokens, session["id"], content=make_test_jpeg(), capture_timestamp=recent)
+    assert "old_photo" not in response.json()["quality_reasons"]
+
+
+def test_missing_capture_timestamp_is_never_flagged_old_photo(client, farmer_with_crop_cycle):
+    """Never fabricated: no real capture_timestamp means no staleness
+    judgment is possible, not a default-to-stale assumption."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+
+    response = _upload(client, tokens, session["id"], content=make_test_jpeg())
+    assert response.json()["capture_timestamp"] is None
+    assert "old_photo" not in response.json()["quality_reasons"]

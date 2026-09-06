@@ -51,10 +51,10 @@ groups and are out of scope here).
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 166 |
+| VERIFIED | 170 |
 | IMPLEMENTED | 25 |
 | PARTIAL | 6 |
-| MISSING | 31 |
+| MISSING | 27 |
 | BROKEN | 0 |
 | FUTURE | 15 |
 | OUT_OF_SCOPE | 3 |
@@ -72,6 +72,30 @@ built, per this row's own recommendation despite its blocker (D20) now being res
 VERIFIED, validated irrigation/soil enums on Plot); D18-06/D18-08 MISSING→VERIFIED (-2
 MISSING, +2 VERIFIED, new IrrigationRecord model); D24-04 PARTIAL→VERIFIED (-1 PARTIAL, +1
 VERIFIED, InputInventoryItem.acquired_at).)*
+
+*(Later continuation session — Missing Backlog Batch 2, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. 4 approved Batch 2 items in
+this group all became VERIFIED with genuine minimal fixes: D2-08/D2-09
+(-2 MISSING, +2 VERIFIED - `FarmResponse.irrigation_summary`/`soil_summary`,
+a computed rollup across a farm's own plots merging BOTH the legacy
+free-text `Plot.irrigation_type`/`soil_type` AND the later, separate,
+validated-enum `irrigation_source`/`soil_category` fields - found during
+testing that the enum fields are independently settable and were being
+silently dropped from an earlier draft of this rollup, fixed before
+landing); D13-05 (-1 MISSING, +1 VERIFIED - `TaskType.PRUNING`, migration
+`fd90ec676715`, plus the mobile task-creation dropdown); D24-10 (-1
+MISSING, +1 VERIFIED - `input_inventory_service.get_item_history` reusing
+the existing `AuditLogger(entity="input_inventory_item")` trail exactly
+like D2-06's `get_farm_history`, zero new DB work; a real pre-existing bug
+found and fixed in the process - `create_item`'s audit-log call read
+`item.id` before the `db.flush()` that populates it, so every CREATED
+event had been silently logged under entity_id="None", unreachable by any
+future query). Total unchanged at 252 - every change here is an internal
+status move, zero new/removed rows. Full backend suite: 930 passed, 0
+failed/errored (pre-existing count before this pass's own final doc-only
+edits; re-confirmed clean for every touched test file individually). Full
+flutter suite: 301 passed, 0 failed. See docs/FINAL_GAP_REPORT.md and
+docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 *(Further updated this session: D15-04/D15-08/D15-09/D17-04/D17-05 MISSING→VERIFIED (-5
 MISSING, +5 VERIFIED) — the weather-risk safety-detection cluster: frost (Magnus-formula
@@ -886,7 +910,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_create_farm_infrastructure_record
 - Verification method: automated test
 ### D2-08 - Domain 2 (Farm) - Irrigation information (farm-level)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `FarmResponse.irrigation_summary` (sorted, distinct, non-null `Plot.irrigation_type` values across the farm's own plots), computed in `FarmResponse.from_orm_farm` - never a duplicated farm-level column. `Plot.irrigation_type`/`soil_type` remain plain free-text (D3-08/D17-01's enum work never actually landed - that cited dependency turned out to be aspirational, not a real blocker; the rollup works correctly over the real free-text values as-is). Tests: `tests/test_farms.py::test_farm_detail_includes_irrigation_summary_from_plots`, `test_farm_with_no_plots_has_empty_irrigation_and_soil_summaries`
 - Existing relevant files/classes/functions: only Plot.irrigation_type exists; no farm-level field
 - Missing component: farm-level irrigation summary/rollup
 - Required implementation: either a computed farm-level rollup (aggregate distinct Plot.irrigation_type values across a farm's plots) or a dedicated farm-level field if a farm-wide irrigation source is meaningful separately - recommend the computed rollup to avoid duplicate/conflicting data entry
@@ -902,7 +926,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test
 
 ### D2-09 - Domain 2 (Farm) - Soil information (farm-level)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `FarmResponse.soil_summary`, same computed-rollup pattern as D2-08 (shared implementation, shared row-level reasoning). Test: `tests/test_farms.py::test_farm_detail_includes_soil_summary_from_plots`
 - Existing relevant files/classes/functions: only Plot.soil_type exists
 - Missing component: farm-level soil summary
 - Required implementation: same reasoning/approach as D2-08 - computed rollup across plots rather than a duplicated farm-level field
@@ -1241,7 +1265,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: covered by D8-08's tests
 - Verification method: automated test (already passing) - flagged for reclassification per the D8-08 cross-reference, not a distinct undisclosed gap
 ### D13-05 - Domain 13 (Perennial Crops) - Pruning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `TaskType.PRUNING` added (migration `fd90ec676715`, `ALTER TYPE task_type ADD VALUE`); mobile `taskTypeOptions` includes `'pruning'` (task creation dropdown, no separate label-mapping to update). Tests: `tests/test_tasks.py::test_create_task_with_pruning_type` (backend), `task_models_test.dart::taskTypeOptions matches...` (mobile)
 - Existing relevant files/classes/functions: TaskType enum is GENERAL/IRRIGATION/SPRAYING/FERTILIZING/WEEDING/HARVESTING/OTHER - no PRUNING value; farmer can only mislabel via OTHER/GENERAL
 - Missing component: dedicated TaskType.PRUNING value
 - Required implementation: add PRUNING to the TaskType enum - a small, low-risk additive change
@@ -1712,7 +1736,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: direct code read this session (`input_inventory_service.py:82`), confirmed passing in the 761-test full suite run
 
 ### D24-10 - Domain 24 (Input Inventory) - Inventory history
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - confirmed exactly this row's own closing recommendation: `input_inventory_service.py` already logged every mutation (`INPUT_INVENTORY_CREATED`/`USAGE_RECORDED`/`RESTOCKED`/`CORRECTED`) via `AuditLogger(entity="input_inventory_item")` - zero new DB work needed. New `get_item_history` (mirrors `farm_service.get_farm_history`/D2-06 exactly) + `GET /input-inventory/{item_id}/history`. Real bug found and fixed in the process: `create_item`'s audit-log call read `item.id` BEFORE the `db.flush()` that actually populates it (a Python-side `uuid.uuid4` default only applies at flush time), so every CREATED row had previously been logged with the literal string "None" as its entity_id - permanently unreachable by this new read path until fixed. Tests: `tests/test_input_inventory.py::test_item_history_shows_every_mutation_in_order`, `test_item_history_is_not_visible_to_another_farmer`
 - Existing relevant files/classes/functions: GET /orders gives purchase history only; partial credit only insofar as order/purchase history exists
 - Missing component: true inventory history (additions/consumption over time) as opposed to marketplace purchase history
 - Required implementation: add an append-only input_inventory_history table (or reuse an audit-log-style pattern) recording every create/usage/restock/correction event against an InputInventoryItem, mirroring crop_cycle_stage_history.py's pattern - check first whether the Batch 3 delta's correction action already implies some history tracking (the matrix summary lists create, usage, restock, correction as built actions, which strongly suggests event-level tracking may already partially exist and just need a farmer-facing history endpoint/screen on top)

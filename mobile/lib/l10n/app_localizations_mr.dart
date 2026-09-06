@@ -1165,6 +1165,14 @@ class AppLocalizationsMr extends AppLocalizations {
       'फोटो अस्पष्ट असू शकतो. कृपया आणखी एक फोटो काढा.';
 
   @override
+  String get photoPossibleDuplicate =>
+      'हे या पिकासाठी तुम्ही आधीच काढलेल्या फोटोसारखे दिसते. तरीही तो जतन केला गेला आहे.';
+
+  @override
+  String get photoOldPhoto =>
+      'हा फोटो काही काळापूर्वी काढला होता. सर्वात अचूक तपासणीसाठी, अलीकडील फोटो वापरा.';
+
+  @override
   String get sharePhotoLocationQuestion => 'या फोटोचं ठिकाण शेअर करायचं का?';
 
   @override

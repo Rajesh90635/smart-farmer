@@ -1173,6 +1173,14 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫోటో అస్పష్టంగా ఉండవచ్చు. దయచేసి మరో ఫోటో తీయండి.';
 
   @override
+  String get photoPossibleDuplicate =>
+      'ఇది ఈ పంట కోసం మీరు ఇప్పటికే తీసిన ఫోటోను పోలి ఉంది. అది ఇప్పటికీ సేవ్ చేయబడింది.';
+
+  @override
+  String get photoOldPhoto =>
+      'ఈ ఫోటో కొంతకాలం క్రితం తీయబడింది. అత్యంత ఖచ్చితమైన తనిఖీ కోసం, ఇటీవలి ఫోటోను ఉపయోగించండి.';
+
+  @override
   String get sharePhotoLocationQuestion => 'ఈ ఫోటో లొకేషన్‌ను షేర్ చేయాలా?';
 
   @override

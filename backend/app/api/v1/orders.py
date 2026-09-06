@@ -32,7 +32,9 @@ from app.schemas.order import (
     OrderListResponse,
     OrderResponse,
     PaymentCompleteRequest,
+    PaymentInitiateRequest,
     PaymentInitiateResponse,
+    PaymentListResponse,
     RefundResponse,
 )
 from app.services import dealer_order_service, delivery_service, dispute_service, order_service, payment_service
@@ -121,11 +123,22 @@ def cancel_order(
 @router.post("/orders/{order_id}/pay", response_model=PaymentInitiateResponse)
 def initiate_payment(
     order_id: uuid.UUID,
+    payload: PaymentInitiateRequest | None = None,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     payment_provider: PaymentGatewayProvider = Depends(get_payment_gateway_provider),
 ) -> PaymentInitiateResponse:
-    return payment_service.initiate_payment(db, current_user.user_id, order_id, payment_provider)
+    amount = payload.amount if payload is not None else None
+    return payment_service.initiate_payment(db, current_user.user_id, order_id, payment_provider, amount=amount)
+
+
+@router.get("/orders/{order_id}/payments", response_model=PaymentListResponse)
+def list_order_payments(
+    order_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> PaymentListResponse:
+    return payment_service.list_payments_for_order(db, current_user.user_id, order_id)
 
 
 @router.post("/orders/{order_id}/pay/complete", response_model=PaymentInitiateResponse)

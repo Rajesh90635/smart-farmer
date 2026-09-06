@@ -40,6 +40,7 @@ from app.models.harvest_listing import HarvestListing  # noqa: F401
 from app.models.crop_cost_estimate import CropCostEstimate  # noqa: F401
 from app.models.harvest_record import HarvestRecord  # noqa: F401
 from app.models.input_inventory import InputInventoryItem  # noqa: F401
+from app.models.insurance_policy import InsurancePolicy  # noqa: F401
 from app.models.invoice import Invoice  # noqa: F401
 from app.models.irrigation_record import IrrigationRecord  # noqa: F401
 from app.models.soil_sample import SoilSample  # noqa: F401
@@ -61,6 +62,7 @@ from app.models.professional_profile import ProfessionalProfile  # noqa: F401
 from app.models.reference_price import ReferencePrice  # noqa: F401
 from app.models.refresh_token import RefreshToken  # noqa: F401
 from app.models.role import Role, UserRole  # noqa: F401
+from app.models.rule_version_snapshot import RuleVersionSnapshot  # noqa: F401
 from app.models.sale_dispute import DemandSignal, QualityDispute, SaleDispute, SaleFeedback  # noqa: F401
 from app.models.sale_order import SaleOrder  # noqa: F401
 from app.models.task import Task  # noqa: F401

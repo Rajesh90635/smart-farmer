@@ -140,6 +140,13 @@ class CropPhoto(Base):
         String(500), nullable=True
     )  # e.g. "too_dark,too_blurry" - farmer-facing message is composed from this, not stored pre-rendered
 
+    # D30-05 (docs/audit/FINAL_CANONICAL_group_B.md): a perceptual
+    # "average hash" (see app/core/image_quality.py) computed at upload
+    # time - used only to flag a likely-duplicate capture of the same
+    # subject within the same crop cycle, never to identify the image
+    # content itself.
+    perceptual_hash: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)

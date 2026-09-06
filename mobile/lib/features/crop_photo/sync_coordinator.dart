@@ -136,6 +136,7 @@ class SyncCoordinator {
         mimeType: pending.mimeType,
         clientUploadId: pending.clientUploadId,
         source: pending.source,
+        captureTimestamp: pending.capturedAt,
       );
       // A quality-rejected result is a SUCCESSFUL HTTP response (the
       // photo was received and stored server-side, just flagged

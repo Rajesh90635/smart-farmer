@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -61,6 +61,11 @@ class Payment(Base):
         index=True,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    # D65-03: ordering when an order/sale accumulates more than one Payment
+    # row (partial/installment payments) - 1 for the first payment attempt,
+    # incrementing per additional attempt against the same order/sale,
+    # regardless of whether an earlier attempt failed.
+    installment_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     external_reference: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

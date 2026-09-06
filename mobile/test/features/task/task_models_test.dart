@@ -107,7 +107,7 @@ void main() {
     });
 
     test('taskTypeOptions matches the exact real backend TaskType enum values', () {
-      expect(taskTypeOptions, ['general', 'irrigation', 'spraying', 'fertilizing', 'weeding', 'harvesting', 'other']);
+      expect(taskTypeOptions, ['general', 'irrigation', 'spraying', 'fertilizing', 'weeding', 'harvesting', 'pruning', 'other']);
     });
   });
 }

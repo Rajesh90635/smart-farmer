@@ -26,6 +26,7 @@ class CropPhoto {
   final int fileSizeBytes;
   final int widthPx;
   final int heightPx;
+  final String? captureTimestamp;
   final String uploadTimestamp;
   final String source;
   final String uploadStatus;
@@ -41,6 +42,7 @@ class CropPhoto {
     required this.fileSizeBytes,
     required this.widthPx,
     required this.heightPx,
+    this.captureTimestamp,
     required this.uploadTimestamp,
     required this.source,
     required this.uploadStatus,
@@ -59,6 +61,7 @@ class CropPhoto {
         fileSizeBytes: json['file_size_bytes'] as int,
         widthPx: json['width_px'] as int,
         heightPx: json['height_px'] as int,
+        captureTimestamp: json['capture_timestamp'] as String?,
         uploadTimestamp: json['upload_timestamp'] as String,
         source: json['source'] as String,
         uploadStatus: json['upload_status'] as String,
@@ -129,6 +132,11 @@ const Map<String, String> qualityReasonMessageKeys = {
   'too_dark': 'photoTooDark',
   'too_bright': 'photoTooBright',
   'too_blurry': 'photoTooBlurry',
+  // D30-05/D30-06 (docs/audit/FINAL_CANONICAL_group_B.md): warnings, not
+  // rejections - image_quality_status stays 'accepted' for these, but the
+  // farmer still deserves to know the backend flagged them.
+  'possible_duplicate': 'photoPossibleDuplicate',
+  'old_photo': 'photoOldPhoto',
 };
 
 /// Shared quality-reason-to-farmer-message mapping - extracted from
@@ -147,6 +155,10 @@ List<String> qualityFriendlyMessages(AppLocalizations l10n, List<String> reasons
         return l10n.photoTooBright;
       case 'too_blurry':
         return l10n.photoTooBlurry;
+      case 'possible_duplicate':
+        return l10n.photoPossibleDuplicate;
+      case 'old_photo':
+        return l10n.photoOldPhoto;
       default:
         return reason;
     }

@@ -1163,6 +1163,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get photoTooBlurry => 'फोटो धुंधली हो सकती है। कृपया दूसरी फोटो लें।';
 
   @override
+  String get photoPossibleDuplicate =>
+      'यह इस फ़सल के लिए आपकी पहले ली गई फोटो जैसी लगती है। यह फिर भी सेव कर दी गई है।';
+
+  @override
+  String get photoOldPhoto =>
+      'यह फोटो कुछ समय पहले ली गई थी। सबसे सटीक जांच के लिए हाल की फोटो का उपयोग करें।';
+
+  @override
   String get sharePhotoLocationQuestion =>
       'क्या इस फोटो की लोकेशन शेयर करनी है?';
 

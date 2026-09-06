@@ -38,14 +38,29 @@ changes, and are folded into this file's evidence rather than the deltas table: 
 (cited as examples of already-correctly-justified MISSING/FUTURE rows — see §3/§5), and
 D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE rows — see §6).
 
+*(Later continuation session — Missing Backlog Batch 2, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Of the 5 D65 Partial
+Payments items, 4 became VERIFIED with genuine new code (D65-01/02/03/05 -
+4 MISSING, +4 VERIFIED): partial-amount payments (scoped to the DEALER
+ORDER flow only, per this cluster's own citations - the marketplace SALE
+flow was correctly left out of scope, not silently skipped), a computed
+remaining-balance, installment support with the order only reaching PAID
+once genuinely fully paid, and a payment-history endpoint. D65-04
+(ledger-level balance tracking) was deliberately deferred, re-confirmed
+genuinely complex rather than force-built - see its own row for the exact
+reasoning. Total unchanged at 174 - every change here is an internal
+status move, zero new/removed rows. Full backend suite: 931 passed, 0
+failed/errored. See docs/FINAL_GAP_REPORT.md and
+docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
+
 ## Count summary (this group)
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 83 |
+| VERIFIED | 87 |
 | IMPLEMENTED | 14 |
 | PARTIAL | 4 |
-| MISSING | 46 |
+| MISSING | 42 |
 | BROKEN | 0 |
 | FUTURE | 7 |
 | OUT_OF_SCOPE | 20 |
@@ -1500,7 +1515,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 65 Partial Payments
 - Scenario ID: D65-01
 - Exact scenario name: Partial payment
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - scoped to the DEALER ORDER flow only (`payment_service.py`/`orders.py`), per this row's own citations - the marketplace SALE flow (`sale_order_service.py`) still hardcodes the full amount and is out of scope for this row (not audited under D65 at all). `PaymentInitiateRequest.amount` (optional, defaults to the full remaining balance) validated against a real computed remaining balance, never trusted blindly. Tests: `test_payments.py::test_farmer_can_pay_a_partial_amount_and_order_stays_payment_pending`, `test_cannot_pay_more_than_the_remaining_balance`
 - Existing relevant files/classes/functions: `Payment.amount` always set to `order.final_amount`/`sale.net_value` verbatim (`payment_service.py:35`, `sale_order_service.py:113`); `PaymentCompleteRequest` (`schemas/order.py:85-88`) only carries `succeed: bool`
 - Missing component: Any partial-amount field anywhere in the Payment model/schema/service layer
 - Required implementation: Add an `amount: Decimal` field to the payment-initiation request, validated `<= order.final_amount`; track `Payment.amount` as the actually-tendered amount rather than always the full order value
@@ -1519,7 +1534,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 65 Partial Payments
 - Scenario ID: D65-02
 - Exact scenario name: Remaining balance tracking
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `OrderResponse.amount_paid`/`amount_remaining`, computed fresh from successful `Payment` rows (never stored), exposed on the order-detail (`get_my_order`) and order-list (`list_my_orders`) reads. Test: `test_payments.py::test_order_detail_reports_full_remaining_balance_before_any_payment`
 - Existing relevant files/classes/functions: none — only one full-amount payment attempt is modeled per order
 - Missing component: Any "balance remaining" concept
 - Required implementation: A computed `amount_remaining = order.final_amount - sum(successful Payment.amount)` function, exposed via the order-detail response
@@ -1538,7 +1553,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 65 Partial Payments
 - Scenario ID: D65-03
 - Exact scenario name: Multiple payments
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `Payment.installment_number` (migration `aa4170ae6a30`); `initiate_payment` allows a second/subsequent payment once a real balance remains (via `sum_successful_payment_amount_for_order`), and `complete_payment` only transitions the order to PAID once cumulative successful payments reach `final_amount` - otherwise stays PAYMENT_PENDING for a further installment. Test: `test_payments.py::test_second_installment_completes_the_order_once_balance_is_fully_paid`
 - Existing relevant files/classes/functions: `Payment.order_id`/`sale_order_id` are not unique (multiple rows physically possible), but `get_latest_payment_for_order` (`order_repository.py:80-81`) only ever looks at the single most recent row; no endpoint creates a second `Payment` while the order isn't back in a pre-payment state (see D66-02)
 - Missing component: `payments` has no `sequence`/`installment_number` column; no endpoint supports intentionally creating a second payment for the same order while it's still partially paid
 - Required implementation: Allow `initiate_payment` to create an additional `Payment` row when the order has an outstanding balance (D65-02), with a `sequence`/`installment_number` column for ordering
@@ -1557,7 +1572,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 65 Partial Payments
 - Scenario ID: D65-04
 - Exact scenario name: Balance tracking (ledger-level)
-- Current implementation status: Missing
+- Current implementation status: **Missing (deliberately deferred, Missing Backlog Batch 2)** - re-confirmed genuinely complex, not attempted this batch. `ledger_service.import_completed_sales` only imports a sale once its status is `COMPLETED` (the full `net_value`, idempotent via `linked_sale_id`'s unique constraint) - extending it to import PARTIAL receipts incrementally, without either double-counting once the sale later completes or misrepresenting an in-progress sale as settled revenue, is a genuine ledger-design question this batch's other 4 D65 items don't require solving. Left for its own future batch rather than force-built under time pressure.
 - Existing relevant files/classes/functions: none — `LedgerEntry`/`crop_financial_service` operate on completed sale totals only, not partial-payment ledgers
 - Missing component: Any ledger-level view of partial-payment balances
 - Required implementation: Once D70-01's sale-import mechanism exists (it does, VERIFIED), extend it to import partial-payment receipts incrementally rather than only a single `COMPLETED` sale total — a design question requiring care not to double-count or prematurely import an incomplete sale
@@ -1576,7 +1591,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 65 Partial Payments
 - Scenario ID: D65-05
 - Exact scenario name: Payment history
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - new `GET /orders/{id}/payments` (farmer-ownership-scoped via `get_order_owned_by_farmer`, 404-not-403 for another farmer's order), returns every `Payment` row (failed + successful) ordered by `created_at`. Tests: `test_payments.py::test_payment_history_lists_every_attempt_in_order`, `test_payment_history_is_scoped_to_the_owning_farmer`
 - Existing relevant files/classes/functions: `get_latest_payment_for_order` only returns the single latest row; no endpoint lists all `Payment` rows for an order/sale (confirmed by grep of `order_repository.py`/`orders.py`/`marketplace.py`)
 - Missing component: Any list-payments read path
 - Required implementation: A `GET /orders/{id}/payments` endpoint returning all `Payment` rows for the order, ordered by `created_at`

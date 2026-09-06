@@ -11,6 +11,7 @@ from app.core import error_codes
 from app.core.config import Settings, get_settings
 from app.core.current_user import CurrentUser, require_role
 from app.core.errors import AppError
+from app.core.market_provider_dependency import get_market_provider
 from app.core.roles import Role
 from app.core.storage_dependency import get_file_storage
 from app.db.session import get_db
@@ -26,6 +27,7 @@ from app.schemas.product import (
     ProductResponse,
 )
 from app.services import dealer_product_service, price_query_service, product_service
+from app.services.market.market_provider import MarketProvider
 from app.services.storage.base import FileStorage
 
 router = APIRouter(tags=["products"])
@@ -223,13 +225,14 @@ def compare_product_prices(
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    market_provider: MarketProvider = Depends(get_market_provider),
 ) -> PriceComparisonResponse:
     """D44-02/03/04 (docs/audit/FINAL_CANONICAL_group_B.md): optional
     location filter (dealer's own service_area), mirroring the state/
     district matching nearby_professional_service already uses for
     experts - no location given returns every verified dealer's offer,
     same as before this filter existed."""
-    return price_query_service.compare_offers_for_product(db, product_id, settings, district=district, state=state)
+    return price_query_service.compare_offers_for_product(db, product_id, settings, market_provider, district=district, state=state)
 
 
 @router.get("/dealer-products/{dealer_product_id}/scam-shield", response_model=ScamShieldStatusResponse)
@@ -238,8 +241,9 @@ def get_scam_shield_status(
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    market_provider: MarketProvider = Depends(get_market_provider),
 ) -> ScamShieldStatusResponse:
-    return price_query_service.get_scam_shield_status(db, dealer_product_id, settings)
+    return price_query_service.get_scam_shield_status(db, dealer_product_id, settings, market_provider)
 
 
 @router.post("/dealer-products", response_model=DealerProductResponse, status_code=201)

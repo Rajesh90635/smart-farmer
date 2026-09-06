@@ -1185,6 +1185,14 @@ class AppLocalizationsMl extends AppLocalizations {
       'ഫോട്ടോ മങ്ങിയതായിരിക്കാം. ദയവായി മറ്റൊരു ഫോട്ടോ എടുക്കുക.';
 
   @override
+  String get photoPossibleDuplicate =>
+      'ഇത് ഈ വിളയ്ക്കായി നിങ്ങൾ നേരത്തെ എടുത്ത ഫോട്ടോയോട് സാമ്യമുള്ളതാണ്. ഇത് ഇപ്പോഴും സേവ് ചെയ്തിട്ടുണ്ട്.';
+
+  @override
+  String get photoOldPhoto =>
+      'ഈ ഫോട്ടോ കുറച്ച് സമയം മുമ്പ് എടുത്തതാണ്. ഏറ്റവും കൃത്യമായ പരിശോധനയ്ക്ക്, സമീപകാല ഫോട്ടോ ഉപയോഗിക്കുക.';
+
+  @override
   String get sharePhotoLocationQuestion => 'ഈ ഫോട്ടോയുടെ സ്ഥലം പങ്കിടണോ?';
 
   @override

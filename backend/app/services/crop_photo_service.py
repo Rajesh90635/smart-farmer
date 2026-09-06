@@ -8,7 +8,7 @@ from app.core import error_codes
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.core.image_processing import process_image
-from app.core.image_quality import check_quality
+from app.core.image_quality import check_quality, compute_average_hash, hamming_distance, is_capture_stale
 from app.core.image_validation import validate_upload
 from app.core.photo_storage_keys import build_leaf_filename, build_photo_container
 from app.middleware.rate_limit import InMemoryRateLimiter
@@ -110,6 +110,14 @@ def upload_photo(
     processed = process_image(validated.image, settings=settings)
     quality = check_quality(validated.image, settings)
 
+    upload_timestamp = datetime.now(timezone.utc)
+    perceptual_hash = compute_average_hash(validated.image)
+    reasons = list(quality.reasons)
+    if is_capture_stale(metadata.capture_timestamp, upload_timestamp, settings):
+        reasons.append("old_photo")
+    if _has_recent_duplicate(db, crop_cycle.id, perceptual_hash, settings):
+        reasons.append("possible_duplicate")
+
     extension = _EXT_BY_MIME.get(declared_mime_type, "jpg")
     container = build_photo_container(farmer_id=farmer_uuid, crop_cycle_id=crop_cycle.id)
 
@@ -140,15 +148,21 @@ def upload_photo(
         file_size_bytes=len(processed.content),
         width_px=processed.width,
         height_px=processed.height,
-        upload_timestamp=datetime.now(timezone.utc),
+        capture_timestamp=metadata.capture_timestamp,
+        upload_timestamp=upload_timestamp,
         latitude=metadata.latitude if metadata.share_location else None,
         longitude=metadata.longitude if metadata.share_location else None,
         device_model=metadata.device_model,
         capture_condition=metadata.capture_condition,
         source=metadata.source,
         upload_status=UploadStatus.READY,
+        # D30-05/D30-06: "old_photo"/"possible_duplicate" are informational
+        # warnings, never a hard block - image_quality_status is driven
+        # only by the real technical quality.accepted verdict, exactly as
+        # before this change.
         image_quality_status=ImageQualityStatus.ACCEPTED if quality.accepted else ImageQualityStatus.REJECTED,
-        quality_reasons=",".join(quality.reasons) if quality.reasons else None,
+        quality_reasons=",".join(reasons) if reasons else None,
+        perceptual_hash=perceptual_hash,
     )
     crop_photo_repository.create(db, photo)
     db.flush()
@@ -270,6 +284,17 @@ def list_dead_letter_reports(db: Session) -> DeadLetterReportListResponse:
     per-farmer filter, since this is an ops/support view of stuck uploads."""
     reports = dead_letter_report_repository.list_all(db)
     return DeadLetterReportListResponse(items=[DeadLetterReportResponse.model_validate(r) for r in reports], total=len(reports))
+
+
+def _has_recent_duplicate(db: Session, crop_cycle_id: uuid.UUID, perceptual_hash: str, settings: Settings) -> bool:
+    """D30-05: true if any recent photo in the SAME crop cycle has a
+    perceptual hash within the configured similarity distance - flagged as
+    a warning only, never used to reject or silently drop the upload."""
+    candidates = crop_photo_repository.list_recent_hashed_for_crop_cycle(db, crop_cycle_id)
+    return any(
+        hamming_distance(perceptual_hash, existing.perceptual_hash) <= settings.photo_duplicate_hash_max_distance
+        for existing in candidates
+    )
 
 
 def _sanitize_display_filename(filename: str | None) -> str | None:

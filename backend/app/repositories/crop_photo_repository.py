@@ -50,6 +50,28 @@ def list_for_crop_cycle(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.U
     )
 
 
+def list_recent_hashed_for_crop_cycle(db: Session, crop_cycle_id: uuid.UUID, *, limit: int = 20) -> list[CropPhoto]:
+    """D30-05: candidates for the duplicate-photo check - only rows that
+    actually have a perceptual_hash (older photos uploaded before this
+    feature existed have none), most recent first, capped so a crop cycle
+    with thousands of photos doesn't make every new upload compare against
+    its entire history."""
+    return list(
+        db.execute(
+            select(CropPhoto)
+            .where(
+                CropPhoto.crop_cycle_id == crop_cycle_id,
+                CropPhoto.upload_status != UploadStatus.DELETED,
+                CropPhoto.perceptual_hash.is_not(None),
+            )
+            .order_by(CropPhoto.created_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+
+
 def list_for_session(db: Session, session_id: uuid.UUID) -> list[CropPhoto]:
     return list(
         db.execute(

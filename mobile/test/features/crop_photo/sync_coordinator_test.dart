@@ -41,6 +41,7 @@ class AlwaysFailingCropPhotoRepository extends CropPhotoRepository {
     bool shareLocation = false,
     double? latitude,
     double? longitude,
+    DateTime? captureTimestamp,
   }) async {
     throw Exception('simulated permanent upload failure');
   }

@@ -154,4 +154,35 @@ void main() {
     final restored = PendingUpload.fromJson(legacyJson);
     expect(restored.retryCount, 0);
   });
+
+  test('capturedAt round-trips through toJson/fromJson - D30-06', () {
+    final original = PendingUpload(
+      clientUploadId: 'a',
+      sessionId: 'session-1',
+      localFilePath: '/tmp/x.jpg',
+      fileName: 'leaf.jpg',
+      mimeType: 'image/jpeg',
+      source: 'camera',
+      capturedAt: DateTime.utc(2026, 1, 1, 10, 30),
+    );
+
+    final restored = PendingUpload.fromJson(original.toJson());
+    expect(restored.capturedAt, DateTime.utc(2026, 1, 1, 10, 30));
+  });
+
+  test('fromJson defaults capturedAt to null for a manifest written before this field existed', () {
+    final legacyJson = {
+      'clientUploadId': 'a',
+      'sessionId': 'session-1',
+      'localFilePath': '/tmp/x.jpg',
+      'fileName': 'leaf.jpg',
+      'mimeType': 'image/jpeg',
+      'source': 'camera',
+      'status': 'failed',
+      'lastErrorMessage': null,
+      // no 'capturedAt' key at all - simulates an old manifest file
+    };
+    final restored = PendingUpload.fromJson(legacyJson);
+    expect(restored.capturedAt, isNull);
+  });
 }

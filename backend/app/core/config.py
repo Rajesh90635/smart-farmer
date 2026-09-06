@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     photo_quality_min_mean_brightness: float = 25.0   # below this: "too dark"
     photo_quality_max_mean_brightness: float = 230.0  # above this: "too bright"
     photo_quality_min_blur_variance: float = 15.0     # below this: "too blurry"
+    # D30-05/D30-06 (docs/audit/FINAL_CANONICAL_group_B.md): warnings only,
+    # never a hard block - "possible_duplicate"/"old_photo" are appended to
+    # quality_reasons independent of image_quality_status.
+    photo_duplicate_hash_max_distance: int = 5  # out of 64 bits - below this: "possible_duplicate"
+    photo_stale_capture_days: int = 30          # capture_timestamp older than this before upload: "old_photo"
 
     # --- OCR (Phase 30) - PLACEHOLDERS, same honesty convention as the
     # AI confidence gate (Prompt 6) and image quality thresholds above:

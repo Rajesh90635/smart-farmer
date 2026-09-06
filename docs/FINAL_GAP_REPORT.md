@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 434 |
+| Verified | 447 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **507** |
+| **Attended (Verified + Implemented)** | **520** |
 | Partial | 21 |
-| Missing | 198 |
+| Missing | 185 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **219** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **206** |
 | Future | 38 |
 | Out of Scope | 26 |
 | Environment Dependent | 8 |
@@ -45,6 +45,33 @@ unchanged at 798 - every change this pass was an internal status move,
 zero new/removed rows. Full backend suite and full flutter suite both
 re-run green after this batch. See docs/audit/FINAL_CANONICAL_group_D.md's
 own batch note for the full per-scenario breakdown.)*
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
+BACKLOG" prioritization plan's Batch 2 (the user's "go ahead next batch"
+approving the priority plan's own recommended Batch 2 list). 14 approved
+items processed, spanning all four canonical group files for the first
+time this session: D65-01/02/03/05, D89-03, D90-02, D24-10, D2-08/D2-09,
+D13-05, D30-05/D30-06, D74-01 all VERIFIED (+13); D65-04 (ledger-level
+partial-payment tracking) investigated and deliberately deferred, not
+force-built - a genuine ledger-design question (avoiding double-counting
+or prematurely importing an incomplete sale into the farmer's own
+financial ledger), correctly left for its own future batch rather than
+built under time pressure. Verified 434→447 (+13), Missing 198→185 (-13,
+matching). Partial row D89-08 re-verified again (stays Partial, unchanged
+count): all three of its cited dependencies (D89-01/02/03) are now
+Verified, narrowing its remaining blocker to a smaller, more specific gap
+(a per-notification FK to the exact snapshot that produced it) than
+before this batch. Total unchanged at 798 - every change this pass was an
+internal status move, zero new/removed rows. One real pre-existing bug
+found and fixed as a side effect of building D24-10's read path:
+`input_inventory_service.create_item` logged its CREATED audit event with
+`entity_id=str(item.id)` BEFORE the `db.flush()` that actually populates a
+Python-side UUID default, so every such row had been silently unreachable
+under the literal string "None" - not a Batch-2 scenario itself, but
+disclosed here since it affects real production behavior. Full backend
+suite: 931 passed, 0 failed/errored. Full flutter suite: 301 passed, 0
+failed. See each of the four group files' own batch notes for the full
+per-scenario breakdown.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 PARTIAL
 FUNCTIONALITY COMPLETION" prompt: every genuinely Partial scenario across

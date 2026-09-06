@@ -2352,6 +2352,18 @@ abstract class AppLocalizations {
   /// **'Photo may be blurry. Please take another photo.'**
   String get photoTooBlurry;
 
+  /// No description provided for @photoPossibleDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'This looks similar to a photo you already took for this crop. It was still saved.'**
+  String get photoPossibleDuplicate;
+
+  /// No description provided for @photoOldPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'This photo was taken a while ago. For the most accurate check, use a recent photo.'**
+  String get photoOldPhoto;
+
   /// No description provided for @sharePhotoLocationQuestion.
   ///
   /// In en, this message translates to:

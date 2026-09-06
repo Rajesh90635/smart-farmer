@@ -28,6 +28,13 @@ class PendingUpload {
   final String fileName;
   final String mimeType;
   final String source; // 'camera' | 'gallery'
+  // D30-06 (docs/audit/FINAL_CANONICAL_group_B.md): the device clock at
+  // the moment of capture - set once, in _capture(), and carried through
+  // the queue unchanged so a photo that waits offline for hours/days still
+  // reports its REAL capture time, not whenever the upload finally
+  // succeeds. Nullable/defaulted for forward-compatibility with a
+  // manifest written by a version of this app before this field existed.
+  final DateTime? capturedAt;
   PendingUploadStatus status;
   String? lastErrorMessage;
   int retryCount; // caps automatic retries so a permanently-failing upload doesn't hammer forever
@@ -40,6 +47,7 @@ class PendingUpload {
     required this.fileName,
     required this.mimeType,
     required this.source,
+    this.capturedAt,
     this.status = PendingUploadStatus.waitingForNetwork,
     this.lastErrorMessage,
     this.retryCount = 0,
@@ -58,6 +66,7 @@ class PendingUpload {
         'fileName': fileName,
         'mimeType': mimeType,
         'source': source,
+        'capturedAt': capturedAt?.toUtc().toIso8601String(),
         'status': status.name,
         'lastErrorMessage': lastErrorMessage,
         'retryCount': retryCount,
@@ -73,6 +82,9 @@ class PendingUpload {
         fileName: json['fileName'] as String,
         mimeType: json['mimeType'] as String,
         source: json['source'] as String,
+        // Defaulted for forward-compatibility with a manifest written by
+        // a version of this app before capturedAt existed.
+        capturedAt: json['capturedAt'] != null ? DateTime.parse(json['capturedAt'] as String) : null,
         status: PendingUploadStatus.values.byName(json['status'] as String),
         lastErrorMessage: json['lastErrorMessage'] as String?,
         // Defaulted for forward-compatibility with a manifest written by

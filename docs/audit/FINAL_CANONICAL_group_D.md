@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 113 |
+| VERIFIED | 116 |
 | IMPLEMENTED | 30 |
 | PARTIAL | 7 |
-| MISSING | 58 |
+| MISSING | 55 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 3 |
@@ -202,6 +202,26 @@ Full backend suite and full flutter suite both re-run green after this
 batch - see each suite's own run for exact counts. See
 docs/FINAL_GAP_REPORT.md and docs/FINAL_RELEASE_READINESS.md for the
 cross-group reconciliation.)*
+
+*(Later continuation session — Missing Backlog Batch 2, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Of the 4 approved Batch 2
+items in this group, 3 became VERIFIED with genuine new code (-3 Missing,
++3 Verified): D74-01 (new `InsurancePolicy` model + full CRUD, entirely
+farmer-entered/self-reported, no insurer integration - none claimed);
+D89-03 (`RuleVersionSnapshot` table + effective-dated lookup service,
+wired into `weather_alert_orchestration_service` - the only rule module
+with real Settings-driven numeric thresholds to snapshot); D90-02
+(`MarketProvider` ABC + `DatabaseMarketProvider`, confirmed
+non-regression against the exact prior direct-query behavior). Partial row
+D89-08 re-verified again (stays Partial): D89-01/02/03 are now ALL
+VERIFIED, narrowing its remaining blocker to a smaller, more specific gap
+than before this batch - a per-notification FK pointer to the exact
+snapshot that produced it, not the whole snapshot system's absence (see
+its own row for the full reasoning; correctly not force-closed). Total
+unchanged at 223 - every change here is an internal status move, zero
+new/removed rows. Full backend suite: 931 passed, 0 failed/errored. Full
+flutter suite: 301 passed, 0 failed. See docs/FINAL_GAP_REPORT.md and
+docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -693,13 +713,20 @@ cross-group reconciliation.)*
 ### D89-08 — Historical reproducibility of a past rule decision
 - Domain: 89. Rule Versioning
 - Current implementation status: **STAYS PARTIAL (re-verified again during
-  Missing Backlog Batch 1)** - D89-01 and D89-02 (both cited as
-  dependencies) are now BOTH VERIFIED (see their own rows - D89-01 built
-  this batch, D89-02 found already satisfied). The sole remaining blocker
-  is D89-03 (effective-date scoping / the `RuleVersionSnapshot` table
-  itself), deliberately deferred - it is a substantial new table/service,
-  not a Batch-1-sized item, and was correctly not selected for this batch.
-  No code change to this row this pass.
+  Missing Backlog Batch 2)** - D89-01, D89-02, AND D89-03 (all three cited
+  dependencies) are now VERIFIED (see their own rows) - the
+  `RuleVersionSnapshot` table, `rule_version_service`, and live
+  weather-alert-orchestration wiring this row's own Required Implementation
+  asked for all now exist. The one piece still missing is the FK linkage
+  this row's own Database/migration work line also asked for: a
+  per-`Notification` (or per-risk-score-history) pointer to the EXACT
+  snapshot row that produced it, so a stored decision can be traced back to
+  its snapshot directly rather than only re-derived via a timestamp lookup
+  against `get_thresholds_effective_at`. That re-derivation already works
+  (see D89-03's test proving an old date still reproduces the old
+  decision) - what's missing is the stored, direct pointer, a smaller
+  remaining gap than before this batch but not yet zero. Correctly not
+  force-closed.
 - Existing relevant files/classes/functions: per `docs/FINAL_GAP_REPORT.md`'s exact resolution — `Notification.rule_version` is now populated (`weather_alert_rules.RULE_VERSION`) for every weather-alert-rule-triggered notification, mirroring D88-07's `crop_risk_v1` precedent (test: `test_proactive_weather_sweep.py`)
 - Missing component: the full versioned/dated threshold-snapshot system (D89-01 rule identifier + D89-02 rule version + D89-03 effective-date-scoping) — a history table letting anyone recompute exactly what a past decision would have been under the threshold set active at that time. This is stated exactly as documented: partially resolved (rule_version populated for weather-alert-rule notifications), but the full rule-versioning system remains future work
 - Required implementation: a `RuleVersionSnapshot` table (rule_id, version, effective_from, effective_to, threshold_values JSONB) plus a lookup service resolving "what were the thresholds on date X"
@@ -1242,7 +1269,7 @@ cross-group reconciliation.)*
 
 ### D74-01 — Policy record (view own crop insurance policy details)
 - Domain: 74. Crop Insurance
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `InsurancePolicy` model (migration `d0f4e71b1d13`; farmer-owned, optional `crop_id` FK to `CropMaster` validated against a real active crop, never left dangling); full CRUD (`POST`/`GET` list/`GET` one/`DELETE`) under `/farmers/me/insurance-policies`, ownership-scoped via `get_owned` (404-not-403). Tests: `tests/test_insurance.py` (7 tests)
 - Existing relevant files/classes/functions: none — no `insurance*.py` anywhere in `app/api` or `app/models`
 - Missing component: `Policy`/`Insurance` model + read endpoint
 - Required implementation: `InsurancePolicy` (policy_number, insurer, sum_insured, premium, crop_id, season) + `GET /farmers/me/insurance-policies`
@@ -2098,7 +2125,7 @@ cross-group reconciliation.)*
 
 ### D89-03 — Effective date scoping of a rule
 - Domain: 89. Rule Versioning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `RuleVersionSnapshot` table (migration `ad3fdbbb5720`: rule_id, version, threshold_values JSONB, effective_from, effective_to) + `rule_version_service.record_snapshot_if_changed`/`get_thresholds_effective_at`. Wired into `weather_alert_orchestration_service.generate_alerts_for_farm_weather` (the only rule module with real Settings-driven numeric thresholds - `crop_risk_service`/`weather_action_rules` have none to snapshot), recording/keeping-current a snapshot of `weather_alert_rules`'s 10 threshold Settings fields on every weather fetch (idempotent - unchanged thresholds cost one SELECT, no write). Does NOT yet close D89-08 - see that row for the still-missing piece (a per-notification FK to the snapshot that produced it). Tests: `tests/test_rule_versioning.py` (5 new tests, including a real threshold-change-then-old-date-still-reproduces-the-old-value test and a live weather-fetch integration test)
 - Existing relevant files/classes/functions: thresholds are single current `Settings` values (`app/core/config.py:84-89`, e.g. `weather_rain_probability_threshold: float = 40.0`), no dated/versioned threshold table
 - Missing component: a date range a given threshold set was in force
 - Required implementation: part of D89-08's full `RuleVersionSnapshot` system (effective_from/effective_to columns)
@@ -2166,7 +2193,7 @@ cross-group reconciliation.)*
 
 ### D90-02 — Market provider abstraction
 - Domain: 90. Provider Abstraction
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `MarketProvider(ABC)` + `MarketPriceResult` (`app/services/market/market_provider.py`) + `DatabaseMarketProvider` wrapping the exact prior `product_repository.get_latest_reference_price` query, unchanged behavior; `get_market_provider` FastAPI dependency mirrors `get_payment_gateway_provider`/`get_weather_provider` exactly; `price_query_service.compare_offers_for_product`/`get_scam_shield_status` now call through the interface. Non-regression confirmed: all 11 pre-existing `test_price_comparison.py` tests pass unchanged. Tests: `tests/test_market_provider.py` (2 new)
 - Existing relevant files/classes/functions: `price_comparison.py`/`price_query_service.py` operate purely on `ReferencePrice` DB rows (admin/dealer-entered); no `MarketProvider` ABC, nothing pluggable, no live external market-price API call anywhere
 - Missing component: architecting the existing DB-backed feature as a swappable provider interface the way Weather/AI/OCR/AI-assistant already are
 - Required implementation: `MarketProvider(ABC)` with abstract `get_reference_price(product_id/crop_id, region)`; a `DatabaseMarketProvider` implementation wrapping the current `ReferencePrice` query (so today's real, working feature becomes the first concrete implementation, not a stub), leaving room for a future live-API-backed implementation

@@ -43,6 +43,11 @@ class OrderResponse(BaseModel):
     items: list[OrderItemResponse]
     created_at: datetime
     confirmed_at: datetime | None
+    # D65-02: computed from successful Payment rows, not a real column -
+    # left at these defaults (no payment activity possible yet) for
+    # response paths that don't explicitly enrich them (cart/checkout).
+    amount_paid: Decimal = Decimal("0")
+    amount_remaining: Decimal | None = None
 
     model_config = {"from_attributes": True}
 
@@ -59,6 +64,14 @@ class CheckoutRequest(BaseModel):
 
 class DealerOrderActionRequest(BaseModel):
     reason: str | None = None
+
+
+class PaymentInitiateRequest(BaseModel):
+    """D65-01: omitted or null amount defaults to the full remaining
+    balance - existing callers making a single full payment need no
+    changes. A farmer paying part of an order sends a smaller amount,
+    validated server-side against the actual remaining balance."""
+    amount: Decimal | None = Field(default=None, gt=0)
 
 
 class PaymentInitiateResponse(BaseModel):
@@ -86,6 +99,25 @@ class PaymentInitiateResponse(BaseModel):
                 **kwargs,
             )
         return super().model_validate(obj, **kwargs)
+
+
+class PaymentResponse(BaseModel):
+    """D65-05: one attempt (successful or not) against an order's balance."""
+    id: uuid.UUID
+    order_id: uuid.UUID | None
+    provider: PaymentProvider
+    status: PaymentStatus
+    amount: Decimal
+    installment_number: int
+    created_at: datetime
+    completed_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class PaymentListResponse(BaseModel):
+    items: list[PaymentResponse]
+    total: int
 
 
 class PaymentCompleteRequest(BaseModel):

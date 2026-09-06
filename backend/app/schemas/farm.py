@@ -70,6 +70,11 @@ class FarmResponse(BaseModel):
     area_unit: AreaUnit
     status: FarmStatus
     created_at: datetime
+    # D2-08/D2-09 (docs/audit/FINAL_CANONICAL_group_A.md): computed rollup
+    # of the farm's own plots - never a separate farm-level column, so
+    # there is no duplicate/conflicting data-entry point to keep in sync.
+    irrigation_summary: list[str] = []
+    soil_summary: list[str] = []
 
     model_config = {"from_attributes": True}
 
@@ -80,6 +85,18 @@ class FarmResponse(BaseModel):
         response.district_name = farm.district.name if farm.district else None
         response.mandal_name = farm.mandal.name if farm.mandal else None
         response.village_name = farm.village.name if farm.village else None
+        # D2-08/D2-09: merges the legacy free-text fields with D3-08/D3-09's
+        # later, separate, validated-enum fields (irrigation_source/
+        # soil_category) - both are real, independently settable per plot
+        # (see app/models/plot.py's own docstring), so a plot classified
+        # only via the newer enum field must not be silently dropped from
+        # this rollup.
+        irrigation_values = {p.irrigation_type for p in farm.plots if p.irrigation_type} | {
+            p.irrigation_source.value for p in farm.plots if p.irrigation_source
+        }
+        soil_values = {p.soil_type for p in farm.plots if p.soil_type} | {p.soil_category.value for p in farm.plots if p.soil_category}
+        response.irrigation_summary = sorted(irrigation_values)
+        response.soil_summary = sorted(soil_values)
         return response
 
 

@@ -27,6 +27,20 @@ def test_create_task(client, farmer_with_crop_cycle):
     assert body["title"] == "Check drip lines"
 
 
+def test_create_task_with_pruning_type(client, farmer_with_crop_cycle):
+    """D13-05 (docs/audit/FINAL_CANONICAL_group_A.md): pruning previously
+    had no dedicated TaskType - a farmer could only mislabel it via
+    OTHER/GENERAL."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"task_type": "pruning", "title": "Prune mango tree"},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 201
+    assert response.json()["task_type"] == "pruning"
+
+
 def test_task_calendar_groups_tasks_by_date_across_crop_cycles(client, registered_farmer, sample_crop_id):
     """D8-01 (docs/audit/FINAL_CANONICAL_group_A.md): a farmer-level,
     date-grouped view spanning two different plots/crop cycles."""

@@ -1172,6 +1172,14 @@ class AppLocalizationsKn extends AppLocalizations {
       'ಫೋಟೋ ಮಸುಕಾಗಿರಬಹುದು. ದಯವಿಟ್ಟು ಇನ್ನೊಂದು ಫೋಟೋ ತೆಗೆಯಿರಿ.';
 
   @override
+  String get photoPossibleDuplicate =>
+      'ಇದು ಈ ಬೆಳೆಗಾಗಿ ನೀವು ಈಗಾಗಲೇ ತೆಗೆದ ಫೋಟೋವನ್ನು ಹೋಲುತ್ತದೆ. ಅದು ಇನ್ನೂ ಉಳಿಸಲಾಗಿದೆ.';
+
+  @override
+  String get photoOldPhoto =>
+      'ಈ ಫೋಟೋವನ್ನು ಸ್ವಲ್ಪ ಸಮಯದ ಹಿಂದೆ ತೆಗೆಯಲಾಗಿದೆ. ಹೆಚ್ಚು ನಿಖರವಾದ ಪರಿಶೀಲನೆಗಾಗಿ, ಇತ್ತೀಚಿನ ಫೋಟೋವನ್ನು ಬಳಸಿ.';
+
+  @override
   String get sharePhotoLocationQuestion => 'ಈ ಫೋಟೋದ ಸ್ಥಳವನ್ನು ಹಂಚಿಕೊಳ್ಳಬೇಕೇ?';
 
   @override

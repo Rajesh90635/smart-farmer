@@ -53,6 +53,10 @@ class TaskType(str, enum.Enum):
     FERTILIZING = "fertilizing"
     WEEDING = "weeding"
     HARVESTING = "harvesting"
+    # D13-05 (docs/audit/FINAL_CANONICAL_group_A.md): perennial-crop
+    # pruning previously had no dedicated value - a farmer could only
+    # mislabel it via OTHER/GENERAL.
+    PRUNING = "pruning"
     OTHER = "other"
 
 

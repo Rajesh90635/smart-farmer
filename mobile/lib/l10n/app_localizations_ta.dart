@@ -1192,6 +1192,14 @@ class AppLocalizationsTa extends AppLocalizations {
       'புகைப்படம் தெளிவற்றதாக இருக்கலாம். மற்றொரு புகைப்படம் எடுக்கவும்.';
 
   @override
+  String get photoPossibleDuplicate =>
+      'இது இந்த பயிருக்காக நீங்கள் ஏற்கனவே எடுத்த புகைப்படத்தை ஒத்திருக்கிறது. அது இன்னும் சேமிக்கப்பட்டது.';
+
+  @override
+  String get photoOldPhoto =>
+      'இந்த புகைப்படம் சிறிது காலத்திற்கு முன்பு எடுக்கப்பட்டது. மிகவும் துல்லியமான சரிபார்ப்புக்கு, சமீபத்திய புகைப்படத்தைப் பயன்படுத்தவும்.';
+
+  @override
   String get sharePhotoLocationQuestion =>
       'இந்த புகைப்படத்தின் இருப்பிடத்தை பகிரவா?';
 
