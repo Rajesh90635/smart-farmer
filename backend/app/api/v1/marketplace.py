@@ -21,6 +21,7 @@ from app.schemas.marketplace import (
     BuyerProfileResponse,
     CounterOfferCreateRequest,
     CounterOfferResponse,
+    FarmerDisputeResponseRequest,
     OfferCreateRequest,
     OfferListResponse,
     OfferResponse,
@@ -234,6 +235,18 @@ def add_quality_dispute_details(
     sale_order_service.add_quality_dispute_details(db, dispute_id, payload)
 
 
+@router.post("/disputes/{dispute_id}/farmer-response", status_code=204)
+def add_farmer_dispute_response(
+    dispute_id: uuid.UUID,
+    payload: FarmerDisputeResponseRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> None:
+    """D67-05 (docs/audit/FINAL_CANONICAL_group_C.md): symmetric
+    counterpart to add_quality_dispute_details above."""
+    sale_order_service.add_farmer_response(db, current_user.user_id, dispute_id, payload)
+
+
 # --- Sales (buyer side) ---
 
 @router.get("/purchases", response_model=SaleOrderListResponse)
@@ -263,7 +276,10 @@ def initiate_sale_payment(
     payment_provider: PaymentGatewayProvider = Depends(get_payment_gateway_provider),
 ):
     payment = sale_order_service.initiate_payment(db, current_user.user_id, sale_id, payment_provider)
-    return {"payment_id": str(payment.id), "status": payment.status.value, "amount": str(payment.amount)}
+    return {
+        "payment_id": str(payment.id), "status": payment.status.value, "amount": str(payment.amount),
+        "created_at": payment.created_at.isoformat(), "completed_at": payment.completed_at.isoformat() if payment.completed_at else None,
+    }
 
 
 @router.post("/purchases/{sale_id}/pay/complete")
@@ -277,7 +293,10 @@ def complete_sale_payment(
     """SANDBOX/TEST-ONLY - see docs/PAYMENT_ARCHITECTURE.md. Only works
     when the configured provider is sandbox-completable."""
     payment = sale_order_service.complete_payment(db, current_user.user_id, sale_id, succeed, payment_provider)
-    return {"payment_id": str(payment.id), "status": payment.status.value}
+    return {
+        "payment_id": str(payment.id), "status": payment.status.value,
+        "created_at": payment.created_at.isoformat(), "completed_at": payment.completed_at.isoformat() if payment.completed_at else None,
+    }
 
 
 @router.post("/purchases/{sale_id}/cancel", response_model=SaleOrderResponse)

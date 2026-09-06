@@ -397,6 +397,47 @@ def test_farmer_cannot_list_open_sale_disputes(client, farmer_with_crop_cycle):
     assert response.status_code == 403
 
 
+def test_farmer_can_respond_to_a_dispute_filed_against_them(client, farmer_with_crop_cycle, verified_buyer, db_session, admin_tokens):
+    """D67-05 (docs/audit/FINAL_CANONICAL_group_C.md): QualityDispute.farmer_response
+    existed as a column but nothing ever wrote it - symmetric counterpart
+    to the buyer's own quality-details endpoint."""
+    import uuid as uuid_mod
+
+    from app.models.sale_dispute import QualityDispute
+
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    response = client.post(
+        f"/api/v1/marketplace/disputes/{dispute['id']}/farmer-response",
+        json={"farmer_response": "The produce was packed and delivered in good condition."},
+        headers=auth_headers(farmer_tokens),
+    )
+    assert response.status_code == 204
+
+    quality_dispute = db_session.query(QualityDispute).filter_by(sale_dispute_id=uuid_mod.UUID(dispute["id"])).one()
+    assert quality_dispute.farmer_response == "The produce was packed and delivered in good condition."
+
+    # Never auto-changes dispute/sale status - record-only, same as the buyer's endpoint.
+    unchanged = client.get("/api/v1/marketplace/disputes", headers=auth_headers(admin_tokens)).json()
+    assert any(d["id"] == dispute["id"] and d["status"] == "open" for d in unchanged["items"])
+
+
+def test_farmer_cannot_respond_to_another_farmers_dispute(client, farmer_with_crop_cycle, verified_buyer, another_farmer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    _, other_tokens = another_farmer
+    response = client.post(
+        f"/api/v1/marketplace/disputes/{dispute['id']}/farmer-response",
+        json={"farmer_response": "Trying to respond to someone else's dispute"},
+        headers=auth_headers(other_tokens),
+    )
+    assert response.status_code == 404
+
+
 def test_farmer_a_cannot_see_farmer_bs_sale(client, farmer_with_crop_cycle, verified_buyer, another_farmer):
     farmer_a_tokens, crop_cycle_id = farmer_with_crop_cycle
     buyer_tokens, _ = verified_buyer

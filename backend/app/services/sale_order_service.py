@@ -23,6 +23,7 @@ from app.services import notification_service
 from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
 from app.services.weather_alert_rules import AlertCandidate
 from app.schemas.marketplace import (
+    FarmerDisputeResponseRequest,
     QualityDisputeCreateRequest,
     SaleCancelRequest,
     SaleDisputeCreateRequest,
@@ -290,6 +291,34 @@ def add_quality_dispute_details(db: Session, dispute_id: uuid.UUID, payload: Qua
         evidence_note=payload.evidence_note,
     )
     sale_order_repository.create_quality_dispute(db, quality_dispute)
+    db.commit()
+
+
+def add_farmer_response(db: Session, farmer_id: str, dispute_id: uuid.UUID, payload: FarmerDisputeResponseRequest) -> None:
+    """D67-05 (docs/audit/FINAL_CANONICAL_group_C.md): symmetric counterpart
+    to add_quality_dispute_details above - QualityDispute.farmer_response
+    existed as a column but nothing ever wrote it. Record-only, never
+    auto-changes dispute/sale status, same as the buyer's own endpoint."""
+    dispute = sale_order_repository.get_dispute(db, dispute_id)
+    if dispute is None:
+        raise AppError(error_codes.NOT_FOUND, "Dispute not found.", 404)
+
+    # 404-not-403 by design (this project's established ID-enumeration-
+    # avoidance convention) if this farmer doesn't own the underlying sale.
+    sale = sale_order_repository.get_sale_owned_by_farmer(db, dispute.sale_order_id, uuid.UUID(farmer_id))
+    if sale is None:
+        raise AppError(error_codes.NOT_FOUND, "Dispute not found.", 404)
+
+    quality_dispute = sale_order_repository.get_quality_dispute(db, dispute.id)
+    if quality_dispute is None:
+        quality_dispute = QualityDispute(sale_dispute_id=dispute.id, agreed_grade=sale.quality_grade_snapshot)
+        sale_order_repository.create_quality_dispute(db, quality_dispute)
+    quality_dispute.farmer_response = payload.farmer_response
+
+    AuditLogger(db).log(
+        "SALE_DISPUTE_FARMER_RESPONSE_ADDED", actor_id=farmer_id, actor_role="farmer",
+        entity="sale_dispute", entity_id=str(dispute.id),
+    )
     db.commit()
 
 

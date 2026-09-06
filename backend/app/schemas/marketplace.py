@@ -150,6 +150,13 @@ class QualityDisputeCreateRequest(BaseModel):
     evidence_note: str | None = Field(default=None, max_length=1000)
 
 
+class FarmerDisputeResponseRequest(BaseModel):
+    """D67-05 (docs/audit/FINAL_CANONICAL_group_C.md): symmetric counterpart
+    to the buyer's QualityDisputeCreateRequest - record-only, never
+    auto-changes the dispute/sale status."""
+    farmer_response: str = Field(min_length=1, max_length=1000)
+
+
 class SaleFeedbackCreateRequest(BaseModel):
     helpful: bool | None = None
     rating: int | None = Field(default=None, ge=1, le=5)
