@@ -49,6 +49,11 @@ class HarvestRecord(Base):
     actual_quantity: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     unit: Mapped[str] = mapped_column(String(20), nullable=False, default="kg")
     quality_grade: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # D51-02/D51-04 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-entered
+    # only, never fabricated sensor/lab data - same convention as this
+    # project's other harvest-quality fields.
+    moisture_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    defect_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     status: Mapped[HarvestStatus] = mapped_column(
         SAEnum(HarvestStatus, name="harvest_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),

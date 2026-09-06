@@ -207,6 +207,51 @@ def test_ownership_still_enforced_for_multi_harvest_endpoints(client, farmer_wit
     assert listed_by_b.status_code == 404
 
 
+# --- D47-01: mark_approaching audit log + explicit rejection on a wrong-status call ---
+
+def test_marking_approaching_is_audit_logged(client, farmer_with_crop_cycle, db_session):
+    from app.models.audit_log import AuditLog
+    from sqlalchemy import select
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    client.post(f"/api/v1/harvests/{harvest['id']}/approaching", headers=auth_headers(tokens))
+
+    entries = db_session.execute(
+        select(AuditLog).where(AuditLog.entity == "harvest_record", AuditLog.entity_id == harvest["id"])
+    ).scalars().all()
+    assert any(e.action == "HARVEST_MARKED_APPROACHING" for e in entries)
+
+
+def test_marking_approaching_twice_is_rejected_not_a_silent_noop(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    first = client.post(f"/api/v1/harvests/{harvest['id']}/approaching", headers=auth_headers(tokens))
+    assert first.status_code == 200
+
+    second = client.post(f"/api/v1/harvests/{harvest['id']}/approaching", headers=auth_headers(tokens))
+    assert second.status_code == 409
+
+
+# --- D51-02/D51-04: moisture_percent/defect_notes round-trip at confirm-ready ---
+
+def test_confirm_ready_persists_moisture_and_defect_notes(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    response = client.post(
+        f"/api/v1/harvests/{harvest['id']}/confirm-ready",
+        json={"estimated_quantity": "1000.00", "moisture_percent": "12.50", "defect_notes": "A few bruised tomatoes near the bottom crate."},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["moisture_percent"] == "12.50"
+    assert body["defect_notes"] == "A few bruised tomatoes near the bottom crate."
+
+
 def test_existing_single_harvest_get_or_create_behavior_is_unchanged(client, farmer_with_crop_cycle):
     """Guards the pre-existing idempotency contract: a crop with only one
     harvest must keep working exactly as before Phase 0."""

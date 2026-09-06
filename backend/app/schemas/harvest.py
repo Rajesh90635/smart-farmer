@@ -13,6 +13,10 @@ class HarvestConfirmReadyRequest(BaseModel):
     but only this farmer action moves status to READY."""
     actual_harvest_date: date | None = None
     estimated_quantity: Decimal | None = Field(default=None, gt=0)
+    # D51-02/D51-04 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-entered
+    # only, never fabricated sensor/lab data.
+    moisture_percent: Decimal | None = Field(default=None, ge=0, le=100)
+    defect_notes: str | None = Field(default=None, max_length=1000)
 
 
 class HarvestResponse(BaseModel):
@@ -25,6 +29,8 @@ class HarvestResponse(BaseModel):
     actual_quantity: Decimal | None
     unit: str
     quality_grade: str | None
+    moisture_percent: Decimal | None
+    defect_notes: str | None
     status: HarvestStatus
     created_at: datetime
 

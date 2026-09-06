@@ -101,12 +101,20 @@ def mark_approaching(db: Session, farmer_id: str, harvest_id: uuid.UUID) -> Harv
     harvest = harvest_repository.get_harvest_owned(db, harvest_id, uuid.UUID(farmer_id))
     if harvest is None:
         raise AppError(error_codes.NOT_FOUND, "Harvest record not found.", 404)
-    if harvest.status == HarvestStatus.PLANNED:
-        harvest.status = HarvestStatus.APPROACHING
-        db.commit()
-        _notify_harvest_status(db, farmer_id, harvest, "HARVEST_APPROACHING")
-    else:
-        db.commit()
+    # D47-01 (docs/audit/FINAL_CANONICAL_group_C.md): a wrong-status call
+    # used to silently no-op (200, unchanged) instead of surfacing an
+    # error, and the transition itself was never audit-logged unlike its
+    # sibling confirm_ready/create_listing transitions.
+    if harvest.status != HarvestStatus.PLANNED:
+        raise AppError(
+            error_codes.VALIDATION_ERROR,
+            f"Cannot mark approaching - harvest is already '{harvest.status.value}'.",
+            409,
+        )
+    harvest.status = HarvestStatus.APPROACHING
+    AuditLogger(db).log("HARVEST_MARKED_APPROACHING", actor_id=farmer_id, actor_role="farmer", entity="harvest_record", entity_id=str(harvest.id))
+    db.commit()
+    _notify_harvest_status(db, farmer_id, harvest, "HARVEST_APPROACHING")
     db.refresh(harvest)
     return HarvestResponse.model_validate(harvest)
 
@@ -139,6 +147,10 @@ def confirm_ready(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: H
         harvest.actual_harvest_date = payload.actual_harvest_date
     if payload.estimated_quantity:
         harvest.estimated_quantity = payload.estimated_quantity
+    if payload.moisture_percent is not None:
+        harvest.moisture_percent = payload.moisture_percent
+    if payload.defect_notes is not None:
+        harvest.defect_notes = payload.defect_notes
 
     AuditLogger(db).log("HARVEST_CONFIRMED_READY", actor_id=farmer_id, actor_role="farmer", entity="harvest_record", entity_id=str(harvest.id))
     db.commit()
