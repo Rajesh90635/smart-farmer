@@ -52,3 +52,19 @@ def list_overdue_for_farmer(db: Session, farmer_id: uuid.UUID, *, today: date) -
             select(Task).where(Task.farmer_id == farmer_id, Task.status == TaskStatus.PENDING, Task.due_date.is_not(None), Task.due_date < today)
         ).scalars().all()
     )
+
+
+def list_overdue_unalerted(db: Session, *, today: date) -> list[Task]:
+    """D9-16/D9-03 (docs/audit/FINAL_CANONICAL_group_A.md): the sweep's own
+    query, across every farmer - mirrors input_inventory_repository's
+    list_expiring_unalerted "fires once per episode" pattern."""
+    return list(
+        db.execute(
+            select(Task).where(
+                Task.status == TaskStatus.PENDING,
+                Task.due_date.is_not(None),
+                Task.due_date < today,
+                Task.overdue_alerted_at.is_(None),
+            )
+        ).scalars().all()
+    )

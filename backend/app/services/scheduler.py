@@ -23,6 +23,7 @@ from app.core.weather_provider_dependency import get_weather_provider
 from app.db.session import SessionLocal
 from app.services.case_sla_service import run_case_sla_sweep
 from app.services.input_inventory_service import run_expiry_check_sweep
+from app.services.task_service import run_overdue_task_alert_sweep
 from app.services.weather_alert_orchestration_service import run_proactive_weather_alert_sweep
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,18 @@ def _run_proactive_weather_alert_sweep_job(settings: Settings) -> None:
         db.close()
 
 
+def _run_task_overdue_alert_sweep_job(settings: Settings) -> None:
+    db = SessionLocal()
+    try:
+        alerted = run_overdue_task_alert_sweep(db, settings)
+        logger.info("task_overdue_alert_sweep alerted=%s", alerted)
+    except Exception:
+        logger.exception("task_overdue_alert_sweep tick failed - will retry next interval")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
     """Idempotent - calling twice (e.g. lifespan re-entry in tests that
     build the app more than once) never starts a second scheduler."""
@@ -110,13 +123,23 @@ def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
         coalesce=True,
         misfire_grace_time=settings.proactive_weather_alert_sweep_interval_seconds,
     )
+    scheduler.add_job(
+        _run_task_overdue_alert_sweep_job,
+        "interval",
+        seconds=settings.task_overdue_alert_sweep_interval_seconds,
+        args=[settings],
+        id="task_overdue_alert_sweep",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=settings.task_overdue_alert_sweep_interval_seconds,
+    )
     scheduler.start()
     _scheduler = scheduler
     logger.info(
         "Background scheduler started (case_sla_sweep every %ss, input_inventory_expiry_sweep every %ss, "
-        "proactive_weather_alert_sweep every %ss)",
+        "proactive_weather_alert_sweep every %ss, task_overdue_alert_sweep every %ss)",
         settings.case_sla_sweep_interval_seconds, settings.input_inventory_expiry_sweep_interval_seconds,
-        settings.proactive_weather_alert_sweep_interval_seconds,
+        settings.proactive_weather_alert_sweep_interval_seconds, settings.task_overdue_alert_sweep_interval_seconds,
     )
     return scheduler
 

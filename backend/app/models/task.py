@@ -33,6 +33,17 @@ class TaskStatus(str, enum.Enum):
     PENDING = "pending"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    # D9-12 (docs/audit/FINAL_CANONICAL_group_A.md): distinct from CANCELLED -
+    # the farmer attempted the task but genuinely could not (e.g. irrigation
+    # pump broke), a real-world outcome worth reporting differently from
+    # simply choosing not to do it.
+    FAILED = "failed"
+
+
+class TaskPriority(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
 class TaskType(str, enum.Enum):
@@ -78,6 +89,21 @@ class Task(Base):
         index=True,
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    priority: Mapped[TaskPriority] = mapped_column(
+        SAEnum(TaskPriority, name="task_priority", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        default=TaskPriority.MEDIUM,
+        nullable=False,
+    )
+    # D9-10 (docs/audit/FINAL_CANONICAL_group_A.md): farmer-entered, optional,
+    # shared across cancel/skip/fail - never auto-populated.
+    cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # D9-16/D9-03 (docs/audit/FINAL_CANONICAL_group_A.md): mirrors
+    # InputInventoryItem.low_stock_alerted_at's "fires once per episode" gate
+    # - cleared whenever the task stops being overdue (due_date pushed out,
+    # completed, cancelled, or skipped), so a farmer who reschedules and goes
+    # overdue again is correctly re-alerted.
+    overdue_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # D8-07/D8-08 (docs/FINAL_GAP_REPORT.md): both optional, farmer-set only
     # - never inferred or auto-generated, consistent with this model's own

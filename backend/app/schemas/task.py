@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.task import TaskStatus, TaskType
+from app.models.task import TaskPriority, TaskStatus, TaskType
 
 
 class TaskCreateRequest(BaseModel):
@@ -13,6 +13,19 @@ class TaskCreateRequest(BaseModel):
     due_date: date | None = None
     depends_on_task_id: uuid.UUID | None = None
     repeat_interval_days: int | None = Field(default=None, gt=0)
+    priority: TaskPriority = TaskPriority.MEDIUM
+
+
+class TaskUpdateRequest(BaseModel):
+    """D9-05/D9-06 (docs/audit/FINAL_CANONICAL_group_A.md): one shared
+    endpoint for both snooze (postpone) and reschedule (pick a new date) -
+    the underlying mutation is identical, only the farmer's intent differs."""
+    due_date: date | None = None
+
+
+class TaskActionRequest(BaseModel):
+    """D9-10: optional farmer-entered reason, shared by cancel/skip/fail."""
+    reason: str | None = Field(default=None, max_length=500)
 
 
 class WeatherAdvisoryResponse(BaseModel):
@@ -39,6 +52,8 @@ class TaskResponse(BaseModel):
     # blocked/waiting state without a second lookup.
     dependency_completed: bool | None = None
     repeat_interval_days: int | None = None
+    priority: TaskPriority
+    cancellation_reason: str | None = None
 
     model_config = {"from_attributes": True}
 

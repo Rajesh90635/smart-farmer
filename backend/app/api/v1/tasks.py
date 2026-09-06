@@ -12,7 +12,7 @@ from app.core.current_user import CurrentUser, require_role
 from app.core.roles import Role
 from app.core.weather_provider_dependency import get_weather_provider
 from app.db.session import get_db
-from app.schemas.task import TaskCreateRequest, TaskListResponse, TaskResponse
+from app.schemas.task import TaskActionRequest, TaskCreateRequest, TaskListResponse, TaskResponse, TaskUpdateRequest
 from app.services import task_service
 from app.services.weather.weather_provider import WeatherProvider
 
@@ -49,6 +49,17 @@ def get_task(
     return task_service.get_task(db, current_user.user_id, task_id)
 
 
+@router.patch("/tasks/{task_id}", response_model=TaskResponse)
+def update_task(
+    task_id: uuid.UUID,
+    payload: TaskUpdateRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> TaskResponse:
+    """D9-05/D9-06: snooze and reschedule share this one endpoint."""
+    return task_service.update_task(db, current_user.user_id, task_id, payload)
+
+
 @router.post("/tasks/{task_id}/complete", response_model=TaskResponse)
 def complete_task(
     task_id: uuid.UUID,
@@ -61,7 +72,30 @@ def complete_task(
 @router.post("/tasks/{task_id}/cancel", response_model=TaskResponse)
 def cancel_task(
     task_id: uuid.UUID,
+    payload: TaskActionRequest = TaskActionRequest(),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
 ) -> TaskResponse:
-    return task_service.cancel_task(db, current_user.user_id, task_id)
+    return task_service.cancel_task(db, current_user.user_id, task_id, payload)
+
+
+@router.post("/tasks/{task_id}/skip", response_model=TaskResponse)
+def skip_task(
+    task_id: uuid.UUID,
+    payload: TaskActionRequest = TaskActionRequest(),
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> TaskResponse:
+    """D9-09: skips only this occurrence of a recurring task."""
+    return task_service.skip_task(db, current_user.user_id, task_id, payload)
+
+
+@router.post("/tasks/{task_id}/fail", response_model=TaskResponse)
+def fail_task(
+    task_id: uuid.UUID,
+    payload: TaskActionRequest = TaskActionRequest(),
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> TaskResponse:
+    """D9-12: the farmer attempted the task but genuinely could not."""
+    return task_service.fail_task(db, current_user.user_id, task_id, payload)

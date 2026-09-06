@@ -298,3 +298,222 @@ def test_completing_a_recurring_task_after_crop_cycle_closed_does_not_recur(clie
     # path left for a stray recurrence to be created from it.
     completed = client.post(f"/api/v1/tasks/{task['id']}/complete", headers=headers)
     assert completed.status_code == 409
+
+
+def test_cannot_create_a_task_for_a_closed_crop_cycle(client, registered_farmer, sample_crop_id):
+    """D97-12 (docs/audit/FINAL_CANONICAL_group_D.md, BROKEN): create_task
+    used to never check cultivation_status at all, unlike its sibling
+    guards in complete_task/cancel_all_pending_for_crop_cycle - a farmer
+    double-tap or a replayed offline-queued create could attach a live
+    task to a HARVESTED/CANCELLED cycle."""
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    _, tokens = registered_farmer
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=headers)
+    client.post(f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=headers)
+
+    response = client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks",
+        json={"title": "Water the field"},
+        headers=headers,
+    )
+    assert response.status_code == 409
+
+
+def test_can_create_a_task_for_a_cancelled_crop_cycle_is_also_rejected(client, registered_farmer, sample_crop_id):
+    """Same guard, CANCELLED branch (re-sowing's failure path) rather than
+    HARVESTED (season closure's success path)."""
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    _, tokens = registered_farmer
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+    client.post(f"/api/v1/crops/{cycle['id']}/report-failure", json={"failure_reason": "pest"}, headers=headers)
+
+    response = client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/tasks",
+        json={"title": "Water the field"},
+        headers=headers,
+    )
+    assert response.status_code == 409
+
+
+# --- Task update/skip/fail (D9-05/D9-06/D9-09/D9-10/D9-12) ---
+
+def test_reschedule_task_to_new_due_date(client, farmer_with_crop_cycle):
+    """D9-05/D9-06: one shared endpoint serves both snooze and reschedule."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Irrigate", "due_date": date.today().isoformat()},
+        headers=auth_headers(tokens),
+    ).json()
+
+    new_due = (date.today() + timedelta(days=5)).isoformat()
+    response = client.patch(f"/api/v1/tasks/{task['id']}", json={"due_date": new_due}, headers=auth_headers(tokens))
+    assert response.status_code == 200
+    assert response.json()["due_date"] == new_due
+
+
+def test_cannot_reschedule_a_completed_task(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
+
+    response = client.patch(
+        f"/api/v1/tasks/{task['id']}", json={"due_date": date.today().isoformat()}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 409
+
+
+def test_skip_recurring_task_generates_next_occurrence_without_completing_current(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    due = date.today().isoformat()
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Spray", "due_date": due, "repeat_interval_days": 7},
+        headers=auth_headers(tokens),
+    ).json()
+
+    response = client.post(
+        f"/api/v1/tasks/{task['id']}/skip", json={"reason": "rain expected"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+    assert response.json()["cancellation_reason"] == "rain expected"
+
+    items = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", headers=auth_headers(tokens)).json()["items"]
+    next_occurrences = [t for t in items if t["title"] == "Spray" and t["status"] == "pending"]
+    assert len(next_occurrences) == 1
+    assert next_occurrences[0]["due_date"] == (date.today() + timedelta(days=7)).isoformat()
+
+
+def test_cannot_skip_a_non_recurring_task(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "One-off"}, headers=auth_headers(tokens)
+    ).json()
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/skip", headers=auth_headers(tokens))
+    assert response.status_code == 422
+
+
+def test_cancel_task_can_include_a_reason(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+
+    response = client.post(
+        f"/api/v1/tasks/{task['id']}/cancel", json={"reason": "no longer needed"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    assert response.json()["cancellation_reason"] == "no longer needed"
+
+
+def test_task_can_be_marked_failed_with_reason(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+
+    response = client.post(
+        f"/api/v1/tasks/{task['id']}/fail", json={"reason": "pump broke"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
+    assert response.json()["display_status"] == "failed"
+    assert response.json()["cancellation_reason"] == "pump broke"
+
+
+def test_cannot_fail_an_already_completed_task(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/fail", headers=auth_headers(tokens))
+    assert response.status_code == 409
+
+
+def test_task_priority_defaults_to_medium_and_is_settable(client, farmer_with_crop_cycle):
+    """D37-03: a general task-priority field."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    default_task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+    assert default_task["priority"] == "medium"
+
+    high_task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Urgent spray", "priority": "high"},
+        headers=auth_headers(tokens),
+    ).json()
+    assert high_task["priority"] == "high"
+
+
+# --- Overdue task alert sweep (D9-16/D9-03/D78-01/D37-04) ---
+
+def test_overdue_sweep_sends_one_alert_and_never_duplicates(client, farmer_with_crop_cycle, db_session):
+    """The sweep's return value is a global sweep-wide count, not scoped to
+    this test's own task - the shared test database can have other
+    still-unalerted overdue tasks sitting around from other test runs,
+    which would inflate an exact count (same hazard already fixed for
+    run_expiry_check_sweep's own tests). Assert on this task's own alerted
+    state and this farmer's own notifications instead."""
+    import uuid
+    from datetime import datetime, timezone
+
+    from app.core.config import get_settings
+    from app.models.task import Task
+    from app.services.task_service import run_overdue_task_alert_sweep
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    # UTC, matching run_overdue_task_alert_sweep's own "today" exactly -
+    # date.today() (local) would be off by one whenever local time and
+    # UTC straddle midnight on different calendar days.
+    utc_today = datetime.now(timezone.utc).date()
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Overdue irrigation", "due_date": (utc_today - timedelta(days=1)).isoformat()},
+        headers=auth_headers(tokens),
+    ).json()
+
+    settings = get_settings()
+    run_overdue_task_alert_sweep(db_session, settings)
+    stored_task = db_session.get(Task, uuid.UUID(task["id"]))
+    assert stored_task.overdue_alerted_at is not None
+
+    run_overdue_task_alert_sweep(db_session, settings)  # must never duplicate
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    task_alerts = [n for n in notifications if n["category"] == "task_alert" and n["related_entity_id"] == task["id"]]
+    assert len(task_alerts) == 1
+
+
+def test_overdue_sweep_ignores_tasks_without_a_due_date(client, farmer_with_crop_cycle, db_session):
+    import uuid
+
+    from app.core.config import get_settings
+    from app.models.task import Task
+    from app.services.task_service import run_overdue_task_alert_sweep
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"title": "No due date"}, headers=auth_headers(tokens)
+    ).json()
+
+    run_overdue_task_alert_sweep(db_session, get_settings())
+    stored_task = db_session.get(Task, uuid.UUID(task["id"]))
+    assert stored_task.overdue_alerted_at is None
