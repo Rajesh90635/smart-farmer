@@ -24,6 +24,12 @@ from app.core.config import Settings
 from app.services.weather.weather_provider import WeatherReading
 
 
+# D88-07 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors
+# weather_alert_rules.RULE_VERSION/crop_risk_service.RULE_VERSION's
+# existing pattern - bump whenever assess_* logic changes below.
+RULE_VERSION = "weather_action_rules_v1"
+
+
 class ActionStatus(str, enum.Enum):
     SAFE = "safe"
     CAUTION = "caution"

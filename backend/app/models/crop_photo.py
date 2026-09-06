@@ -114,6 +114,13 @@ class CropPhoto(Base):
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
 
+    # D91-03 (docs/audit/FINAL_CANONICAL_group_D.md): optional capture-
+    # condition metadata for AI governance traceability - client-reported,
+    # never inferred/guessed server-side; None whenever the client
+    # doesn't send it (e.g. an older app version).
+    device_model: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    capture_condition: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
     source: Mapped[PhotoSource] = mapped_column(
         SAEnum(PhotoSource, name="photo_source", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,

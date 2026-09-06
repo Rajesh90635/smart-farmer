@@ -67,6 +67,41 @@ def test_multiple_consistent_treatment_follow_ups_strengthen_the_preference(clie
     assert "consistently" in treatment_signal["observation"]
 
 
+def test_cost_pattern_signal_needs_at_least_three_cycles_with_recorded_cost(client, farmer_with_crop_cycle):
+    """D98-03 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/ledger/entries",
+        json={"entry_type": "expense", "category": "seed", "amount": "100.00", "entry_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    )
+    response = client.get("/api/v1/farmers/me/personalization", headers=auth_headers(tokens))
+    body = response.json()
+    cost_signal = next(p for p in body["preferences"] if p["signal_name"] == "cost_pattern")
+    assert cost_signal["confidence"] is None
+    assert cost_signal["evidence_count"] == 1
+
+
+def test_cost_pattern_signal_reports_a_trend_once_enough_cycles_have_recorded_cost(client, farmer_with_crop_cycle, sample_crop_id):
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+    crop_cycle_id_3 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    for cycle_id, amount in ((crop_cycle_id_1, "100.00"), (crop_cycle_id_2, "100.00"), (crop_cycle_id_3, "100.00")):
+        client.post(
+            f"/api/v1/crop-cycles/{cycle_id}/ledger/entries",
+            json={"entry_type": "expense", "category": "seed", "amount": amount, "entry_date": "2026-01-01"},
+            headers=auth_headers(tokens),
+        )
+
+    response = client.get("/api/v1/farmers/me/personalization", headers=auth_headers(tokens))
+    body = response.json()
+    cost_signal = next(p for p in body["preferences"] if p["signal_name"] == "cost_pattern")
+    assert cost_signal["evidence_count"] == 3
+    assert cost_signal["confidence"] == "low"
+    assert "stable" in cost_signal["observation"]
+
+
 def test_personalization_evidence_count_reflects_real_task_data(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     for i in range(5):

@@ -53,6 +53,45 @@ def test_compare_and_scam_shield_never_return_scientific_notation_price_fields(c
     assert scam["reference_price_per_unit"] == "100.00"
 
 
+def test_reference_price_response_exposes_retrieved_at(client, registered_farmer, admin_tokens):
+    """D88-03 (docs/audit/FINAL_CANONICAL_group_D.md): the column already
+    existed on the model - it was just dropped from the response schema."""
+    product = client.post("/api/v1/products", json=valid_product_payload(), headers=auth_headers(admin_tokens)).json()
+    client.post(f"/api/v1/products/{product['id']}/approve", json={}, headers=auth_headers(admin_tokens))
+    created = client.post(
+        f"/api/v1/products/{product['id']}/reference-prices",
+        json={"product_id": product["id"], "price": "50.00", "source_type": "admin_entered_reference", "effective_date": "2026-01-01"},
+        headers=auth_headers(admin_tokens),
+    ).json()
+    assert created["retrieved_at"] is not None
+
+    _, farmer_tokens = registered_farmer
+    fetched = client.get(f"/api/v1/products/{product['id']}/prices", headers=auth_headers(farmer_tokens)).json()
+    assert fetched["retrieved_at"] is not None
+
+
+def test_reference_price_is_flagged_stale_once_older_than_the_configured_max_age(client, registered_farmer, admin_tokens):
+    """D88-10 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from datetime import date, timedelta
+
+    from app.core.config import get_settings
+
+    product = client.post("/api/v1/products", json=valid_product_payload(), headers=auth_headers(admin_tokens)).json()
+    client.post(f"/api/v1/products/{product['id']}/approve", json={}, headers=auth_headers(admin_tokens))
+
+    settings = get_settings()
+    old_date = date.today() - timedelta(days=settings.reference_price_max_age_days + 1)
+    client.post(
+        f"/api/v1/products/{product['id']}/reference-prices",
+        json={"product_id": product["id"], "price": "50.00", "source_type": "admin_entered_reference", "effective_date": old_date.isoformat()},
+        headers=auth_headers(admin_tokens),
+    )
+
+    _, farmer_tokens = registered_farmer
+    fetched = client.get(f"/api/v1/products/{product['id']}/prices", headers=auth_headers(farmer_tokens)).json()
+    assert fetched["is_stale"] is True
+
+
 def test_compare_offers_filters_by_dealer_district(client, registered_farmer, verified_dealer, approved_product):
     """D44-02/03/04 (docs/audit/FINAL_CANONICAL_group_B.md): the
     verified_dealer fixture's own service_area is Kerala/Thrissur - a

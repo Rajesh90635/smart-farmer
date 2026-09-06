@@ -16,6 +16,39 @@ def test_get_weather_with_fake_provider(client, farmer_with_located_farm):
     assert len(body["forecast"]) == 2
 
 
+def test_weather_response_includes_region_when_farm_has_a_village(client, farmer_with_located_farm, db_session):
+    """D88-05 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.test_farms import _ap_state_id, _guntur_district_id, _make_mandal_and_village
+
+    tokens, farm_id = farmer_with_located_farm
+    state_id = _ap_state_id(client, tokens)
+    district_id = _guntur_district_id(client, tokens)
+    mandal_id, mandal_name, village_id, village_name = _make_mandal_and_village(db_session, district_id)
+    put_response = client.put(
+        f"/api/v1/farms/{farm_id}",
+        json={"state_id": state_id, "district_id": district_id, "mandal_id": mandal_id, "village_id": village_id},
+        headers=auth_headers(tokens),
+    )
+    assert put_response.status_code == 200
+
+    with override_weather_provider(FakeWeatherProvider()):
+        response = client.get(f"/api/v1/farms/{farm_id}/weather", headers=auth_headers(tokens))
+    region = response.json()["region"]
+    assert region["village"] == village_name
+    assert region["mandal"] == mandal_name
+    assert region["district"] == "Guntur"
+    assert region["state"] == "Andhra Pradesh"
+
+
+def test_weather_response_region_is_none_without_a_resolvable_mandal_or_village(client, farmer_with_located_farm):
+    """D88-05: never fabricated - a farm with no linked mandal/village
+    gets an honest None, not a guess."""
+    tokens, farm_id = farmer_with_located_farm
+    with override_weather_provider(FakeWeatherProvider()):
+        response = client.get(f"/api/v1/farms/{farm_id}/weather", headers=auth_headers(tokens))
+    assert response.json()["region"] is None
+
+
 def test_weather_is_cached_on_second_request(client, farmer_with_located_farm):
     tokens, farm_id = farmer_with_located_farm
     fake = FakeWeatherProvider()

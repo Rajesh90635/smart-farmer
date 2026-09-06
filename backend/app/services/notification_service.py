@@ -14,6 +14,7 @@ distributed architecture unnecessarily" - see docs/NOTIFICATION_ARCHITECTURE.md.
 """
 import uuid
 from datetime import time
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,9 @@ from app.models.notification import Notification, NotificationCategory, Notifica
 from app.models.notification_preference import NotificationPreference
 from app.repositories import notification_repository
 from app.services.weather_alert_rules import AlertCandidate
+
+if TYPE_CHECKING:
+    from app.services.notifications.delivery_provider import NotificationDeliveryProvider
 
 _CATEGORY_PREFERENCE_MAP = {
     NotificationCategory.WEATHER_ALERT: "weather_alerts_enabled",
@@ -54,6 +58,25 @@ _TITLE_BY_CATEGORY = {
     NotificationCategory.DISPUTE_ALERT: "Dispute Update",
     NotificationCategory.SECURITY_ALERT: "Security Alert",
     NotificationCategory.SEVERE_WEATHER_ALERT: "Severe Weather Warning",
+}
+
+# D88-01 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors the "source"
+# strings already used by app/services/assistant/tools.py's tool
+# functions (e.g. "Weather service (Prompt 7)") - the subsystem that
+# actually produced this category of alert, not a new invented taxonomy.
+_SOURCE_BY_CATEGORY = {
+    NotificationCategory.WEATHER_ALERT: "Weather service",
+    NotificationCategory.RAIN_ALERT: "Weather service",
+    NotificationCategory.HEAVY_RAIN_ALERT: "Weather service",
+    NotificationCategory.SEVERE_WEATHER_ALERT: "Weather service",
+    NotificationCategory.CROP_ALERT: "Weather service",
+    NotificationCategory.DISEASE_ALERT: "AI disease detection",
+    NotificationCategory.HARVEST_ALERT: "Harvest record",
+    NotificationCategory.STOCK_ALERT: "Input inventory",
+    NotificationCategory.PAYMENT_ALERT: "Payment records",
+    NotificationCategory.TASK_ALERT: "Task records",
+    NotificationCategory.DISPUTE_ALERT: "Dispute records",
+    NotificationCategory.SECURITY_ALERT: "Account security",
 }
 
 
@@ -90,6 +113,7 @@ def create_alert_notification(
     related_entity_id: str | None = None,
     now_local_time: time | None = None,
     rule_version: str | None = None,
+    delivery_provider: "NotificationDeliveryProvider | None" = None,
 ) -> Notification | None:
     """Returns the created Notification, or None if suppressed by
     preference, quiet hours, or an existing duplicate."""
@@ -124,8 +148,21 @@ def create_alert_notification(
         related_entity_type=related_entity_type,
         related_entity_id=related_entity_id,
         rule_version=rule_version,
+        source_summary=_SOURCE_BY_CATEGORY.get(candidate.category),
     )
     notification_repository.create(db, notification)
     db.commit()
     db.refresh(notification)
+
+    # D90-04 (docs/audit/FINAL_CANONICAL_group_D.md): best-effort push/SMS
+    # delivery side channel - the Notification row above is already the
+    # complete, working in-app feature; this NEVER blocks on or reverses
+    # that write, and swallows any delivery-provider failure rather than
+    # letting it surface as a 500 for what is otherwise a successful call.
+    if delivery_provider is not None:
+        try:
+            delivery_provider.send(farmer_id, {"title": notification.title, "body": notification.body})
+        except Exception:  # noqa: BLE001 - delivery is best-effort only, never fatal
+            pass
+
     return notification

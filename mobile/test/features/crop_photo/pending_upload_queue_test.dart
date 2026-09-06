@@ -1,9 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_farmer_mobile/features/crop_photo/pending_upload_queue.dart';
 
-PendingUpload _makeUpload(String id) => PendingUpload(
+PendingUpload _makeUpload(String id, {String cropCycleId = 'cycle-1'}) => PendingUpload(
       clientUploadId: id,
       sessionId: 'session-1',
+      cropCycleId: cropCycleId,
       localFilePath: '/tmp/does-not-need-to-exist-for-these-tests-$id.jpg',
       fileName: 'leaf.jpg',
       mimeType: 'image/jpeg',
@@ -68,11 +69,39 @@ void main() {
     final restored = PendingUpload.fromJson(original.toJson());
     expect(restored.clientUploadId, original.clientUploadId);
     expect(restored.sessionId, original.sessionId);
+    expect(restored.cropCycleId, original.cropCycleId);
     expect(restored.localFilePath, original.localFilePath);
     expect(restored.fileName, original.fileName);
     expect(restored.mimeType, original.mimeType);
     expect(restored.source, original.source);
     expect(restored.status, original.status);
+  });
+
+  test('fromJson defaults cropCycleId to null for a manifest written before this field existed', () {
+    final legacyJson = {
+      'clientUploadId': 'a',
+      'sessionId': 'session-1',
+      'localFilePath': '/tmp/x.jpg',
+      'fileName': 'leaf.jpg',
+      'mimeType': 'image/jpeg',
+      'source': 'camera',
+      'status': 'failed',
+      'lastErrorMessage': null,
+      // no 'cropCycleId' key at all - simulates an old manifest file
+    };
+    final restored = PendingUpload.fromJson(legacyJson);
+    expect(restored.cropCycleId, isNull);
+  });
+
+  test('forCropCycle returns only that cycle\'s own not-yet-uploaded items', () async {
+    final queue = PendingUploadQueue();
+    await queue.enqueue(_makeUpload('a', cropCycleId: 'cycle-1'));
+    await queue.enqueue(_makeUpload('b', cropCycleId: 'cycle-2'));
+    await queue.enqueue(_makeUpload('c', cropCycleId: 'cycle-1'));
+    await queue.updateStatus('c', PendingUploadStatus.uploaded);
+
+    final forCycle1 = queue.forCropCycle('cycle-1').map((u) => u.clientUploadId).toSet();
+    expect(forCycle1, {'a'}); // 'c' excluded - already uploaded
   });
 
   test('loadFromDisk with no prior manifest leaves the queue empty, not crashed', () async {

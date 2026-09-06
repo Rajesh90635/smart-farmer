@@ -213,6 +213,47 @@ def test_daily_summary_includes_finance_line_once_expenses_recorded(client, farm
     assert any(line.startswith("Expenses:") and "500" in line for line in after), f"Expected a finance line, got: {after}"
 
 
+def test_daily_summary_lists_every_active_crop_cycle_on_a_multi_crop_farm(client, farmer_with_crop_cycle, sample_crop_id):
+    """D92-04 (docs/audit/FINAL_CANONICAL_group_D.md): previously only the
+    single most-recently-updated crop cycle was ever surfaced."""
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers)
+
+    response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    lines = response.json()["lines"]
+    assert any(line.startswith("Crops:") and "Tomato" in line for line in lines), f"Expected a multi-crop line, got: {lines}"
+
+
+def test_daily_summary_single_crop_farm_keeps_the_original_single_crop_wording(client, farmer_with_crop_cycle):
+    """D92-04: a one-crop farmer's daily brief must read exactly as
+    before - no regression to the existing single-crop wording."""
+    tokens, _ = farmer_with_crop_cycle
+    response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    lines = response.json()["lines"]
+    assert any(line.startswith("Crop:") for line in lines), f"Expected the single-crop line, got: {lines}"
+    assert not any(line.startswith("Crops:") for line in lines)
+
+
+def test_daily_summary_includes_spray_advisory_when_weather_is_unsuitable_for_spraying(client, farmer_with_crop_cycle):
+    """D93-03 (docs/audit/FINAL_CANONICAL_group_D.md): CropActionAdvisoryResponse
+    already existed on FarmWeatherResponse - it was never surfaced in the
+    daily brief."""
+    from tests.conftest import override_weather_provider
+    from tests.fake_weather_provider import FakeWeatherProvider
+    from app.services.weather.weather_provider import WeatherReading
+
+    tokens, _ = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(temperature_c=28, wind_speed_kmh=55, rain_probability_percent=5))):
+        response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    lines = response.json()["lines"]
+    assert any(line.startswith("Spray advisory:") for line in lines), f"Expected a spray-advisory line, got: {lines}"
+
+
 def test_daily_summary_flags_what_changed_since_last_visit(client, farmer_with_crop_cycle):
     """D94-08 (docs/FINAL_GAP_REPORT.md): diffs a stored snapshot of the
     raw facts behind the lines above, not the rendered text - so this

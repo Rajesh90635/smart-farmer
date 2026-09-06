@@ -14,17 +14,34 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 352 |
+| Verified | 417 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **425** |
-| Partial | 97 |
+| **Attended (Verified + Implemented)** | **490** |
+| Partial | 21 |
 | Missing | 215 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **312** |
-| Future | 30 |
-| Out of Scope | 25 |
-| Environment Dependent | 6 |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **236** |
+| Future | 38 |
+| Out of Scope | 26 |
+| Environment Dependent | 8 |
 | **TOTAL** | **798** |
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 PARTIAL
+FUNCTIONALITY COMPLETION" prompt: every genuinely Partial scenario across
+all four `FINAL_CANONICAL_group_{A,B,C,D}.md` files was re-inspected.
+Verified 351→417 (+66), Partial 97→21 (-76): 21 Group-D rows this pass
+(D75-06/07, D82-06, D84-01, D87-01/02, D88-01/03/05/07/10, D89-05, D90-04,
+D91-03/08/09/10, D92-04, D93-03, D96-01, D98-03), plus the earlier Group
+A/B/C passes this same session already folded into these per-group
+totals. Environment Dependent 6→8 and Out of Scope 25→26 absorbed the two
+rows that couldn't be honestly closed as either Verified or left plain
+Partial (D75-04, D88-09) rather than being force-closed. 21 rows remain
+genuinely Partial, each with an individually-verified, non-fabricated
+reason recorded in its own group file - see each `FINAL_CANONICAL_group_*.md`'s
+own "Count summary" batch note for the full per-row breakdown. Missing,
+Future, and the 798 grand total are unchanged - every change this pass was
+an internal status move, zero new/removed rows. Full backend suite: 864
+passed, 0 failed/errored. Full flutter suite: 283 passed, 0 failed.)*
 
 (Verified rose from 278→323 and Missing fell from 273→233 this session, across: the P0 fix
 batch (D6-07/D11-05/D68-02 PARTIAL→VERIFIED); the P1 task-management cluster (D9-03/05/

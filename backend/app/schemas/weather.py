@@ -48,3 +48,8 @@ class FarmWeatherResponse(BaseModel):
     current: WeatherReadingResponse | None = None
     forecast: list[ForecastDayResponse] = []
     crop_action: CropActionAdvisoryResponse | None = None
+    # D88-05 (docs/audit/FINAL_CANONICAL_group_D.md): the farm's already-
+    # seeded Mandal/Village master data, surfaced alongside the reading -
+    # None whenever the farm has no resolvable mandal/village (never
+    # fabricated), never a second/duplicate location dataset.
+    region: dict | None = None

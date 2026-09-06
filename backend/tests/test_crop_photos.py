@@ -168,6 +168,25 @@ def test_location_only_recorded_with_explicit_consent(client, farmer_with_crop_c
     assert with_consent.json()["latitude"] == "10.500000"
 
 
+def test_capture_metadata_round_trips_when_provided(client, farmer_with_crop_cycle):
+    """D91-03 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = _create_session(client, tokens, crop_cycle_id)
+
+    with_metadata = _upload(
+        client, tokens, session["id"], content=make_test_jpeg(), client_upload_id="with-capture-metadata",
+        device_model="Pixel 7a", capture_condition="outdoor_daylight",
+    )
+    body = with_metadata.json()
+    assert body["device_model"] == "Pixel 7a"
+    assert body["capture_condition"] == "outdoor_daylight"
+
+    without_metadata = _upload(client, tokens, session["id"], content=make_test_jpeg(), client_upload_id="no-capture-metadata")
+    body2 = without_metadata.json()
+    assert body2["device_model"] is None
+    assert body2["capture_condition"] is None
+
+
 def test_get_photo_detail(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     session = _create_session(client, tokens, crop_cycle_id)

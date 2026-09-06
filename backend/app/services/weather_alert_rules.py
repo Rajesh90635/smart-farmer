@@ -229,16 +229,30 @@ def evaluate_consecutive_dry_days_risk(dry_days: int, settings: Settings) -> "Al
 
 
 def evaluate_crop_weather_alert(
-    *, crop_name: str, cultivation_status: str, forecast_today: WeatherReading | None, settings: Settings
+    *,
+    crop_name: str,
+    cultivation_status: str,
+    forecast_today: WeatherReading | None,
+    settings: Settings,
+    crop_thresholds: dict[str, float] | None = None,
 ) -> "AlertCandidate | None":
     """Combines crop + stage + weather into one contextual alert. Only
     fires for a heavy-rain scenario currently - the simplest, clearest
     case supportable without inventing agricultural logic that hasn't
     been validated. Additional crop-stage-specific rules should be added
-    here as they're actually validated, not guessed."""
+    here as they're actually validated, not guessed.
+
+    D89-05 (docs/audit/FINAL_CANONICAL_group_D.md): `crop_thresholds`
+    optionally overrides the global weather_heavy_rain_probability_threshold
+    for a specific crop_name, falling back to the global default when the
+    crop has no entry - genuine crop-conditional branching, but with NO
+    values pre-populated here, since no authoritative per-crop threshold
+    dataset exists in this project. Passing None/empty (today's only
+    production call) reproduces the exact prior global-only behavior."""
     if forecast_today is None or forecast_today.rain_probability_percent is None:
         return None
-    if forecast_today.rain_probability_percent < settings.weather_heavy_rain_probability_threshold:
+    threshold = (crop_thresholds or {}).get(crop_name, settings.weather_heavy_rain_probability_threshold)
+    if forecast_today.rain_probability_percent < threshold:
         return None
 
     return AlertCandidate(

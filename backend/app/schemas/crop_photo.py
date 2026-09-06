@@ -34,6 +34,8 @@ class CropPhotoResponse(BaseModel):
     upload_timestamp: datetime
     latitude: Decimal | None
     longitude: Decimal | None
+    device_model: str | None
+    capture_condition: str | None
     source: PhotoSource
     upload_status: UploadStatus
     image_quality_status: ImageQualityStatus
@@ -57,6 +59,27 @@ class CropPhotoListResponse(BaseModel):
     total: int
 
 
+class DeadLetterReportCreateRequest(BaseModel):
+    """D87-02 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    client_upload_id: str = Field(min_length=1, max_length=100)
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class DeadLetterReportResponse(BaseModel):
+    id: uuid.UUID
+    farmer_id: uuid.UUID
+    client_upload_id: str
+    reason: str
+    reported_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DeadLetterReportListResponse(BaseModel):
+    items: list[DeadLetterReportResponse]
+    total: int
+
+
 class PhotoUploadMetadata(BaseModel):
     """Multipart form fields accompanying the file itself. FastAPI binds
     these from Form(...) fields, not JSON body, since this is a
@@ -67,6 +90,10 @@ class PhotoUploadMetadata(BaseModel):
     share_location: bool = False
     latitude: Decimal | None = None
     longitude: Decimal | None = None
+    # D91-03 (docs/audit/FINAL_CANONICAL_group_D.md): optional, client-
+    # reported only - never inferred/guessed server-side.
+    device_model: str | None = Field(default=None, max_length=150)
+    capture_condition: str | None = Field(default=None, max_length=30)
 
     @field_validator("latitude")
     @classmethod

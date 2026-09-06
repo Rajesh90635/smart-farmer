@@ -68,6 +68,13 @@ class TestExtremeWeatherAlerts:
         reading = WeatherReading(temperature_c=25, wind_speed_kmh=10)
         assert evaluate_extreme_weather_alerts(reading, settings) == []
 
+    def test_extreme_heat_alert_message_carries_protective_advisory_text(self):
+        """D75-06 (docs/audit/FINAL_CANONICAL_group_D.md): the heat alert
+        must say more than just "it's hot" - a farmer needs an actual
+        protective action attached, not a bare temperature observation."""
+        message = get_message("extreme_heat_alert", "en", temperature=40)
+        assert "shade" in message.lower() or "irrigation" in message.lower()
+
     def test_no_data_produces_no_alert(self):
         assert evaluate_extreme_weather_alerts(None, settings) == []
 
@@ -119,6 +126,32 @@ class TestCropWeatherAlert:
         candidate = evaluate_crop_weather_alert(crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings)
         forbidden = ["pesticide", "spray", "chemical", "dosage", "fungicide"]
         assert not any(term in candidate.message_key.lower() for term in forbidden)
+
+    def test_crop_specific_threshold_overrides_the_global_default_when_present(self):
+        """D89-05 (docs/audit/FINAL_CANONICAL_group_D.md): a lower
+        crop-specific threshold fires earlier than the global default -
+        the override map is caller-supplied (test-only synthetic values
+        here), never fabricated real agronomic data shipped in this repo."""
+        reading = WeatherReading(rain_probability_percent=settings.weather_heavy_rain_probability_threshold - 10)
+        # Below the global threshold - no alert without an override.
+        assert evaluate_crop_weather_alert(crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings) is None
+
+        lower_threshold = settings.weather_heavy_rain_probability_threshold - 10
+        candidate = evaluate_crop_weather_alert(
+            crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings,
+            crop_thresholds={"Tomato": lower_threshold},
+        )
+        assert candidate is not None
+
+    def test_crop_specific_threshold_leaves_other_crops_on_the_global_default(self):
+        """D89-05: an override entry for one crop must never leak to a
+        different crop_name not present in the map."""
+        reading = WeatherReading(rain_probability_percent=settings.weather_heavy_rain_probability_threshold - 10)
+        candidate = evaluate_crop_weather_alert(
+            crop_name="Chilli", cultivation_status="flowering", forecast_today=reading, settings=settings,
+            crop_thresholds={"Tomato": settings.weather_heavy_rain_probability_threshold - 10},
+        )
+        assert candidate is None
 
 
 class TestFrostRisk:

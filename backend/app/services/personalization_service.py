@@ -19,11 +19,12 @@ minimum-evidence floor of 3 is enforced everywhere below.
 """
 import uuid
 from collections import Counter
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.models.task import TaskStatus
-from app.repositories import advisory_feedback_repository, crop_cycle_repository, task_repository, treatment_repository
+from app.repositories import advisory_feedback_repository, crop_cycle_repository, ledger_entry_repository, task_repository, treatment_repository
 from app.schemas.personalization import LearnedPreference, PersonalizationProfileResponse
 
 
@@ -46,6 +47,7 @@ def get_personalization_profile(db: Session, farmer_id: str) -> PersonalizationP
         _treatment_follow_up_signal(db, farmer_uuid, crop_cycles),
         _task_completion_signal(db, farmer_uuid, crop_cycles),
         _advisory_feedback_signal(db, farmer_uuid),
+        _cost_pattern_signal(db, farmer_uuid, crop_cycles),
     ]
 
     return PersonalizationProfileResponse(farmer_id=farmer_uuid, preferences=preferences)
@@ -183,4 +185,55 @@ def _advisory_feedback_signal(db: Session, farmer_uuid: uuid.UUID) -> LearnedPre
         confidence=confidence,
         last_observed_at=most_recent.created_at,
         explanation=f"Based on {helpful} of {evidence_count} feedback submissions marked helpful.",
+    )
+
+
+def _cost_pattern_signal(db: Session, farmer_uuid: uuid.UUID, crop_cycles) -> LearnedPreference:
+    """D98-03 (docs/audit/FINAL_CANONICAL_group_D.md): a descriptive
+    observation of how this farmer's recorded actual costs have trended
+    across their own crop cycles over time - NOT a forward recommendation
+    (that remains D98-07, correctly FUTURE). Only cycles with at least
+    some recorded expense are counted as evidence - a cycle with zero
+    recorded spend has no cost pattern to observe yet."""
+    costs = []
+    for cc in crop_cycles:
+        total_cost, _ = ledger_entry_repository.compute_totals(db, cc.id, farmer_uuid)
+        if total_cost > 0:
+            costs.append((cc, total_cost))
+
+    evidence_count = len(costs)
+    confidence = _confidence_for(evidence_count)
+    if confidence is None:
+        return LearnedPreference(
+            signal_name="cost_pattern",
+            observation=None,
+            evidence_count=evidence_count,
+            confidence=None,
+            last_observed_at=None,
+            explanation=f"Only {evidence_count} crop cycle(s) with recorded costs - at least 3 are needed before a cost pattern can be identified.",
+        )
+
+    costs.sort(key=lambda pair: pair[0].created_at)
+    midpoint = evidence_count // 2 or 1
+    earlier, later = costs[:midpoint], costs[midpoint:]
+    if not later:
+        earlier, later = costs[:-1], costs[-1:]
+    earlier_avg = sum((c for _, c in earlier), Decimal("0")) / len(earlier)
+    later_avg = sum((c for _, c in later), Decimal("0")) / len(later)
+
+    if later_avg > earlier_avg * Decimal("1.1"):
+        observation = "This farmer's recorded costs per crop cycle have been trending upward over time."
+    elif later_avg < earlier_avg * Decimal("0.9"):
+        observation = "This farmer's recorded costs per crop cycle have been trending downward over time."
+    else:
+        observation = "This farmer's recorded costs per crop cycle have stayed relatively stable over time."
+
+    most_recent = max((cc for cc, _ in costs), key=lambda cc: cc.created_at)
+    return LearnedPreference(
+        signal_name="cost_pattern",
+        observation=observation,
+        evidence_count=evidence_count,
+        confidence=confidence,
+        last_observed_at=most_recent.created_at,
+        explanation=f"Based on recorded costs across {evidence_count} crop cycles for this farmer.",
     )

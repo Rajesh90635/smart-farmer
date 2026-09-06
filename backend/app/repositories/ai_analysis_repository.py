@@ -1,9 +1,9 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.ai_analysis import AIAnalysis
+from app.models.ai_analysis import AIAnalysis, ResultStatus
 from app.models.ai_analysis_session import AIAnalysisSession
 from app.models.crop_photo import CropPhoto
 
@@ -70,3 +70,22 @@ def list_for_session(db: Session, session_id: uuid.UUID) -> list[AIAnalysis]:
         .scalars()
         .all()
     )
+
+
+def count_by_result_status(db: Session, result_status: ResultStatus) -> int:
+    """D91-09/D91-10 (docs/audit/FINAL_CANONICAL_group_D.md): the real
+    denominator a false-positive/false-negative RATE needs - every
+    analysis of that result type, not just the ones a farmer corrected."""
+    return db.execute(select(func.count()).select_from(AIAnalysis).where(AIAnalysis.result_status == result_status)).scalar_one()
+
+
+def count_by_result_status_and_correction(db: Session, result_status: ResultStatus, correction: str) -> int:
+    return db.execute(
+        select(func.count()).select_from(AIAnalysis).where(
+            AIAnalysis.result_status == result_status, AIAnalysis.farmer_correction == correction
+        )
+    ).scalar_one()
+
+
+def count_by_correction(db: Session, correction: str) -> int:
+    return db.execute(select(func.count()).select_from(AIAnalysis).where(AIAnalysis.farmer_correction == correction)).scalar_one()

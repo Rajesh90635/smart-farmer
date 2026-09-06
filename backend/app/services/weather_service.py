@@ -39,7 +39,7 @@ def get_farm_weather(
     fresh_forecast = weather_repository.get_fresh_forecast(db, farm_id)
 
     if fresh_current is not None and fresh_forecast:
-        return _build_response(fresh_current, fresh_forecast, is_stale=False, settings=settings)
+        return _build_response(fresh_current, fresh_forecast, is_stale=False, settings=settings, farm=farm)
 
     result = provider.get_weather(
         latitude=float(farm.latitude), longitude=float(farm.longitude), forecast_days=_DEFAULT_FORECAST_DAYS
@@ -49,7 +49,7 @@ def get_farm_weather(
         stale_current = weather_repository.get_latest_current(db, farm_id)
         if stale_current is not None:
             stale_forecast = weather_repository.get_fresh_forecast(db, farm_id) or []
-            return _build_response(stale_current, stale_forecast, is_stale=True, settings=settings)
+            return _build_response(stale_current, stale_forecast, is_stale=True, settings=settings, farm=farm)
         return FarmWeatherResponse(
             available=False, unavailable_reason=result.unavailable_reason or "Weather information is temporarily unavailable."
         )
@@ -93,10 +93,12 @@ def get_farm_weather(
         forecast_snapshots.append(snap)
 
     db.commit()
-    return _build_response(current_snapshot, forecast_snapshots, is_stale=False, settings=settings)
+    return _build_response(current_snapshot, forecast_snapshots, is_stale=False, settings=settings, farm=farm)
 
 
-def _build_response(current: WeatherSnapshot, forecast: list[WeatherSnapshot], *, is_stale: bool, settings: Settings) -> FarmWeatherResponse:
+def _build_response(
+    current: WeatherSnapshot, forecast: list[WeatherSnapshot], *, is_stale: bool, settings: Settings, farm
+) -> FarmWeatherResponse:
     return FarmWeatherResponse(
         available=True,
         provider=current.provider,
@@ -108,7 +110,33 @@ def _build_response(current: WeatherSnapshot, forecast: list[WeatherSnapshot], *
             for f in forecast
         ],
         crop_action=_compute_crop_action_advisory(current, settings),
+        region=_build_region(farm),
     )
+
+
+def _build_region(farm) -> dict | None:
+    """D88-05 (docs/audit/FINAL_CANONICAL_group_D.md): surfaces whichever
+    of the farm's already-linked Village/Mandal rows resolves - never
+    fabricated, never re-derived from lat/long (that would be a second,
+    approximate location source disagreeing with the normalized one)."""
+    if farm.village is not None:
+        mandal = farm.village.mandal
+        district = mandal.district if mandal else None
+        return {
+            "village": farm.village.name,
+            "mandal": mandal.name if mandal else None,
+            "district": district.name if district else None,
+            "state": district.state.name if district else None,
+        }
+    if farm.mandal is not None:
+        district = farm.mandal.district
+        return {
+            "village": None,
+            "mandal": farm.mandal.name,
+            "district": district.name if district else None,
+            "state": district.state.name if district else None,
+        }
+    return None
 
 
 def _compute_crop_action_advisory(current: WeatherSnapshot, settings: Settings) -> CropActionAdvisoryResponse | None:

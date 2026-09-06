@@ -19,6 +19,11 @@ import 'package:path_provider/path_provider.dart';
 class PendingUpload {
   final String clientUploadId; // idempotency key - same value on every retry
   final String sessionId;
+  // D82-06 (docs/audit/FINAL_CANONICAL_group_D.md): lets CropPhotoListScreen
+  // filter the queue down to just this crop cycle's own pending items -
+  // nullable/defaulted for forward-compatibility with a manifest written
+  // by a version of this app before this field existed (see fromJson).
+  final String? cropCycleId;
   final String localFilePath; // persisted on-device file - NOT raw bytes in memory
   final String fileName;
   final String mimeType;
@@ -30,6 +35,7 @@ class PendingUpload {
   PendingUpload({
     required this.clientUploadId,
     required this.sessionId,
+    this.cropCycleId,
     required this.localFilePath,
     required this.fileName,
     required this.mimeType,
@@ -47,6 +53,7 @@ class PendingUpload {
   Map<String, dynamic> toJson() => {
         'clientUploadId': clientUploadId,
         'sessionId': sessionId,
+        'cropCycleId': cropCycleId,
         'localFilePath': localFilePath,
         'fileName': fileName,
         'mimeType': mimeType,
@@ -59,6 +66,9 @@ class PendingUpload {
   factory PendingUpload.fromJson(Map<String, dynamic> json) => PendingUpload(
         clientUploadId: json['clientUploadId'] as String,
         sessionId: json['sessionId'] as String,
+        // Defaulted for forward-compatibility with a manifest written by
+        // a version of this app before cropCycleId existed.
+        cropCycleId: json['cropCycleId'] as String?,
         localFilePath: json['localFilePath'] as String,
         fileName: json['fileName'] as String,
         mimeType: json['mimeType'] as String,
@@ -203,6 +213,16 @@ class PendingUploadQueue extends ChangeNotifier {
       }
     }
   }
+
+  /// D82-06 (docs/audit/FINAL_CANONICAL_group_D.md): this crop cycle's
+  /// own not-yet-server-confirmed items, for CropPhotoListScreen's
+  /// per-photo sync-status badges - excludes `uploaded` (already
+  /// removed from the queue on success, see sync_coordinator.dart, but
+  /// filtered here too for safety) since that server-confirmed photo is
+  /// already shown via the normal listPhotosForCropCycle() call.
+  List<PendingUpload> forCropCycle(String cropCycleId) => _items
+      .where((u) => u.cropCycleId == cropCycleId && u.status != PendingUploadStatus.uploaded)
+      .toList();
 
   List<PendingUpload> get retryable =>
       _items.where((u) => u.status == PendingUploadStatus.failed || u.status == PendingUploadStatus.waitingForNetwork).toList();

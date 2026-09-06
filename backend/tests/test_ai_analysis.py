@@ -103,6 +103,27 @@ def test_farmer_can_revise_a_previously_submitted_correction(client, uploaded_ph
     assert revised.json()["farmer_correction"] == "confirmed_correct"
 
 
+def test_original_call_judged_correct_reflects_the_farmer_correction(client, uploaded_photo):
+    """D91-08 (docs/audit/FINAL_CANONICAL_group_D.md): a distinct signal
+    from treatment effectiveness - None before any correction, False for
+    a false positive, True for a confirmed-correct call."""
+    tokens, crop_cycle_id, photo_id, _ = uploaded_photo
+    fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.90)], supported_crops=["tomato"])
+    with override_model_provider(fake):
+        analysis = client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(tokens)).json()
+    assert analysis["original_call_judged_correct"] is None
+
+    false_positive = client.post(
+        f"/api/v1/ai/analysis/{analysis['id']}/correction", json={"correction": "actually_healthy"}, headers=auth_headers(tokens)
+    ).json()
+    assert false_positive["original_call_judged_correct"] is False
+
+    confirmed = client.post(
+        f"/api/v1/ai/analysis/{analysis['id']}/correction", json={"correction": "confirmed_correct"}, headers=auth_headers(tokens)
+    ).json()
+    assert confirmed["original_call_judged_correct"] is True
+
+
 def test_cannot_submit_correction_for_another_farmers_analysis(client, uploaded_photo, another_farmer):
     tokens, crop_cycle_id, photo_id, _ = uploaded_photo
     fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.90)], supported_crops=["tomato"])
@@ -163,6 +184,27 @@ def test_model_version_is_always_recorded(client, uploaded_photo):
     # placeholder since no real model has been activated in the registry.
     assert body["model_name"]
     assert body["model_version"]
+
+
+def test_analysis_is_flagged_stale_once_older_than_the_configured_max_age(client, uploaded_photo, db_session):
+    """D88-10 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    import uuid as uuid_mod
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.config import get_settings
+    from app.models.ai_analysis import AIAnalysis
+
+    tokens, crop_cycle_id, photo_id, _ = uploaded_photo
+    result = client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(tokens)).json()
+    assert result["is_stale"] is False
+
+    settings = get_settings()
+    row = db_session.get(AIAnalysis, uuid_mod.UUID(result["id"]))
+    row.inference_timestamp = datetime.now(timezone.utc) - timedelta(days=settings.ai_analysis_max_age_days + 1)
+    db_session.commit()
+
+    refetched = client.get(f"/api/v1/crop-photos/{photo_id}/analysis", headers=auth_headers(tokens)).json()
+    assert refetched["is_stale"] is True
 
 
 def test_analysis_history_for_crop_cycle(client, uploaded_photo):

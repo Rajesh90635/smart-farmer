@@ -161,15 +161,19 @@ def get_latest_reference_price(
     product_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     from app.core import error_codes
     from app.core.errors import AppError
     from app.repositories import product_repository
+    from app.services.price_query_service import is_reference_price_stale
 
     ref = product_repository.get_latest_reference_price(db, product_id)
     if ref is None:
         raise AppError(error_codes.NOT_FOUND, "Reference price unavailable.", 404)
-    return ReferencePriceResponse.model_validate(ref)
+    response = ReferencePriceResponse.model_validate(ref)
+    response.is_stale = is_reference_price_stale(ref, settings)
+    return response
 
 
 @router.get("/products/{product_id}/price-history")
@@ -177,11 +181,18 @@ def get_reference_price_history(
     product_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> list[ReferencePriceResponse]:
     from app.repositories import product_repository
+    from app.services.price_query_service import is_reference_price_stale
 
     history = product_repository.list_reference_price_history(db, product_id)
-    return [ReferencePriceResponse.model_validate(r) for r in history]
+    responses = []
+    for r in history:
+        response = ReferencePriceResponse.model_validate(r)
+        response.is_stale = is_reference_price_stale(r, settings)
+        responses.append(response)
+    return responses
 
 
 @router.post("/products/{product_id}/reference-prices", response_model=ReferencePriceResponse, status_code=201)

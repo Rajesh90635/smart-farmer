@@ -87,10 +87,28 @@ def get_daily_summary(
                 rain=weather.get("rain_probability_today_percent", "?"),
             )
         )
+        # D93-03 (docs/audit/FINAL_CANONICAL_group_D.md): the spray-advisory
+        # crop_action field already existed on FarmWeatherResponse - it was
+        # simply never surfaced in the daily brief. Only ever fires for
+        # the one implemented action (avoid_spraying), same as the schema.
+        if weather.get("crop_action"):
+            lines.append(get_message("daily_summary_weather_action", language_code))
 
-    crop = tools.get_crop_status(db, farmer_id)
-    if crop.get("available"):
-        lines.append(get_message("daily_summary_crop", language_code, crop_name=crop["crop_name"], stage=crop["stage"]))
+    # D92-04 (docs/audit/FINAL_CANONICAL_group_D.md): lists every one of
+    # the farmer's active crop cycles (a multi-crop farm previously only
+    # ever saw its single most-recently-updated cycle) - falls back to the
+    # single-crop wording when there's only one, so a one-crop farmer's
+    # daily brief reads exactly as before.
+    crop_all = tools.get_all_active_crop_statuses(db, farmer_id)
+    crop = {"available": False}
+    if crop_all.get("available"):
+        crops = crop_all["crops"]
+        crop = {"available": True, "crop_cycle_id": crops[0]["crop_cycle_id"], "stage": crops[0]["stage"]}
+        if len(crops) == 1:
+            lines.append(get_message("daily_summary_crop", language_code, crop_name=crops[0]["crop_name"], stage=crops[0]["stage"]))
+        else:
+            crop_summary = "; ".join(f"{c['crop_name']} ({c['stage']})" for c in crops)
+            lines.append(get_message("daily_summary_crop_multi", language_code, crop_summary=crop_summary))
 
     # D92-06/D93-04 (docs/audit/c13_governance_farmbrain_security.md):
     # get_disease_status already existed and was already used by the

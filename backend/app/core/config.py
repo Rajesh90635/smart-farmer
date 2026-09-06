@@ -170,6 +170,17 @@ class Settings(BaseSettings):
     # this project's other threshold settings. ---
     soil_test_max_age_days: int = 730
 
+    # --- Data provenance staleness (D88-10) - mirrors weather's own
+    # is_stale/soil_test_max_age_days convention for the two other data
+    # types that had no freshness signal at all: an AI photo diagnosis
+    # describes a crop's condition at the moment it was taken (disease
+    # progresses in days, not months), and a reference price is only as
+    # trustworthy as how recently it was retrieved relative to when it
+    # actually applied. Disclosed placeholders, not authoritative
+    # agronomic/market research, same as every other threshold here. ---
+    ai_analysis_max_age_days: int = 7
+    reference_price_max_age_days: int = 90
+
     # --- Payment timeout sweep (D66-03) - same scheduler; PaymentStatus.TIMEOUT
     # already existed but nothing ever assigned it, so a payment could sit
     # PENDING forever with no resolution. ---

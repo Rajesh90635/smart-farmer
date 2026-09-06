@@ -80,5 +80,12 @@ class Notification(Base):
     # Nullable because not every notification is rule-triggered.
     rule_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
+    # D88-01 (docs/audit/FINAL_CANONICAL_group_D.md): which subsystem
+    # produced this notification (e.g. "Weather service"), mirroring the
+    # RiskFactor.source pattern already used for crop-risk factors -
+    # nullable since a category with no mapped source honestly leaves it
+    # unset rather than guessing one.
+    source_summary: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)

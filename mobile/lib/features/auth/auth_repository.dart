@@ -34,7 +34,7 @@ class AuthRepository {
     String? preferredVoiceLanguageCode,
     required List<ConsentInput> consents,
   }) async {
-    final response = await _apiClient.post('/auth/register', body: {
+    final response = await _apiClient.post('/auth/register', interceptSessionExpiry: false, body: {
       'phone_number': phoneNumber,
       'password': password,
       'full_name': fullName,
@@ -47,7 +47,7 @@ class AuthRepository {
 
   Future<AuthTokens> login({required String phoneNumber, required String password}) async {
     final deviceId = await _deviceIdentity.readOrCreate();
-    final response = await _apiClient.post('/auth/login', body: {
+    final response = await _apiClient.post('/auth/login', interceptSessionExpiry: false, body: {
       'phone_number': phoneNumber,
       'password': password,
       'device_id': deviceId,
@@ -64,7 +64,7 @@ class AuthRepository {
     if (storedRefreshToken == null) return null;
 
     try {
-      final response = await _apiClient.post('/auth/refresh', body: {'refresh_token': storedRefreshToken});
+      final response = await _apiClient.post('/auth/refresh', interceptSessionExpiry: false, body: {'refresh_token': storedRefreshToken});
       return _persistTokens(response);
     } on ApiException {
       await _tokenStorage.clear();
@@ -75,7 +75,7 @@ class AuthRepository {
   /// Sends a one-time verification code to phoneNumber - resetPassword()
   /// below will not succeed without it (see backend/app/services/sms/).
   Future<void> requestPasswordResetOtp({required String phoneNumber}) async {
-    await _apiClient.post('/auth/reset-password/request-otp', body: {'phone_number': phoneNumber});
+    await _apiClient.post('/auth/reset-password/request-otp', interceptSessionExpiry: false, body: {'phone_number': phoneNumber});
   }
 
   Future<AuthTokens> resetPassword({
@@ -83,7 +83,7 @@ class AuthRepository {
     required String newPassword,
     required String otpCode,
   }) async {
-    final response = await _apiClient.post('/auth/reset-password', body: {
+    final response = await _apiClient.post('/auth/reset-password', interceptSessionExpiry: false, body: {
       'phone_number': phoneNumber,
       'new_password': newPassword,
       'otp_code': otpCode,

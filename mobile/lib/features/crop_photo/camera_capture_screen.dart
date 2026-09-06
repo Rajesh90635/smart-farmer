@@ -29,7 +29,8 @@ String _generateClientUploadId() {
 /// selection from the same screen (Requirement 5) via a second button.
 class CameraCaptureScreen extends StatefulWidget {
   final String sessionId;
-  const CameraCaptureScreen({super.key, required this.sessionId});
+  final String cropCycleId;
+  const CameraCaptureScreen({super.key, required this.sessionId, required this.cropCycleId});
 
   @override
   State<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
@@ -84,6 +85,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     final pending = PendingUpload(
       clientUploadId: _clientUploadId,
       sessionId: widget.sessionId,
+      cropCycleId: widget.cropCycleId,
       localFilePath: localPath,
       fileName: _capturedFile!.name,
       mimeType: 'image/jpeg',
@@ -187,6 +189,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     final pending = PendingUpload(
       clientUploadId: _clientUploadId, // SAME id - this is what makes retry safe
       sessionId: widget.sessionId,
+      cropCycleId: widget.cropCycleId,
       localFilePath: localPath,
       fileName: _capturedFile!.name,
       mimeType: 'image/jpeg',

@@ -36,8 +36,9 @@ def get_session(
     session_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AIAnalysisSessionResponse:
-    return ai_analysis_session_service.get_analysis_session(db, current_user.user_id, session_id)
+    return ai_analysis_session_service.get_analysis_session(db, current_user.user_id, session_id, settings)
 
 
 @router.post("/sessions/{session_id}/analyze", response_model=AIAnalysisSessionResponse)
@@ -57,10 +58,11 @@ def get_analysis(
     analysis_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     from app.services import ai_analysis_service
 
-    return ai_analysis_service.get_analysis(db, current_user.user_id, analysis_id)
+    return ai_analysis_service.get_analysis(db, current_user.user_id, analysis_id, settings)
 
 
 @router.get("/analysis/{analysis_id}/localized")
@@ -91,3 +93,16 @@ def list_supported_languages():
     from app.core.localization import SUPPORTED_LANGUAGE_CODES
 
     return {"languages": sorted(SUPPORTED_LANGUAGE_CODES)}
+
+
+@router.get("/evaluation/correction-aggregate")
+def get_correction_aggregate(
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+):
+    """D91-09/D91-10 (docs/audit/FINAL_CANONICAL_group_D.md): admin-only
+    false-positive/false-negative rates derived from real farmer
+    corrections."""
+    from app.services import ai_evaluation_aggregation_service
+
+    return ai_evaluation_aggregation_service.get_correction_aggregate(db)

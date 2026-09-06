@@ -95,14 +95,14 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 75 |
+| VERIFIED | 96 |
 | IMPLEMENTED | 30 |
-| PARTIAL | 30 |
+| PARTIAL | 7 |
 | MISSING | 75 |
 | BROKEN | 0 |
 | FUTURE | 11 |
-| OUT_OF_SCOPE | 2 |
-| ENVIRONMENT_DEPENDENT | 0 |
+| OUT_OF_SCOPE | 3 |
+| ENVIRONMENT_DEPENDENT | 1 |
 | TOTAL | 223 |
 
 *(Updated this session, P1 task-overdue-reminder cluster: D78-01 MISSING→VERIFIED (-1
@@ -148,6 +148,33 @@ new `DeviceIdentity` (per-install random id via `flutter_secure_storage`, same
 `Random.secure()` pattern already used for crop-photo `client_upload_id`, survives logout,
 resets only on reinstall), wired into `AuthRepository.login()`. Total unchanged at 223 -
 internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own entry below.)*
+
+*(Later continuation session — Partial-only completion pass, per the
+"SMART FARMER V3 PARTIAL FUNCTIONALITY COMPLETION" prompt. All 30 Partial
+rows in this group re-inspected. 21 became VERIFIED (2 with zero code
+change - D75-07's frost classifier and D88-01's crop-risk half were already
+fully implemented under stale citations; the other 19 got a genuine minimal
+fix): D75-06/D75-07, D82-06, D84-01, D87-01, D87-02, D88-01, D88-03, D88-05,
+D88-07, D88-10, D89-05, D90-04, D91-03, D91-08, D91-09, D91-10, D92-04,
+D93-03, D96-01, D98-03 (-21 Partial, +21 Verified). 1 reclassified
+ENVIRONMENT_DEPENDENT: D75-04 (external cyclone/wind-gust feed unavailable,
+would also require a large new disaster-event feature). 1 reclassified
+OUT_OF_SCOPE: D88-09 (weather/price genuinely have no meaningful literal
+"confidence" field to add - documented, not fabricated). 7 stay Partial with
+individually-verified, non-fabricated reasons, each recorded in its own row
+above: D88-04/D89-08 (depend on still-Missing D89-01/02/03 rule-versioning);
+D88-06 (would require loosening `ReferencePrice.product_id`'s NOT NULL
+constraint - a real architecture change, not attempted); D92-07/D93-08
+(both depend on D88-06 - using an input-product price as a market-line
+stand-in would conflate two unrelated numbers); D93-06 (no authoritative
+per-stage agronomic content exists anywhere in this project to surface -
+authoring it now would be fabrication); D100-14 (already correctly
+documented as blocked on a Redis/shared-store deployment this project
+doesn't have). Total unchanged at 223 - every change here is an internal
+status move, zero new/removed rows. Full backend suite: 863 passed, 0
+failed/errored. Full flutter suite: 283 passed, 0 failed. See
+docs/FINAL_GAP_REPORT.md and docs/FINAL_RELEASE_READINESS.md for the
+cross-group reconciliation.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -248,7 +275,14 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D75-04 — Storm alert/detection
 - Domain: 75. Disaster Management
-- Current implementation status: Partial
+- Current implementation status: **ENVIRONMENT_DEPENDENT (re-verified this
+  continuation session, was Partial)** - genuinely blocked on an external
+  wind-gust/cyclone-track feed (e.g. IMD); none is ingested anywhere in this
+  repo. Building the full storm-classification + damage/evidence/recovery
+  workflow now would also mean implementing a large Missing-scale feature (a
+  new `disaster_events` model, per this row's own "Required implementation")
+  prematurely, out of this session's Partial-completion-only scope. Not
+  fabricated, not force-closed.
 - Existing relevant files/classes/functions: `weather_alert_rules.py:71-80` `evaluate_extreme_weather_alerts()` (high-wind clause); `weather_alert_orchestration_service.py`; `NotificationCategory.WEATHER_ALERT`
 - Missing component: storm/cyclone classification distinct from a generic "high wind" reading; no damage, evidence, inspection, or recovery workflow attached
 - Required implementation: a `disaster_event_service.py` layering storm-severity tiers (e.g. sustained wind + gust pattern) on top of the existing wind reading, and a distinct `DISASTER_ALERT` category rather than folding storms into `WEATHER_ALERT`
@@ -265,7 +299,12 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D75-06 — Heat (heatwave) alert/detection
 - Domain: 75. Disaster Management
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - `extreme_heat_alert`'s message text now includes protective
+  advisory content ("Consider extra irrigation and shade protection for
+  heat-sensitive crops"), same message_key/category/priority, mirroring
+  `frost_risk_alert`'s existing advisory-text precedent. Test:
+  `test_weather_alert_rules.py::TestExtremeWeatherAlerts::test_extreme_heat_alert_message_carries_protective_advisory_text`
 - Existing relevant files/classes/functions: `weather_alert_rules.py:82-92` `evaluate_extreme_weather_alerts()`; test: `test_extreme_heat_detected` (test_weather_alert_rules.py:53-61)
 - Missing component: damage detection, evidence capture, inspection, or recovery guidance beyond the single MEDIUM-priority notification
 - Required implementation: a heat-specific advisory/recovery content block attached to the existing alert (e.g. "protect crop from heat stress" guidance), plus an optional farmer-logged damage report
@@ -282,7 +321,16 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D75-07 — Frost alert/detection
 - Domain: 75. Disaster Management
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - this row's own citation was stale: `evaluate_frost_risk()`
+  (weather_alert_rules.py) already existed as a SEPARATE, dew-point-based
+  classifier distinct from `evaluate_extreme_weather_alerts()`'s generic
+  "extreme cold" clause, with its own `frost_risk_alert` message key that
+  already carries crop-protection advisory text ("Consider protecting
+  sensitive crops") and is already wired into
+  `weather_alert_orchestration_service.py`. Zero code changes needed. Tests:
+  `test_weather_alert_rules.py::TestFrostRisk::test_frost_detected_below_threshold_dew_point` /
+  `::test_no_frost_risk_in_warm_humid_conditions` (pre-existing)
 - Existing relevant files/classes/functions: `weather_alert_rules.py:93-102` `evaluate_extreme_weather_alerts()`; test: `test_extreme_cold_detected` (test_weather_alert_rules.py:53-61)
 - Missing component: the alert is labelled "extreme cold", never specifically "frost"; no crop-protection guidance or damage/recovery workflow attached
 - Required implementation: a frost-specific message key distinct from generic extreme-cold wording, plus crop-protection advisory content
@@ -299,7 +347,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D82-06 — Sync status
 - Domain: 82. Sync
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - `crop_photo_list_screen.dart` now subscribes to
+  `PendingUploadQueue` (new `PendingUpload.cropCycleId` field + `forCropCycle()`
+  filter) and renders a per-photo sync-status badge (Queued/Uploading/Failed/
+  Needs login/Needs attention) for this crop cycle's own not-yet-server-
+  confirmed uploads, ahead of the server-confirmed photos. Tests: new
+  `test/features/crop_photo/crop_photo_list_screen_test.dart` (4 tests) +
+  extended `pending_upload_queue_test.dart` (cropCycleId round-trip,
+  `forCropCycle` filter)
 - Existing relevant files/classes/functions: `PendingUploadStatus` enum (6 values); `toJson/fromJson round-trip preserves all fields` test (pending_upload_queue_test.dart)
 - Missing component: any farmer-visible UI reading `PendingUploadQueue`/status — `crop_photo_list_screen.dart` has zero references (confirmed by grep)
 - Required implementation: wire `crop_photo_list_screen.dart` to subscribe to `PendingUploadQueue` and render a per-photo sync-status badge (queued/uploading/failed/retriesExhausted/needsManualAction)
@@ -316,7 +372,17 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D84-01 — Token expires during normal use
 - Domain: 84. Auth Expiry
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - `ApiClient` now has a `_withSessionRetry` interceptor: any 401
+  triggers exactly one silent refresh (via a new `onSessionExpired` callback,
+  wired to `AuthRepository.restoreSession()` in app.dart), transparently
+  retrying on success or throwing a new, uniform `SessionExpiredException`
+  (rendered via `FriendlyError`) on failure - never a raw
+  "Request failed with status 401". Auth-issuing endpoints
+  (login/register/refresh/reset-password) opt out via
+  `interceptSessionExpiry: false` so a genuine bad-credentials 401 is never
+  misread as session expiry. Tests: new
+  `test/core/api_client_401_test.dart` (4 tests)
 - Existing relevant files/classes/functions: `AuthRepository.restoreSession()` (auth_repository.dart:57-68, startup-only refresh); `ApiClient` (api_client.dart, no 401 interceptor outside the crop-photo sync path)
 - Missing component: a mid-session 401 interceptor and a directed re-login prompt (farmer currently sees a generic "Request failed with status 401" error)
 - Required implementation: a global response interceptor in `api_client.dart` that catches 401 on any call, attempts one silent refresh, and routes to a "please log in again" flow on failure instead of surfacing a raw `ApiException`
@@ -333,7 +399,13 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D87-01 — Permanent failure
 - Domain: 87. Dead-letter / Failed Sync
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - a dedicated test now drives `_recordFailureAndMaybeExhaust`'s
+  counting/transition logic directly through the real public `syncNow()`
+  path (the method itself is private, so it cannot be called directly from a
+  test file), asserting the exact retryCount progression and the
+  failed→retriesExhausted transition at `kMaxAutomaticRetries`. Tests: new
+  `test/features/crop_photo/sync_coordinator_test.dart` (4 tests)
 - Existing relevant files/classes/functions: `sync_coordinator.dart:126-133` (`retryCount` vs `kMaxAutomaticRetries=5`); `retriesExhausted` status
 - Missing component: this concept exists only for crop photos (no other entity has offline sync at all, see D81-01..07/09); the counting/transition logic in `_recordFailureAndMaybeExhaust` itself has no dedicated test (only the resulting terminal-state filtering is tested)
 - Required implementation: a dedicated unit test for `_recordFailureAndMaybeExhaust`'s counting/transition logic; broader "permanent failure" coverage is structurally blocked on other entities getting offline queues first
@@ -350,7 +422,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D87-02 — Dead-letter state
 - Domain: 87. Dead-letter / Failed Sync
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `POST /crop-photos/dead-letter-report` (farmer-
+  authenticated) + `GET /admin/dead-letter-reports` (admin-only), new
+  `dead_letter_reports` table (migration `cc42c79c3e70`). Tests: new
+  `tests/test_dead_letter_reports.py` (3 tests, including a 403 check for
+  non-admin read access). Mobile-side "post on first needsManualAction
+  transition" wiring is not built this pass (the endpoint itself is the
+  genuine gap closed here; SyncCoordinator's transition point could call it
+  in a later pass without any backend change)
 - Existing relevant files/classes/functions: `pending_upload_queue.dart:214-215` `needsManualAction` getter (client-only, ephemeral manifest field)
 - Missing component: any server-side/admin visibility — no backend dead-letter table exists at all; this is entirely a client-side, on-device concept
 - Required implementation: a lightweight `POST /crop-photos/dead-letter-report` endpoint the client calls when an item first becomes `needsManualAction`, so an ops/admin view can see stuck uploads across farmers
@@ -367,7 +447,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-01 — Source recorded on returned data
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - this row's own citation was partly stale: `RiskFactor.source`
+  already existed and was already populated (schemas/crop_risk.py). The
+  genuine remaining gap was `Notification` - new `source_summary` column
+  (migration `3c576f4e67d4`) populated from a new
+  `notification_service._SOURCE_BY_CATEGORY` map (mirrors the "source"
+  strings already used by `assistant/tools.py`'s tool functions) whenever
+  `create_alert_notification` fires. Test:
+  `test_notifications.py::test_notification_carries_a_source_summary_for_its_category`
 - Existing relevant files/classes/functions: `weather_snapshot.py:6-8,42` (`provider` field), `ai_analysis.py:86` (`model_name`), `reference_price.py:20-26` (`source_type` enum)
 - Missing component: no unified source concept across crop-risk factors, notifications, or rule outputs
 - Required implementation: add a `source`/`derived_from` field to `AlertCandidate`/`RiskFactor` dataclasses and to the persisted `Notification` row
@@ -384,7 +472,10 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-03 — Fetch date recorded
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - `retrieved_at` added to `ReferencePriceResponse` (the column
+  already existed on the model). Test:
+  `test_price_comparison.py::test_reference_price_response_exposes_retrieved_at`
 - Existing relevant files/classes/functions: `reference_price.py:43` `retrieved_at` column (exists in DB, dropped from `ReferencePriceResponse` schema at `schemas/price.py:20-28`)
 - Missing component: exposing `retrieved_at` in the API response
 - Required implementation: add `retrieved_at` to `ReferencePriceResponse`
@@ -401,7 +492,12 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-04 — Effective date recorded
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **STAYS PARTIAL (re-verified this
+  continuation session)** - genuinely depends on D89-02/03 (rule version,
+  effective-date-scoped thresholds), both still MISSING. Per this session's
+  Partial-completion-only scope, a Partial item's dependency on a Missing
+  scenario is documented rather than used to justify building the Missing
+  scenario itself. No code change.
 - Existing relevant files/classes/functions: `ReferencePrice.effective_date` (reference_price.py:42-43), required/indexed, intentionally distinct from `retrieved_at`
 - Missing component: no effective-date concept for weather, AI results, or rule outputs
 - Required implementation: naturally extends from D89's rule-versioning system (effective-date-scoped thresholds), not a standalone price-domain fix
@@ -418,7 +514,13 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-05 — Region recorded
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `region` field on `FarmWeatherResponse`, derived from the
+  farm's already-linked Village→Mandal→District→State chain
+  (`weather_service._build_region`); `None` when unresolvable, never
+  fabricated. Tests:
+  `test_weather.py::test_weather_response_includes_region_when_farm_has_a_village`
+  / `::test_weather_response_region_is_none_without_a_resolvable_mandal_or_village`
 - Existing relevant files/classes/functions: `ReferencePrice.region` JSONB field (reference_price.py:40)
 - Missing component: `FarmWeatherResponse` has no region field; no rule/risk output carries region
 - Required implementation: surface the farm's already-seeded Mandal/Village (per project master-data) as a `region` field on `FarmWeatherResponse`
@@ -435,7 +537,17 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-06 — Crop linkage recorded
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **STAYS PARTIAL (re-verified this
+  continuation session)** - investigated closing this properly: `ReferencePrice.
+  product_id` is `NOT NULL` (FK to `products.id`, CASCADE), so a genuine
+  crop-selling-price row (which has no input product at all) would require
+  loosening that constraint to nullable and auditing every existing
+  reference-price query path for the new nullable case - a real architecture
+  change, not a "smallest complete fix" additive column. Correctly deferred
+  rather than attempted mid-session per this session's explicit "would
+  require changing unrelated architecture" stop condition. D92-07/D93-08
+  (assistant/daily-brief market lines) both depend on this and are
+  documented as blocked by it below, not independently re-attempted.
 - Existing relevant files/classes/functions: `AIAnalysis.crop_id`/`crop_cycle_id` FK (ai_analysis.py:76-81); `CropCycle.crop_id` (crop_cycle.py:82)
 - Missing component: `ReferencePrice` has no crop linkage at all — only `product_id`, scoped to input products (seed/fertilizer), never crop-selling prices (Phase 32 note, `SMART_FARMER_V3_PHASE_TRACKER.md:30`)
 - Required implementation: extend `ReferencePrice` (or add a sibling model) with a `crop_id` FK for output/selling prices
@@ -452,7 +564,13 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-07 — Rule version recorded alongside a rule-driven output
 - Domain: 88. Data Provenance
-- Current implementation status: Partial (delta: was MISSING)
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial, delta: was MISSING before that)** - new `RULE_VERSION =
+  "weather_action_rules_v1"` constant in `weather_action_rules.py`, threaded
+  into `CropWeatherActionResponse.rule_version` by
+  `weather_action_engine_service.py` on both the weather-available and
+  weather-unavailable return paths. Test:
+  `test_weather_actions.py::test_rule_version_is_always_populated`
 - Existing relevant files/classes/functions: `rule_version` added to `CropRiskScoreResponse` only (Matrix §B batch 9); `weather_action_rules.py` still carries no version parameter
 - Missing component: extend the same `rule_version` field to weather-action outputs — currently only crop-risk (and, per D89-08, weather-alert-rule notifications) carry it
 - Required implementation: add a `RULE_VERSION` constant to `weather_action_rules.py` mirroring `crop_risk_v1`/`weather_alert_rules.RULE_VERSION`, surfaced on `WeatherActionResponse`
@@ -469,7 +587,16 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-09 — Confidence recorded alongside AI output
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **OUT_OF_SCOPE (re-verified this
+  continuation session, was Partial)** - documented clarification rather than
+  a fabricated field: weather is not a classification prediction in the same
+  sense AI disease detection is - `rain_probability_percent` already
+  functions as weather's confidence analog and is already surfaced
+  end-to-end. A reference price is a recorded fact (a number someone
+  reported), not a model output with a calibrated confidence - inventing a
+  numeric "confidence" for it would misrepresent what the field means.
+  Genuinely not applicable to either data type as literally specified, not a
+  gap left open through inaction.
 - Existing relevant files/classes/functions: VERIFIED for AI — `AIAnalysis.confidence` (raw float) + `top_k_predictions` JSONB (ai_analysis.py:89-91), bucketed via `ai/confidence.py`; `test_high_confidence`/`test_medium_confidence`/`test_low_confidence` (test_ai_model_components.py:12-18)
 - Missing component: no confidence field at all on weather or market/price schemas
 - Required implementation: either document why weather/price are not predictions in the same sense as AI classification (rain probability already functions as weather's confidence analog), or add an explicit `confidence` field to `ReferencePriceResponse` if the checklist insists on a literal field for every data type
@@ -486,7 +613,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D88-10 — Freshness/staleness flagged
 - Domain: 88. Data Provenance
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `is_stale` computed on `AIAnalysisResponse` (based on
+  `inference_timestamp` age vs new `Settings.ai_analysis_max_age_days`) and
+  on `ReferencePriceResponse` (based on `effective_date` age vs new
+  `Settings.reference_price_max_age_days`) - both disclosed placeholder
+  thresholds, mirroring `soil_test_max_age_days`'s existing convention, never
+  authoritative research. Tests:
+  `test_ai_analysis.py::test_analysis_is_flagged_stale_once_older_than_the_configured_max_age`,
+  `test_price_comparison.py::test_reference_price_is_flagged_stale_once_older_than_the_configured_max_age`
 - Existing relevant files/classes/functions: VERIFIED for weather — `is_stale` flag computed and surfaced (`schemas/weather.py:46`); `test_stale_weather_is_flagged_in_notes` (test_weather_actions.py:105)
 - Missing component: no freshness/staleness indicator on AI analysis or reference-price data
 - Required implementation: add an `is_stale`-equivalent computed flag to `AIAnalysisResponse` (based on `inference_timestamp` age) and to `ReferencePriceResponse` (based on `retrieved_at` age vs `effective_date`)
@@ -503,7 +638,17 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D89-05 — Crop scoping of a rule
 - Domain: 89. Rule Versioning
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - `evaluate_crop_weather_alert()` now accepts an optional
+  `crop_thresholds: dict[str, float] | None` overriding the global
+  heavy-rain threshold per crop_name, falling back to the global default
+  when absent - genuine crop-conditional branching, with NO real per-crop
+  values pre-populated (no authoritative agronomic threshold dataset exists
+  in this project; test-only synthetic values prove the mechanism).
+  Production call site (`weather_alert_orchestration_service.py`) passes
+  none, reproducing the exact prior global-only behavior. Tests:
+  `test_weather_alert_rules.py::TestCropWeatherAlert::test_crop_specific_threshold_overrides_the_global_default_when_present`
+  / `::test_crop_specific_threshold_leaves_other_crops_on_the_global_default`
 - Existing relevant files/classes/functions: `evaluate_crop_weather_alert(*, crop_name, cultivation_status, ...)` (weather_alert_rules.py:107) accepts crop_name/stage but only interpolates them into message text/dedup key
 - Missing component: genuine crop-conditional threshold branching — the actual decision logic (line 117) is identical for every crop
 - Required implementation: make wind/rain/heat thresholds crop-specific via a lookup table, falling back to the current global default when a crop has no specific entry
@@ -520,7 +665,14 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D89-08 — Historical reproducibility of a past rule decision
 - Domain: 89. Rule Versioning
-- Current implementation status: Partial (delta: was MISSING; the "undecided justification" label is now closed, the underlying gap is not)
+- Current implementation status: **STAYS PARTIAL (re-verified this
+  continuation session; delta: was MISSING; the "undecided justification"
+  label is now closed, the underlying gap is not)** - the full
+  versioned/dated threshold-snapshot system genuinely depends on D89-01
+  (rule identifier) and D89-02 (rule version), both still MISSING as general
+  concepts, and would itself be a large new `RuleVersionSnapshot` system -
+  correctly out of this session's Partial-completion-only scope (not a
+  smallest-complete-fix candidate). No code change.
 - Existing relevant files/classes/functions: per `docs/FINAL_GAP_REPORT.md`'s exact resolution — `Notification.rule_version` is now populated (`weather_alert_rules.RULE_VERSION`) for every weather-alert-rule-triggered notification, mirroring D88-07's `crop_risk_v1` precedent (test: `test_proactive_weather_sweep.py`)
 - Missing component: the full versioned/dated threshold-snapshot system (D89-01 rule identifier + D89-02 rule version + D89-03 effective-date-scoping) — a history table letting anyone recompute exactly what a past decision would have been under the threshold set active at that time. This is stated exactly as documented: partially resolved (rule_version populated for weather-alert-rule notifications), but the full rule-versioning system remains future work
 - Required implementation: a `RuleVersionSnapshot` table (rule_id, version, effective_from, effective_to, threshold_values JSONB) plus a lookup service resolving "what were the thresholds on date X"
@@ -537,7 +689,17 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D90-04 — Notification delivery provider abstraction (push/SMS)
 - Domain: 90. Provider Abstraction
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `NotificationDeliveryProvider(ABC)` +
+  `NotConfiguredDeliveryProvider` (mirrors `WeatherProvider`/
+  `NotConfiguredWeatherProvider` exactly), new
+  `notification_delivery_provider_dependency.py`. `create_alert_notification`
+  gains an optional `delivery_provider` param (backward-compatible - every
+  existing call site is unchanged) and calls it best-effort, catching any
+  exception, strictly after the Notification row is already committed. No
+  real push/SMS gateway exists in this project ("free-first" posture, same
+  as STT/TTS). Tests: new `tests/test_notification_delivery_provider.py`
+  (3 tests, including "still succeeds when delivery provider raises")
 - Existing relevant files/classes/functions: `notification_service.py` (writes DB rows only, no send-side abstraction); `services/notifications/__init__.py` empty placeholder package; docstring: "this phase has no background push scheduler"
 - Missing component: an actual `NotificationDeliveryProvider` ABC analogous to `WeatherProvider`/`ModelProvider`/`OCRProvider`/`AIProvider`, plus a real or honestly-stubbed implementation
 - Required implementation: `NotificationDeliveryProvider(ABC)` with abstract `send(farmer_id, payload) -> DeliveryResult`; a `NotConfiguredDeliveryProvider` stub (mirrors `NotConfiguredWeatherProvider`) returning `delivered=False` until a real FCM/SMS gateway is wired
@@ -554,7 +716,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D91-03 — Input metadata captured
 - Domain: 91. AI Governance
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new optional `device_model`/`capture_condition` fields on
+  `PhotoUploadMetadata`/`CropPhoto` (migration `6e4b094a574f`), client-
+  reported only, never inferred server-side. Test:
+  `test_crop_photos.py::test_capture_metadata_round_trips_when_provided`.
+  Mobile capture-screen UI to actually collect these fields is not built
+  this pass (the schema/persistence round-trip is the genuine gap closed
+  here; a future UI pass can populate them with zero further backend
+  change)
 - Existing relevant files/classes/functions: `preprocessing_version`, `inference_timestamp`, `processing_time_ms` (ai_analysis.py:106-108)
 - Missing component: image EXIF/capture-condition metadata (device, lighting estimate, GPS accuracy)
 - Required implementation: extend `PhotoUploadMetadata` (schemas/crop_photo.py:60-84, already captures lat/long) with optional `device_model`/`capture_condition` fields, threaded onto `AIAnalysis`
@@ -571,7 +741,14 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D91-08 — Outcome tracked against a recommendation
 - Domain: 91. AI Governance
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `AIAnalysisResponse.original_call_judged_correct`
+  computed field, derived deterministically from `farmer_correction`
+  (`None` before any correction, `True` only for `CONFIRMED_CORRECT`, else
+  `False`) - a distinct signal from treatment effectiveness, with no new
+  stored column (derived, can never disagree with `farmer_correction` by
+  construction). Test:
+  `test_ai_analysis.py::test_original_call_judged_correct_reflects_the_farmer_correction`
 - Existing relevant files/classes/functions: `treatment_service.get_effectiveness()` (treatment_service.py:108-146), compares before/after `AIAnalysis.result_status` as an outcome proxy
 - Missing component: a distinct "was the AI's original call correct" signal, separate from treatment effectiveness
 - Required implementation: extend the new D91-07 correction endpoint with an outcome-linkage field back to the specific triggering `AIAnalysis`
@@ -588,7 +765,14 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D91-09 — False positive tracking
 - Domain: 91. AI Governance
-- Current implementation status: Partial (delta: was MISSING)
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial, delta: was MISSING before that)** - new
+  `ai_evaluation_aggregation_service.get_correction_aggregate()`, admin-only
+  `GET /ai/evaluation/correction-aggregate`, computing a real
+  `false_positive_rate` = (DISEASE_DETECTED analyses corrected to
+  ACTUALLY_HEALTHY) / (all DISEASE_DETECTED analyses) - `None` (not a fake
+  0%) whenever the denominator is genuinely zero. Tests:
+  `tests/test_ai_evaluation_aggregation.py` (3 tests)
 - Existing relevant files/classes/functions: raw false-positive signal now captured via `farmer_correction` (the new D91-07 endpoint); `ai/evaluation.py` still a dormant, dataset-driven framework fed no real data
 - Missing component: aggregation/dashboard endpoint turning individual `farmer_correction` rows into a precision/recall-style metric feeding `confidence.py`'s thresholds
 - Required implementation: a job/endpoint reading `farmer_correction` rows implying a false positive (AI said diseased, farmer/expert confirmed healthy) and computing an aggregate rate
@@ -605,7 +789,13 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D91-10 — False negative tracking
 - Domain: 91. AI Governance
-- Current implementation status: Partial (delta: was MISSING)
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial, delta: was MISSING before that)** - shared
+  `ai_evaluation_aggregation_service.get_correction_aggregate()` also
+  computes a real `false_negative_rate` = (HEALTHY analyses corrected to
+  ACTUALLY_DISEASED) / (all HEALTHY analyses) - `None` when the denominator
+  is genuinely zero. Test:
+  `tests/test_ai_evaluation_aggregation.py::test_aggregate_correctly_separates_false_positive_from_false_negative_corrections`
 - Existing relevant files/classes/functions: same dormant `ai/evaluation.py`, same raw signal now captured via `farmer_correction`
 - Missing component: same aggregation gap as D91-09, mirrored for the false-negative direction (AI said healthy, later shown diseased)
 - Required implementation: identical mechanism to D91-09, filtering the opposite correction direction
@@ -622,7 +812,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D92-04 — Current crop stages included
 - Domain: 92. Farm Brain
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `tools.get_all_active_crop_statuses()` lists every one of
+  the farmer's active crop cycles (not just the most-recently-updated one);
+  `get_daily_summary` uses it for a new `daily_summary_crop_multi` line when
+  more than one exists, falling back to the original single-crop wording
+  when there's exactly one (zero behavior change for a one-crop farmer).
+  Tests:
+  `test_assistant_chat.py::test_daily_summary_lists_every_active_crop_cycle_on_a_multi_crop_farm`
+  / `::test_daily_summary_single_crop_farm_keeps_the_original_single_crop_wording`
 - Existing relevant files/classes/functions: `tools.get_crop_status` (tools.py:34-58), covers only a single "most-recently-updated active crop cycle", used at `assistant_extras_service.py:88-90`
 - Missing component: farm-wide, all-active-crop-cycles coverage for a multi-crop farm
 - Required implementation: extend `get_daily_summary`/`tools.get_crop_status` to iterate all of the farmer's active crop cycles, not just the most recent
@@ -639,7 +837,16 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D92-07 — Market included
 - Domain: 92. Farm Brain
-- Current implementation status: Partial
+- Current implementation status: **STAYS PARTIAL (re-verified this
+  continuation session)** - investigated closing this: `price_query_service`
+  only resolves reference prices for INPUT products (seed/fertilizer,
+  `ReferencePrice.product_id`), never for the farmer's own SELLING crop -
+  there is no crop-price linkage at all (see D88-06, also STAYS PARTIAL this
+  session). Using an input product's price as a stand-in "market" line for
+  the farmer's harvest would conflate two unrelated numbers (what farmer
+  pays to buy seed vs. what farmer earns selling produce) - a real data
+  -integrity risk this project's "never fabricate/never conflate" discipline
+  forbids. Genuinely blocked on D88-06, not attempted. No code change.
 - Existing relevant files/classes/functions: `tools.get_buyer_offers` (tools.py:121-137), buyer-offer count only
 - Missing component: price/reference-price/market-trend data
 - Required implementation: add a `price_query_service` call surfacing the farmer's relevant crop's current reference-price trend
@@ -656,7 +863,12 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D93-03 — Weather actions summarized
 - Domain: 93. Daily Farm Brief
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - `tools.get_weather_status` now threads `FarmWeatherResponse.
+  crop_action` through (the field already existed but was never surfaced by
+  this tool); `get_daily_summary` adds a new `daily_summary_weather_action`
+  line whenever a spray advisory is present. Test:
+  `test_assistant_chat.py::test_daily_summary_includes_spray_advisory_when_weather_is_unsuitable_for_spraying`
 - Existing relevant files/classes/functions: `assistant_extras_service.py:77-86` (temperature/rain probability only); `FarmWeatherResponse.crop_action` (schemas/weather.py:50) exists but is not surfaced
 - Missing component: the spray-advisory/`crop_action` field
 - Required implementation: `tools.get_weather_status` return `crop_action` alongside temp/rain; `get_daily_summary` include it when present
@@ -673,7 +885,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D93-06 — Crop-stage actions summarized
 - Domain: 93. Daily Farm Brief
-- Current implementation status: Partial
+- Current implementation status: **STAYS PARTIAL (re-verified this
+  continuation session)** - investigated the stage-to-action lookup this row
+  itself proposes: `CropStageDefinition` (crop_stage_definition.py) has NO
+  advisory/action text field anywhere in this project, and no other
+  per-stage agronomic guidance content exists to reuse. Authoring genuine
+  "what to do at this stage" text now would mean inventing agricultural
+  guidance with no authoritative source in this repository - exactly what
+  this project's core "never fabricate agricultural data" discipline
+  forbids. Correctly left undone rather than guessed. No code change.
 - Existing relevant files/classes/functions: `assistant_extras_service.py:88-90` (current stage as a status readout only)
 - Missing component: a recommended next action tied to the current stage
 - Required implementation: a small stage-to-suggested-action lookup, reusing any existing per-stage advisory content or a new lightweight static table — must avoid inventing agronomic claims not already elsewhere in the project
@@ -690,7 +910,10 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D93-08 — Market summarized
 - Domain: 93. Daily Farm Brief
-- Current implementation status: Partial
+- Current implementation status: **STAYS PARTIAL (re-verified this
+  continuation session)** - shares D92-07's exact blocker (no crop-linked
+  reference price exists, see D88-06) - same conflation risk, same
+  conclusion. No code change.
 - Existing relevant files/classes/functions: `assistant_extras_service.py:96-98`, buyer-offer count only, same underlying gap as D92-07
 - Missing component: price/trend data in the daily brief
 - Required implementation: shared fix with D92-07 — add the market-price line to `get_daily_summary`
@@ -707,7 +930,13 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D96-01 — Compare crop
 - Domain: 96. Season Comparison
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new top-level `CropComparisonResponse.same_crop: bool`,
+  derived from `CropCycle.crop_id` equality (a top-level flag, not another
+  `ComparisonMetric` row - crop identity has no higher/lower/better
+  direction). Tests:
+  `test_crop_performance.py::test_comparison_reports_same_crop_true_when_both_cycles_share_a_crop`
+  / `::test_comparison_reports_same_crop_false_when_cycles_are_different_crops`
 - Existing relevant files/classes/functions: `crop_comparison_service.py:44` — only `cultivation_status` ("crop_stage") compared, marked `not_directly_comparable`/`equal`
 - Missing component: an actual "same crop / different crop" comparability signal — crop identity itself isn't a metric
 - Required implementation: add a `same_crop` boolean derived from `CropCycle.crop_id` equality, surfaced alongside the stage comparison
@@ -826,7 +1055,15 @@ internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own ent
 
 ### D98-03 — Previous costs used in learning
 - Domain: 98. Historical Learning
-- Current implementation status: Partial
+- Current implementation status: **VERIFIED (this continuation session, was
+  Partial)** - new `personalization_service._cost_pattern_signal()`,
+  mirroring `_preferred_crop_signal`'s exact evidence-floor/confidence
+  pattern - a descriptive observation of whether this farmer's actual
+  recorded costs (from `ledger_entry_repository.compute_totals`) are
+  trending up/down/stable across their own crop cycles, never a forward
+  recommendation (that remains D98-07, correctly FUTURE). Tests:
+  `test_personalization.py::test_cost_pattern_signal_needs_at_least_three_cycles_with_recorded_cost`
+  / `::test_cost_pattern_signal_reports_a_trend_once_enough_cycles_have_recorded_cost`
 - Existing relevant files/classes/functions: `actual_cost_so_far` used only as a raw feature-snapshot field for a future, non-existent ML pipeline (learning_foundation_service.py:49-53)
 - Missing component: turning the captured feature into an actual descriptive observation (not a forward recommendation — that is D98-07, correctly FUTURE)
 - Required implementation: extend `personalization_service.py`'s descriptive-pattern style (like `_preferred_crop_signal`) with a `_cost_pattern_signal()` describing past cost trends, gated by the same evidence-floor discipline (≥3 events)

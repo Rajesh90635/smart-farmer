@@ -14,12 +14,16 @@ from app.core.photo_storage_keys import build_leaf_filename, build_photo_contain
 from app.middleware.rate_limit import InMemoryRateLimiter
 from app.models.crop_photo import CropPhoto, ImageQualityStatus, UploadStatus
 from app.models.crop_photo_session import CropPhotoSession
-from app.repositories import crop_cycle_repository, crop_photo_repository, crop_photo_session_repository
+from app.models.dead_letter_report import DeadLetterReport
+from app.repositories import crop_cycle_repository, crop_photo_repository, crop_photo_session_repository, dead_letter_report_repository
 from app.schemas.crop_photo import (
     CropPhotoListResponse,
     CropPhotoResponse,
     CropPhotoSessionCreateRequest,
     CropPhotoSessionResponse,
+    DeadLetterReportCreateRequest,
+    DeadLetterReportListResponse,
+    DeadLetterReportResponse,
     PhotoUploadMetadata,
 )
 from app.services.audit_logger import AuditLogger
@@ -139,6 +143,8 @@ def upload_photo(
         upload_timestamp=datetime.now(timezone.utc),
         latitude=metadata.latitude if metadata.share_location else None,
         longitude=metadata.longitude if metadata.share_location else None,
+        device_model=metadata.device_model,
+        capture_condition=metadata.capture_condition,
         source=metadata.source,
         upload_status=UploadStatus.READY,
         image_quality_status=ImageQualityStatus.ACCEPTED if quality.accepted else ImageQualityStatus.REJECTED,
@@ -243,6 +249,27 @@ def delete_photo(db: Session, farmer_id: str, photo_id: uuid.UUID) -> None:
     )
 
     db.commit()
+
+
+def report_dead_letter(db: Session, farmer_id: str, payload: DeadLetterReportCreateRequest) -> DeadLetterReportResponse:
+    """D87-02 (docs/audit/FINAL_CANONICAL_group_D.md): a best-effort,
+    farmer-authenticated report - not validated against any specific
+    photo/session (a dead-lettered upload may never have reached the
+    server at all, which is the entire point of reporting it)."""
+    report = DeadLetterReport(
+        farmer_id=uuid.UUID(farmer_id), client_upload_id=payload.client_upload_id, reason=payload.reason
+    )
+    dead_letter_report_repository.create(db, report)
+    db.commit()
+    db.refresh(report)
+    return DeadLetterReportResponse.model_validate(report)
+
+
+def list_dead_letter_reports(db: Session) -> DeadLetterReportListResponse:
+    """D87-02: admin-only visibility across every farmer's reports - no
+    per-farmer filter, since this is an ops/support view of stuck uploads."""
+    reports = dead_letter_report_repository.list_all(db)
+    return DeadLetterReportListResponse(items=[DeadLetterReportResponse.model_validate(r) for r in reports], total=len(reports))
 
 
 def _sanitize_display_filename(filename: str | None) -> str | None:

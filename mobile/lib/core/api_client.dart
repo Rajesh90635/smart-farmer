@@ -20,10 +20,28 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode/$code): $message';
 }
 
+/// D84-01 (docs/audit/FINAL_CANONICAL_group_D.md): thrown instead of a raw
+/// ApiException(401) once a silent refresh attempt has already failed -
+/// every screen can catch this ONE type uniformly (e.g. via FriendlyError)
+/// rather than each needing its own ad hoc 401-handling logic.
+class SessionExpiredException implements Exception {
+  const SessionExpiredException();
+
+  @override
+  String toString() => 'SessionExpiredException';
+}
+
 class ApiClient {
   final http.Client _client;
   final String baseUrl;
   String? _accessToken;
+
+  /// D84-01: set once at app startup (see app.dart) to close the circular-
+  /// dependency gap between ApiClient and AuthRepository - attempts ONE
+  /// silent token refresh on any 401, returning the new access token on
+  /// success or null on failure (refresh token itself expired/revoked).
+  Future<String?> Function()? onSessionExpired;
+  bool _refreshInProgress = false;
 
   ApiClient({http.Client? client, String? baseUrl})
       : _client = client ?? http.Client(),
@@ -36,11 +54,40 @@ class ApiClient {
         if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
       };
 
-  Future<Map<String, dynamic>> get(String path) => _send('GET', path);
+  /// Wraps every call site below: on a 401, attempts exactly one silent
+  /// refresh (never recursively - `_refreshInProgress` guards the refresh
+  /// call's OWN request from re-triggering this), then either transparently
+  /// retries the original request with the new token or surfaces a single,
+  /// uniform SessionExpiredException instead of the raw 401.
+  Future<T> _withSessionRetry<T>(Future<T> Function() attempt) async {
+    try {
+      return await attempt();
+    } on ApiException catch (e) {
+      if (e.statusCode != 401 || onSessionExpired == null || _refreshInProgress) {
+        rethrow;
+      }
+      _refreshInProgress = true;
+      String? newToken;
+      try {
+        newToken = await onSessionExpired!();
+      } finally {
+        _refreshInProgress = false;
+      }
+      if (newToken == null) {
+        throw const SessionExpiredException();
+      }
+      setAccessToken(newToken);
+      return await attempt();
+    }
+  }
+
+  Future<Map<String, dynamic>> get(String path) => _withSessionRetry(() => _send('GET', path));
 
   /// For endpoints that return a raw JSON array (e.g. /crops/master)
   /// rather than the {items, total} envelope most list endpoints use.
-  Future<List<dynamic>> getList(String path) async {
+  Future<List<dynamic>> getList(String path) => _withSessionRetry(() => _getListOnce(path));
+
+  Future<List<dynamic>> _getListOnce(String path) async {
     try {
       final uri = Uri.parse('$baseUrl$path');
       final response = await _client.get(uri, headers: _defaultHeaders);
@@ -61,7 +108,9 @@ class ApiClient {
   /// same auth header as every other call - Image.network can't attach
   /// this automatically, so callers fetch bytes here and render via
   /// Image.memory instead.
-  Future<Uint8List> getBytes(String path) async {
+  Future<Uint8List> getBytes(String path) => _withSessionRetry(() => _getBytesOnce(path));
+
+  Future<Uint8List> _getBytesOnce(String path) async {
     try {
       final uri = Uri.parse('$baseUrl$path');
       final response = await _client.get(uri, headers: _defaultHeaders);
@@ -83,6 +132,14 @@ class ApiClient {
   /// for low-literacy users than a percentage number. Deferred as a
   /// possible enhancement, not an oversight - see docs/CROP_PHOTO_MODULE.md.
   Future<Map<String, dynamic>> uploadMultipart(
+    String path, {
+    required List<int> fileBytes,
+    required String fileName,
+    required String mimeType,
+    required Map<String, String> fields,
+  }) => _withSessionRetry(() => _uploadMultipartOnce(path, fileBytes: fileBytes, fileName: fileName, mimeType: mimeType, fields: fields));
+
+  Future<Map<String, dynamic>> _uploadMultipartOnce(
     String path, {
     required List<int> fileBytes,
     required String fileName,
@@ -117,13 +174,19 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? body}) =>
-      _send('POST', path, body: body);
+  /// `interceptSessionExpiry: false` opts a call OUT of the 401 -> silent-
+  /// refresh interceptor - required for the auth-issuing endpoints
+  /// themselves (login/register/refresh/reset-password), where a 401
+  /// means "bad credentials/OTP", never "this session expired". Every
+  /// other authenticated POST correctly defaults to intercepted.
+  Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? body, bool interceptSessionExpiry = true}) {
+    return interceptSessionExpiry ? _withSessionRetry(() => _send('POST', path, body: body)) : _send('POST', path, body: body);
+  }
 
   Future<Map<String, dynamic>> put(String path, {Map<String, dynamic>? body}) =>
-      _send('PUT', path, body: body);
+      _withSessionRetry(() => _send('PUT', path, body: body));
 
-  Future<Map<String, dynamic>> delete(String path) => _send('DELETE', path);
+  Future<Map<String, dynamic>> delete(String path) => _withSessionRetry(() => _send('DELETE', path));
 
   Future<Map<String, dynamic>> _send(String method, String path, {Map<String, dynamic>? body}) async {
     try {

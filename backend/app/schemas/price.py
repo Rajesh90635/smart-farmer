@@ -24,6 +24,14 @@ class ReferencePriceResponse(BaseModel):
     source_type: ReferencePriceSourceType
     source_name: str | None
     effective_date: date
+    # D88-03 (docs/audit/FINAL_CANONICAL_group_D.md): the column already
+    # existed on the model - it was simply never exposed in the response.
+    retrieved_at: datetime
+    # D88-10 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors weather's
+    # is_stale convention - set by the service/route layer (needs
+    # Settings), defaults to False so a bare model_validate() stays
+    # correct anywhere this isn't explicitly computed.
+    is_stale: bool = False
 
     model_config = {"from_attributes": True}
 

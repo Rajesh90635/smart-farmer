@@ -13,7 +13,7 @@ from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.ai_analysis_session import AIAnalysisSession
 from app.repositories import ai_analysis_repository, crop_photo_repository, crop_photo_session_repository
-from app.schemas.ai_analysis import AIAnalysisResponse, AIAnalysisSessionCreateRequest, AIAnalysisSessionResponse
+from app.schemas.ai_analysis import AIAnalysisSessionCreateRequest, AIAnalysisSessionResponse
 from app.services import ai_analysis_service
 from app.services.ai.model_provider import ModelProvider
 from app.services.audit_logger import AuditLogger
@@ -42,11 +42,11 @@ def create_analysis_session(db: Session, farmer_id: str, payload: AIAnalysisSess
     return AIAnalysisSessionResponse.model_validate(session_obj)
 
 
-def get_analysis_session(db: Session, farmer_id: str, session_id: uuid.UUID) -> AIAnalysisSessionResponse:
+def get_analysis_session(db: Session, farmer_id: str, session_id: uuid.UUID, settings: Settings) -> AIAnalysisSessionResponse:
     session_obj = _get_owned_or_404(db, farmer_id, session_id)
     analyses = ai_analysis_repository.list_for_session(db, session_id)
     response = AIAnalysisSessionResponse.model_validate(session_obj)
-    response.analyses = [AIAnalysisResponse.model_validate(a) for a in analyses]
+    response.analyses = [ai_analysis_service._to_response(a, settings) for a in analyses]
     return response
 
 

@@ -8,7 +8,8 @@ import 'camera_capture_screen.dart';
 /// hard-coded (Requirement 33/38).
 class PhotoGuidanceScreen extends StatelessWidget {
   final String sessionId;
-  const PhotoGuidanceScreen({super.key, required this.sessionId});
+  final String cropCycleId;
+  const PhotoGuidanceScreen({super.key, required this.sessionId, required this.cropCycleId});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +44,7 @@ class PhotoGuidanceScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => CameraCaptureScreen(sessionId: sessionId)),
+                  MaterialPageRoute(builder: (_) => CameraCaptureScreen(sessionId: sessionId, cropCycleId: cropCycleId)),
                 ),
                 icon: const Icon(Icons.camera_alt),
                 label: Text(l10n.takePhotoButton),

@@ -4,19 +4,27 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 `docs/FINAL_CROSS_MODULE_WORKFLOW_REPORT.md`, and `docs/FINAL_GAP_REPORT.md` into a single
 release-readiness view.
 
-**Updated this later continuation session** (resumed after an unexpected shutdown;
-reconstructed from git/doc evidence, not from any prior session's claims) — see
+**Updated this later continuation session** (a dedicated Partial-functionality-completion
+pass, per the "SMART FARMER V3 PARTIAL FUNCTIONALITY COMPLETION" prompt) — see
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" for the current authoritative status
-totals (798 total: 352 Verified, 73 Implemented, 97 Partial, 215 Missing, 0 Broken, 30
-Future, 25 Out of Scope, 6 Environment Dependent; 312 current-scope items remain, down from
-391 two sessions ago, 341 at the start of the prior continuation, 313 at the start of this
-one). Prior sessions' work spans: all of P0; the P1 task-management cluster; D1-19 account
-deactivation; the crop-failure reason taxonomy; crop-stage additions; the weather-risk
-safety-detection cluster; irrigation/soil data quality; the entire Soil Testing domain
-foundation; cluster #7 re-verification; the notification-wiring batch (D78-03/05/08
-VERIFIED, D78-13 left PARTIAL); the marketplace/harvest completeness batch; the
-season-closure batch (new `CropCycleClosureSnapshot` table); and the grading-engine batch
-(new `CropGradeOption` table) plus D52-01 sorting. This session: (1) root-caused and fixed
+totals (798 total: 417 Verified, 73 Implemented, 21 Partial, 215 Missing, 0 Broken, 38
+Future, 26 Out of Scope, 8 Environment Dependent; 236 current-scope items remain, down from
+312 at the start of this session, 391 two sessions ago). This session completed or honestly
+reclassified every genuine Partial scenario across all four `FINAL_CANONICAL_group_*.md`
+files (Partial 97→21, Verified 351→417) — see each group file's own batch note for the
+full per-scenario breakdown; the 21 that remain Partial each carry an individually-verified,
+non-fabricated reason (blocked on a still-Missing dependency, a real architecture change,
+an unavailable external service, or no authoritative source to draw from) rather than being
+force-closed. The 233/215 Missing scenarios were explicitly NOT started this session, per
+the prompt's own scope boundary. Prior sessions' work spans: all of P0; the P1
+task-management cluster; D1-19 account deactivation; the crop-failure reason taxonomy;
+crop-stage additions; the weather-risk safety-detection cluster; irrigation/soil data
+quality; the entire Soil Testing domain foundation; cluster #7 re-verification; the
+notification-wiring batch (D78-03/05/08 VERIFIED, D78-13 later fully closed); the
+marketplace/harvest completeness batch; the season-closure batch (new
+`CropCycleClosureSnapshot` table); the grading-engine batch (new `CropGradeOption` table)
+plus D52-01 sorting; and this session's own Partial-completion pass across Groups A/B/C/D.
+An earlier continuation session additionally: (1) root-caused and fixed
 a genuine test-reliability defect found on a fresh full-suite run,
 `test_security.py::test_jwt_rejects_tampered_token` (tampered only the JWT's last 2
 base64url characters, whose final 2 bits are unused padding - ~1/1600 tamper attempts left

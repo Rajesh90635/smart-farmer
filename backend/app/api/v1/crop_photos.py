@@ -29,6 +29,9 @@ from app.schemas.crop_photo import (
     CropPhotoResponse,
     CropPhotoSessionCreateRequest,
     CropPhotoSessionResponse,
+    DeadLetterReportCreateRequest,
+    DeadLetterReportListResponse,
+    DeadLetterReportResponse,
     PhotoUploadMetadata,
 )
 from app.services import ai_analysis_service, crop_photo_service
@@ -67,6 +70,8 @@ async def upload_photo(
     share_location: bool = Form(False),
     latitude: float | None = Form(None),
     longitude: float | None = Form(None),
+    device_model: str | None = Form(None),
+    capture_condition: str | None = Form(None),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     storage: FileStorage = Depends(get_file_storage),
@@ -82,6 +87,8 @@ async def upload_photo(
         share_location=share_location,
         latitude=latitude,
         longitude=longitude,
+        device_model=device_model,
+        capture_condition=capture_condition,
     )
 
     return crop_photo_service.upload_photo(
@@ -143,6 +150,26 @@ def delete_photo(
     crop_photo_service.delete_photo(db, current_user.user_id, photo_id)
 
 
+@router.post("/crop-photos/dead-letter-report", response_model=DeadLetterReportResponse, status_code=status.HTTP_201_CREATED)
+def report_dead_letter(
+    payload: DeadLetterReportCreateRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> DeadLetterReportResponse:
+    """D87-02 (docs/audit/FINAL_CANONICAL_group_D.md): the client calls
+    this best-effort when an upload first becomes needsManualAction."""
+    return crop_photo_service.report_dead_letter(db, current_user.user_id, payload)
+
+
+@router.get("/admin/dead-letter-reports", response_model=DeadLetterReportListResponse)
+def list_dead_letter_reports(
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> DeadLetterReportListResponse:
+    """D87-02: admin-only visibility across every farmer's reports."""
+    return crop_photo_service.list_dead_letter_reports(db)
+
+
 @router.post("/crop-photos/{photo_id}/analyze", response_model=AIAnalysisResponse, status_code=status.HTTP_201_CREATED)
 def analyze_photo(
     photo_id: uuid.UUID,
@@ -160,8 +187,9 @@ def get_photo_analysis(
     photo_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AIAnalysisResponse:
-    return ai_analysis_service.get_latest_for_photo(db, current_user.user_id, photo_id)
+    return ai_analysis_service.get_latest_for_photo(db, current_user.user_id, photo_id, settings)
 
 
 @router.post("/ai/analysis/{analysis_id}/correction", response_model=AIAnalysisResponse)
@@ -170,10 +198,11 @@ def submit_analysis_correction(
     payload: AIAnalysisCorrectionRequest,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AIAnalysisResponse:
     """D91-07/D91-09/D91-10: the farmer's own after-the-fact correction of
     a specific AI result - feeds false-positive/false-negative tracking."""
-    return ai_analysis_service.submit_correction(db, current_user.user_id, analysis_id, payload)
+    return ai_analysis_service.submit_correction(db, current_user.user_id, analysis_id, payload, settings)
 
 
 @router.get("/crop-cycles/{crop_cycle_id}/analyses", response_model=AIAnalysisListResponse)
@@ -181,5 +210,6 @@ def list_analyses_for_crop_cycle(
     crop_cycle_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AIAnalysisListResponse:
-    return ai_analysis_service.list_for_crop_cycle(db, current_user.user_id, crop_cycle_id)
+    return ai_analysis_service.list_for_crop_cycle(db, current_user.user_id, crop_cycle_id, settings)

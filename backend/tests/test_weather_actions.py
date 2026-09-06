@@ -25,6 +25,20 @@ def test_safe_spray_conditions_produce_safe_status(client, farmer_with_crop_cycl
     assert spray["is_deterministic"] is True
 
 
+def test_rule_version_is_always_populated(client, farmer_with_crop_cycle):
+    """D88-07 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors
+    test_model_version_is_always_recorded's discipline for weather-action
+    outputs - populated both when weather is available and when it isn't."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(wind_speed_kmh=10, rain_probability_percent=5))):
+        response = _get_actions(client, tokens, crop_cycle_id)
+    assert response.json()["rule_version"] == "weather_action_rules_v1"
+
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        response = _get_actions(client, tokens, crop_cycle_id)
+    assert response.json()["rule_version"] == "weather_action_rules_v1"
+
+
 def test_high_wind_produces_unsafe_spray_status(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     with override_weather_provider(FakeWeatherProvider(current=WeatherReading(wind_speed_kmh=55, rain_probability_percent=5))):

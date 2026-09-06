@@ -19,6 +19,10 @@ class NotificationResponse(BaseModel):
     # notifications (payment/harvest/SLA/etc) - only weather-alert-rule
     # output carries a version today.
     rule_version: str | None = None
+    # D88-01 (docs/audit/FINAL_CANONICAL_group_D.md): None for a category
+    # with no mapped source (see notification_service._SOURCE_BY_CATEGORY)
+    # rather than a guessed value.
+    source_summary: str | None = None
     read_at: datetime | None
     created_at: datetime
 

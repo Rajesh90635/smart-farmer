@@ -59,6 +59,39 @@ def get_crop_status(db: Session, farmer_id: str) -> dict:
     }
 
 
+def get_all_active_crop_statuses(db: Session, farmer_id: str) -> dict:
+    """D92-04 (docs/audit/FINAL_CANONICAL_group_D.md): the farm-wide,
+    every-active-crop-cycle counterpart to get_crop_status's single
+    most-recent cycle - for a multi-crop farm's daily summary/assistant
+    "what's going on across my whole farm" question."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    rows = db.execute(
+        select(CropCycle, CropMaster.name, Farm.farm_name)
+        .join(CropMaster, CropCycle.crop_id == CropMaster.id)
+        .join(Plot, CropCycle.plot_id == Plot.id)
+        .join(Farm, Plot.farm_id == Farm.id)
+        .where(Farm.farmer_id == farmer_uuid, CropCycle.cultivation_status.in_(_ACTIVE_STATUSES))
+        .order_by(CropCycle.updated_at.desc())
+    ).all()
+
+    if not rows:
+        return {"available": False, "source": "Farmer crop record"}
+
+    return {
+        "available": True,
+        "source": "Farmer crop record",
+        "crops": [
+            {
+                "crop_cycle_id": str(cycle.id),
+                "crop_name": crop_name,
+                "farm_name": farm_name,
+                "stage": cycle.cultivation_status.value,
+            }
+            for cycle, crop_name, farm_name in rows
+        ],
+    }
+
+
 def get_disease_status(db: Session, farmer_id: str, settings: Settings) -> dict:
     farmer_uuid = uuid.UUID(farmer_id)
     analysis = db.execute(
@@ -99,6 +132,14 @@ def get_weather_status(db: Session, farmer_id: str, provider: WeatherProvider, s
         "current_temperature_c": result.current.temperature_c if result.current else None,
         "rain_probability_today_percent": result.forecast[0].reading.rain_probability_percent if result.forecast else None,
         "unavailable_reason": result.unavailable_reason,
+        # D93-03 (docs/audit/FINAL_CANONICAL_group_D.md): the field already
+        # existed on FarmWeatherResponse - it was just never threaded
+        # through this tool for the assistant/daily-summary to surface.
+        "crop_action": (
+            {"action": result.crop_action.action, "basis": result.crop_action.basis, "reason_message_key": result.crop_action.reason_message_key}
+            if result.crop_action
+            else None
+        ),
     }
 
 

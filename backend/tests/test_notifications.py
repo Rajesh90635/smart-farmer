@@ -39,6 +39,17 @@ def test_weather_check_creates_a_rain_notification(client, farmer_with_located_f
     assert "heavy_rain_alert" in categories
 
 
+def test_notification_carries_a_source_summary_for_its_category(client, farmer_with_located_farm):
+    """D88-01 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, farm_id = farmer_with_located_farm
+    with override_weather_provider(heavy_rain_provider()):
+        client.get(f"/api/v1/farms/{farm_id}/weather", headers=auth_headers(tokens))
+
+    body = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()
+    heavy_rain = next(n for n in body["items"] if n["category"] == "heavy_rain_alert")
+    assert heavy_rain["source_summary"] == "Weather service"
+
+
 def test_repeated_weather_checks_do_not_duplicate_the_same_alert(client, farmer_with_located_farm):
     tokens, farm_id = farmer_with_located_farm
     with override_weather_provider(heavy_rain_provider()):

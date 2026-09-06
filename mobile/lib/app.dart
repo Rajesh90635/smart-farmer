@@ -57,6 +57,12 @@ class SmartFarmerApp extends StatelessWidget {
     // FarmerRepository) built on top of it.
     final apiClient = ApiClient();
     final authRepository = AuthRepository(apiClient: apiClient);
+    // D84-01 (docs/audit/FINAL_CANONICAL_group_D.md): closes the circular-
+    // dependency gap noted in api_client.dart's own docstring - reuses
+    // AuthRepository.restoreSession()'s existing refresh-token flow
+    // (already used at app startup) as the interceptor's silent-refresh
+    // attempt for a 401 encountered MID-session, anywhere in the app.
+    apiClient.onSessionExpired = () async => (await authRepository.restoreSession())?.accessToken;
 
     return MultiProvider(
       providers: [

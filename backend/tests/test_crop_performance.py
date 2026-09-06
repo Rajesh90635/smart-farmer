@@ -153,6 +153,29 @@ def test_comparison_reports_insufficient_data_for_yield_when_nothing_harvested_y
     assert yield_metric["comparison"] == "insufficient_data"
 
 
+def test_comparison_reports_same_crop_true_when_both_cycles_share_a_crop(client, farmer_with_crop_cycle, sample_crop_id):
+    """D96-01 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    assert response.json()["same_crop"] is True
+
+
+def test_comparison_reports_same_crop_false_when_cycles_are_different_crops(client, farmer_with_crop_cycle, db_session):
+    """D96-01 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from sqlalchemy import select
+
+    from app.models.crop_master import CropMaster
+
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    other_crop = db_session.execute(select(CropMaster).where(CropMaster.name != "Tomato").limit(1)).scalar_one()
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, str(other_crop.id))
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    assert response.json()["same_crop"] is False
+
+
 def test_comparison_correctly_identifies_higher_yield_once_harvest_quantities_exist(
     client, farmer_with_crop_cycle, sample_crop_id, db_session
 ):

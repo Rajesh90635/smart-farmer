@@ -49,7 +49,10 @@ def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID,
         _build_metric("crop_stage", crop_a.cultivation_status.value, crop_b.cultivation_status.value, comparable=False),
     ]
 
-    return CropComparisonResponse(crop_cycle_id_a=crop_cycle_id_a, crop_cycle_id_b=crop_cycle_id_b, metrics=metrics)
+    return CropComparisonResponse(
+        crop_cycle_id_a=crop_cycle_id_a, crop_cycle_id_b=crop_cycle_id_b,
+        same_crop=crop_a.crop_id == crop_b.crop_id, metrics=metrics,
+    )
 
 
 def _total_actual_yield(db: Session, crop_cycle_id: uuid.UUID):

@@ -7,6 +7,14 @@ import '../l10n/app_localizations.dart';
 /// developer logs.
 class FriendlyError {
   static String from(Object error, AppLocalizations l10n) {
+    // D84-01 (docs/audit/FINAL_CANONICAL_group_D.md): the uniform outcome
+    // of ApiClient's 401 -> silent-refresh interceptor once that refresh
+    // has already failed - reuses the SAME wording as the backend's own
+    // SESSION_EXPIRED error code (see the ApiException branch below), one
+    // wording for the same underlying farmer-facing fact either way.
+    if (error is SessionExpiredException) {
+      return l10n.errorSessionExpired;
+    }
     if (error is ApiException) {
       switch (error.code) {
         case 'INVALID_CREDENTIALS':

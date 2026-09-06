@@ -5,6 +5,7 @@ reference price. Never ranks a dealer higher for any reason other than
 price/availability - no "sponsored" concept exists in this codebase.
 """
 import uuid
+from datetime import date
 
 from sqlalchemy.orm import Session
 
@@ -12,9 +13,20 @@ from app.core import error_codes
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.professional_profile import VerificationStatus
+from app.models.reference_price import ReferencePrice
 from app.repositories import dealer_product_repository, product_repository, professional_repository
 from app.schemas.price import DealerOfferComparisonResponse, PriceComparisonResponse, ScamShieldStatusResponse
 from app.services.price_comparison import compare_price, price_per_unit
+
+
+def is_reference_price_stale(ref: ReferencePrice, settings: Settings) -> bool:
+    """D88-10 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors weather's
+    is_stale convention - a reference price is only as trustworthy as how
+    recently it was actually effective, never how recently it was
+    inserted into this database (retrieved_at can lag the real market
+    date, e.g. a batch import)."""
+    today = date.today()
+    return (today - ref.effective_date).days > settings.reference_price_max_age_days
 
 
 def _dealer_matches_location(dealer, *, district: str | None, state: str | None) -> bool:

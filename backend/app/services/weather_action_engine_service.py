@@ -59,6 +59,7 @@ def get_weather_actions(
             recommended_spray_window=None,
             relevant_pending_spray_task_id=None,
             data_completeness_notes=notes,
+            rule_version=rules.RULE_VERSION,
         )
 
     if weather.is_stale:
@@ -91,6 +92,7 @@ def get_weather_actions(
         recommended_spray_window=recommended_window,
         relevant_pending_spray_task_id=pending_spray_task_id,
         data_completeness_notes=notes,
+        rule_version=rules.RULE_VERSION,
     )
 
 

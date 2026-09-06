@@ -54,7 +54,7 @@ def analyze_photo(
     # this exact photo, return it rather than starting a redundant job.
     in_flight = ai_analysis_repository.get_in_flight_for_photo(db, photo_id, farmer_uuid)
     if in_flight is not None:
-        return AIAnalysisResponse.model_validate(in_flight)
+        return _to_response(in_flight, settings)
 
     # The quality gate is a hard stop BEFORE any inference attempt -
     # reusing Prompt 5's quality verdict, not re-checking it.
@@ -99,7 +99,24 @@ def analyze_photo(
     _run_analysis(db, analysis, photo, crop_cycle.crop.name, model_provider, storage, settings)
 
     db.refresh(analysis)
-    return AIAnalysisResponse.model_validate(analysis)
+    return _to_response(analysis, settings)
+
+
+def _is_analysis_stale(analysis: AIAnalysis, settings: Settings) -> bool:
+    """D88-10 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors weather's
+    is_stale convention - an analysis with no inference_timestamp yet
+    (still PENDING/PROCESSING, or a FAILED run that never completed) is
+    never flagged stale, since there is no completed result to be old."""
+    if analysis.inference_timestamp is None:
+        return False
+    age = datetime.now(timezone.utc) - analysis.inference_timestamp
+    return age.days > settings.ai_analysis_max_age_days
+
+
+def _to_response(analysis: AIAnalysis, settings: Settings) -> AIAnalysisResponse:
+    response = AIAnalysisResponse.model_validate(analysis)
+    response.is_stale = _is_analysis_stale(analysis, settings)
+    return response
 
 
 def _run_analysis(
@@ -161,14 +178,14 @@ def _notify_disease_detected(db: Session, analysis: AIAnalysis, crop_name: str) 
     )
 
 
-def get_analysis(db: Session, farmer_id: str, analysis_id: uuid.UUID) -> AIAnalysisResponse:
+def get_analysis(db: Session, farmer_id: str, analysis_id: uuid.UUID, settings: Settings) -> AIAnalysisResponse:
     analysis = ai_analysis_repository.get_analysis_owned(db, analysis_id, uuid.UUID(farmer_id))
     if analysis is None:
         raise AppError(error_codes.NOT_FOUND, "Analysis not found.", 404)
-    return AIAnalysisResponse.model_validate(analysis)
+    return _to_response(analysis, settings)
 
 
-def submit_correction(db: Session, farmer_id: str, analysis_id: uuid.UUID, payload: AIAnalysisCorrectionRequest) -> AIAnalysisResponse:
+def submit_correction(db: Session, farmer_id: str, analysis_id: uuid.UUID, payload: AIAnalysisCorrectionRequest, settings: Settings) -> AIAnalysisResponse:
     """D91-07 (docs/audit/c13_governance_farmbrain_security.md): a
     farmer's own after-the-fact correction of THIS specific AI result -
     distinct from AdvisoryFeedback, which never covered the disease
@@ -189,10 +206,10 @@ def submit_correction(db: Session, farmer_id: str, analysis_id: uuid.UUID, paylo
     )
     db.commit()
     db.refresh(analysis)
-    return AIAnalysisResponse.model_validate(analysis)
+    return _to_response(analysis, settings)
 
 
-def get_latest_for_photo(db: Session, farmer_id: str, photo_id: uuid.UUID) -> AIAnalysisResponse:
+def get_latest_for_photo(db: Session, farmer_id: str, photo_id: uuid.UUID, settings: Settings) -> AIAnalysisResponse:
     farmer_uuid = uuid.UUID(farmer_id)
     photo = crop_photo_repository.get_owned(db, photo_id, farmer_uuid)
     if photo is None:
@@ -201,14 +218,14 @@ def get_latest_for_photo(db: Session, farmer_id: str, photo_id: uuid.UUID) -> AI
     analysis = ai_analysis_repository.get_latest_for_photo(db, photo_id, farmer_uuid)
     if analysis is None:
         raise AppError(error_codes.NOT_FOUND, "No analysis found for this photo yet.", 404)
-    return AIAnalysisResponse.model_validate(analysis)
+    return _to_response(analysis, settings)
 
 
-def list_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> AIAnalysisListResponse:
+def list_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, settings: Settings) -> AIAnalysisListResponse:
     farmer_uuid = uuid.UUID(farmer_id)
     crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, farmer_uuid)
     if crop_cycle is None:
         raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
 
     analyses = ai_analysis_repository.list_for_crop_cycle(db, crop_cycle_id, farmer_uuid)
-    return AIAnalysisListResponse(items=[AIAnalysisResponse.model_validate(a) for a in analyses], total=len(analyses))
+    return AIAnalysisListResponse(items=[_to_response(a, settings) for a in analyses], total=len(analyses))
