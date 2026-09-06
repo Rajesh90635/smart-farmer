@@ -14,17 +14,37 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 417 |
+| Verified | 434 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **490** |
+| **Attended (Verified + Implemented)** | **507** |
 | Partial | 21 |
-| Missing | 215 |
+| Missing | 198 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **236** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **219** |
 | Future | 38 |
 | Out of Scope | 26 |
 | Environment Dependent | 8 |
 | **TOTAL** | **798** |
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
+BACKLOG" prioritization + Batch 1 implementation prompts. A credit-efficient
+dependency analysis of all 215 Missing scenarios was performed first (not
+implemented from), then exactly 17 approved Batch 1 items were implemented,
+all in Group D: D89-01, D81-01, D93-05, D94-01/02/03/04/06/07,
+D95-05/06/07/08, D96-02/07, D98-04/05. Verified 417→434 (+17): 16 genuine
+Batch-1 fixes plus 1 zero-code bonus (D89-02, found already satisfied by an
+earlier D88-07 fix while verifying D89-01's own stated dependency). Missing
+215→198 (-17, matching). 1 of the 17 approved items (D95-07) was
+investigated and correctly NOT force-closed - it shares Partial row
+D88-06/D92-07/D93-08's exact "no crop-linked reference price exists" root
+cause and stays genuinely Missing, documented in Group D's own row. Partial
+row D89-08 re-verified (stays Partial, unchanged count): its two cited
+dependencies (D89-01, D89-02) are now both Verified, narrowing its sole
+remaining blocker to D89-03 (a larger, deliberately-deferred item). Total
+unchanged at 798 - every change this pass was an internal status move,
+zero new/removed rows. Full backend suite and full flutter suite both
+re-run green after this batch. See docs/audit/FINAL_CANONICAL_group_D.md's
+own batch note for the full per-scenario breakdown.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 PARTIAL
 FUNCTIONALITY COMPLETION" prompt: every genuinely Partial scenario across

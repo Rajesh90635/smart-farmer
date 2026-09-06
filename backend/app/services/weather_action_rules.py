@@ -29,6 +29,11 @@ from app.services.weather.weather_provider import WeatherReading
 # existing pattern - bump whenever assess_* logic changes below.
 RULE_VERSION = "weather_action_rules_v1"
 
+# D89-01 (docs/audit/FINAL_CANONICAL_group_D.md): a stable identifier for
+# this rule module, independent of RULE_VERSION (which bumps on logic
+# changes) - the natural predecessor to a future rule-history system.
+RULE_ID = "weather_action_rules"
+
 
 class ActionStatus(str, enum.Enum):
     SAFE = "safe"

@@ -2168,6 +2168,10 @@ class AppLocalizationsKn extends AppLocalizations {
       'ನಿಮ್ಮ ಸೆಷನ್ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಲಾಗಿನ್ ಮಾಡಿ.';
 
   @override
+  String get errorQueuedForSync =>
+      'ನೀವು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ. ಇದನ್ನು ಉಳಿಸಿ ನಂತರ ಸಿಂಕ್ ಮಾಡುತ್ತೇವೆ.';
+
+  @override
   String get errorRateLimited =>
       'ಹಲವು ಬಾರಿ ಪ್ರಯತ್ನಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಕೆಲವು ನಿಮಿಷ ಕಾದು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 

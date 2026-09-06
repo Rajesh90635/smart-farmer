@@ -713,6 +713,7 @@
   "errorIncorrectCurrentPassword": "Your current password is incorrect.",
   "errorValidation": "Please check the information you entered and try again.",
   "errorSessionExpired": "Your session has ended. Please log in again.",
+  "errorQueuedForSync": "You're offline - this will be saved automatically once you're back online.",
   "errorRateLimited": "Too many attempts. Please wait a few minutes and try again.",
   "errorInvalidOtp": "That verification code is invalid or has expired.",
   "errorOtpDeliveryFailed": "Could not send the verification code right now. Please try again shortly.",

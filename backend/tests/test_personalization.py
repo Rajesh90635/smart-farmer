@@ -102,6 +102,79 @@ def test_cost_pattern_signal_reports_a_trend_once_enough_cycles_have_recorded_co
     assert "stable" in cost_signal["observation"]
 
 
+def test_disease_pattern_signal_needs_at_least_three_analyses(client, farmer_with_crop_cycle):
+    """D98-04 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.test_crop_performance import _upload_and_analyze
+    from app.services.ai.model_provider import TopKPrediction
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    _upload_and_analyze(client, tokens, crop_cycle_id, [TopKPrediction("Healthy", 0.95)])
+
+    response = client.get("/api/v1/farmers/me/personalization", headers=auth_headers(tokens))
+    disease_signal = next(p for p in response.json()["preferences"] if p["signal_name"] == "disease_pattern")
+    assert disease_signal["confidence"] is None
+    assert disease_signal["evidence_count"] == 1
+
+
+def test_disease_pattern_signal_reports_a_pattern_once_enough_analyses_exist(client, farmer_with_crop_cycle):
+    from tests.test_crop_performance import _upload_and_analyze
+    from app.services.ai.model_provider import TopKPrediction
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    _upload_and_analyze(client, tokens, crop_cycle_id, [TopKPrediction("Early Blight", 0.90)])
+    _upload_and_analyze(client, tokens, crop_cycle_id, [TopKPrediction("Healthy", 0.95)])
+    _upload_and_analyze(client, tokens, crop_cycle_id, [TopKPrediction("Healthy", 0.95)])
+
+    response = client.get("/api/v1/farmers/me/personalization", headers=auth_headers(tokens))
+    disease_signal = next(p for p in response.json()["preferences"] if p["signal_name"] == "disease_pattern")
+    assert disease_signal["evidence_count"] == 3
+    assert disease_signal["confidence"] == "low"
+    assert "occasionally" in disease_signal["observation"]
+
+
+def test_weather_impact_signal_needs_at_least_three_alerts(client, farmer_with_located_farm):
+    """D98-05 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.conftest import override_weather_provider
+    from tests.weather_factories import heavy_rain_provider
+
+    tokens, farm_id = farmer_with_located_farm
+    with override_weather_provider(heavy_rain_provider()):
+        client.get(f"/api/v1/farms/{farm_id}/weather", headers=auth_headers(tokens))
+
+    response = client.get("/api/v1/farmers/me/personalization", headers=auth_headers(tokens))
+    weather_signal = next(p for p in response.json()["preferences"] if p["signal_name"] == "weather_impact")
+    assert weather_signal["confidence"] is None
+    assert weather_signal["evidence_count"] == 1
+
+
+def test_weather_impact_signal_reports_a_pattern_once_enough_alerts_exist(client, farmer_with_located_farm, db_session):
+    """D98-05: real notification rows (a farmer genuinely can't generate
+    3 distinct dated weather alerts in one test run - the pipeline dedups
+    by calendar day) inserted directly, same as this project's other
+    tests that simulate a future/batch write path."""
+    import uuid as uuid_mod
+    from datetime import datetime, timezone
+
+    from app.core.jwt import decode_access_token
+    from app.models.notification import Notification, NotificationCategory, NotificationPriority
+
+    tokens, farm_id = farmer_with_located_farm
+    farmer_id = uuid_mod.UUID(decode_access_token(tokens["access_token"])["sub"])
+
+    for i in range(3):
+        db_session.add(Notification(
+            farmer_id=farmer_id, category=NotificationCategory.HEAVY_RAIN_ALERT, priority=NotificationPriority.HIGH,
+            title="Heavy Rain Warning", body="test", language_code="en", dedup_key=f"heavy_rain_alert:test:{i}",
+        ))
+    db_session.commit()
+
+    response = client.get("/api/v1/farmers/me/personalization", headers=auth_headers(tokens))
+    weather_signal = next(p for p in response.json()["preferences"] if p["signal_name"] == "weather_impact")
+    assert weather_signal["evidence_count"] == 3
+    assert weather_signal["confidence"] == "low"
+    assert "frequently" in weather_signal["observation"]
+
+
 def test_personalization_evidence_count_reflects_real_task_data(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     for i in range(5):

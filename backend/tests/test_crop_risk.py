@@ -175,6 +175,87 @@ def test_weather_unavailable_is_unknown(client, farmer_with_crop_cycle):
     assert weather_factor["value"] == "unknown"
 
 
+def test_irrigation_factor_is_unknown_when_soil_moisture_unavailable(client, farmer_with_crop_cycle):
+    """D95-05 (docs/audit/FINAL_CANONICAL_group_D.md): soil moisture is
+    confirmed absent from this project - the factor must never fabricate
+    a MEDIUM/LOW adequacy level from weather data alone."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(wind_speed_kmh=10, rain_probability_percent=5))):
+        response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+    body = response.json()
+    irrigation_factor = next(f for f in body["factors"] if f["factor_name"] == "Water/Irrigation Risk")
+    assert irrigation_factor["value"] == "unknown"
+
+
+def test_harvest_timing_factor_reports_unknown_with_no_harvest_record(client, farmer_with_crop_cycle):
+    """D95-06 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+    body = response.json()
+    harvest_factor = next(f for f in body["factors"] if f["factor_name"] == "Harvest Timing Risk")
+    assert harvest_factor["value"] == "unknown"
+
+
+def test_harvest_timing_factor_reports_high_when_ready(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/approaching", headers=auth_headers(tokens))
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1000.00"}, headers=auth_headers(tokens))
+
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+    body = response.json()
+    harvest_factor = next(f for f in body["factors"] if f["factor_name"] == "Harvest Timing Risk")
+    assert harvest_factor["value"] == "high"
+
+
+def test_harvest_timing_factor_reports_medium_when_approaching(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/approaching", headers=auth_headers(tokens))
+
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+    body = response.json()
+    harvest_factor = next(f for f in body["factors"] if f["factor_name"] == "Harvest Timing Risk")
+    assert harvest_factor["value"] == "medium"
+
+
+def test_payment_delay_factor_reports_unknown_with_no_committed_sale(client, farmer_with_crop_cycle):
+    """D95-08 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+    body = response.json()
+    payment_factor = next(f for f in body["factors"] if f["factor_name"] == "Payment Delay Risk")
+    assert payment_factor["value"] == "unknown"
+
+
+def test_payment_delay_factor_reports_medium_when_a_sale_is_awaiting_payment(client, farmer_with_crop_cycle, verified_buyer):
+    from tests.harvest_factories import valid_harvest_listing_payload, valid_offer_payload
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    listing = client.post(f"/api/v1/harvests/{harvest['id']}/listing", json=valid_harvest_listing_payload(), headers=auth_headers(tokens)).json()
+    offer = client.post(f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(), headers=auth_headers(buyer_tokens)).json()
+    sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", headers=auth_headers(tokens)).json()
+
+    client.post(f"/api/v1/marketplace/sales/{sale['id']}/accept", headers=auth_headers(tokens))
+    for status in ["preparing", "ready_for_collection", "collected", "in_transit", "delivered"]:
+        client.post(f"/api/v1/marketplace/sales/{sale['id']}/advance?target_status={status}", headers=auth_headers(tokens))
+    confirm = client.post(f"/api/v1/marketplace/purchases/{sale['id']}/confirm-delivery", headers=auth_headers(buyer_tokens))
+    assert confirm.json()["status"] == "payment_pending"
+
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+    body = response.json()
+    payment_factor = next(f for f in body["factors"] if f["factor_name"] == "Payment Delay Risk")
+    assert payment_factor["value"] == "medium"
+
+
 def test_two_medium_factors_aggregate_to_overall_high(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     client.post(

@@ -1,4 +1,5 @@
 import 'api_client.dart';
+import 'offline/pending_write_queue.dart';
 import '../l10n/app_localizations.dart';
 
 /// Converts backend error codes (see backend docs/API_CONVENTIONS.md) into
@@ -14,6 +15,12 @@ class FriendlyError {
     // wording for the same underlying farmer-facing fact either way.
     if (error is SessionExpiredException) {
       return l10n.errorSessionExpired;
+    }
+    // D81-01 (docs/audit/FINAL_CANONICAL_group_D.md): a deliberately
+    // distinct, reassuring message - this is NOT a failure, the write was
+    // saved locally and will be sent automatically once back online.
+    if (error is QueuedForSyncException) {
+      return l10n.errorQueuedForSync;
     }
     if (error is ApiException) {
       switch (error.code) {

@@ -1,4 +1,6 @@
 import '../../core/api_client.dart';
+import '../../core/offline/pending_write_queue.dart';
+import '../crop_photo/network_status_checker.dart';
 import '../weather/weather_models.dart';
 import 'farm_models.dart';
 
@@ -17,6 +19,14 @@ class FarmRepository {
     return Farm.fromJson(response);
   }
 
+  /// D81-01 (docs/audit/FINAL_CANONICAL_group_D.md): when both
+  /// `networkChecker` and `writeQueue` are supplied AND the device is
+  /// offline, the write is queued instead of sent, and this throws
+  /// `QueuedForSyncException` (a distinct, non-error outcome) instead of
+  /// returning a `Farm` - there is no server-assigned id yet to return.
+  /// Omitting either param (the default) preserves the exact prior
+  /// always-online behavior unchanged - every existing call site/test
+  /// keeps working without modification.
   Future<Farm> createFarm({
     required String farmName,
     String? description,
@@ -28,8 +38,10 @@ class FarmRepository {
     int? villageId,
     required double areaValue,
     required String areaUnit,
+    NetworkStatusChecker? networkChecker,
+    PendingWriteQueue? writeQueue,
   }) async {
-    final response = await _apiClient.post('/farms', body: {
+    final body = {
       'farm_name': farmName,
       if (description != null) 'description': description,
       if (latitude != null) 'latitude': latitude,
@@ -40,7 +52,14 @@ class FarmRepository {
       if (villageId != null) 'village_id': villageId,
       'area_value': areaValue,
       'area_unit': areaUnit,
-    });
+    };
+
+    if (networkChecker != null && writeQueue != null && !(await networkChecker.isOnline())) {
+      await writeQueue.enqueue(PendingWrite(clientRequestId: generateClientRequestId(), method: 'POST', path: '/farms', body: body));
+      throw const QueuedForSyncException();
+    }
+
+    final response = await _apiClient.post('/farms', body: body);
     return Farm.fromJson(response);
   }
 

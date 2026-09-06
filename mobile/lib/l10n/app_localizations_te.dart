@@ -2165,6 +2165,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ సెషన్ ముగిసింది. దయచేసి మళ్లీ లాగిన్ అవ్వండి.';
 
   @override
+  String get errorQueuedForSync =>
+      'మీరు ఆఫ్‌లైన్‌లో ఉన్నారు. దీన్ని సేవ్ చేసి తర్వాత సింక్ చేస్తాం.';
+
+  @override
   String get errorRateLimited =>
       'చాలా ప్రయత్నాలు జరిగాయి. దయచేసి కొన్ని నిమిషాలు ఆగి మళ్లీ ప్రయత్నించండి.';
 

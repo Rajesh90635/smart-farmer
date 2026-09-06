@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
-from app.repositories import crop_cycle_repository, harvest_repository
+from app.models.ai_analysis import ResultStatus
+from app.repositories import ai_analysis_repository, crop_cycle_repository, harvest_repository
 from app.schemas.crop_comparison import ComparisonMetric, CropComparisonResponse
 from app.services import crop_financial_service, crop_performance_service
 
@@ -22,6 +23,7 @@ _METRIC_DIRECTIONS = {
     "actual_revenue": "higher_better",
     "actual_profit_loss": "higher_better",
     "actual_yield": "higher_better",
+    "disease_recurrence_count": "lower_better",
 }
 
 
@@ -39,6 +41,8 @@ def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID,
 
     yield_a = _total_actual_yield(db, crop_cycle_id_a)
     yield_b = _total_actual_yield(db, crop_cycle_id_b)
+    disease_a = _disease_recurrence_count(db, crop_cycle_id_a, farmer_uuid)
+    disease_b = _disease_recurrence_count(db, crop_cycle_id_b, farmer_uuid)
 
     metrics = [
         _build_metric("overall_performance_score", performance_a.overall_score, performance_b.overall_score),
@@ -47,6 +51,14 @@ def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID,
         _build_metric("actual_profit_loss", financial_a.actual_profit_loss, financial_b.actual_profit_loss),
         _build_metric("actual_yield", yield_a, yield_b),
         _build_metric("crop_stage", crop_a.cultivation_status.value, crop_b.cultivation_status.value, comparable=False),
+        # D96-02 (docs/audit/FINAL_CANONICAL_group_D.md): same shape as
+        # crop_stage above - variety identity has no higher/lower/better
+        # direction, so it's a non-comparable equality metric too.
+        _build_metric("variety", str(crop_a.variety_id) if crop_a.variety_id else None, str(crop_b.variety_id) if crop_b.variety_id else None, comparable=False),
+        # D96-07: reuses the exact same AIAnalysis data crop_risk_service's
+        # own _disease_recurrence_factor is built on - a raw comparable
+        # count, not a re-derivation of that factor's HIGH/MEDIUM/LOW value.
+        _build_metric("disease_recurrence_count", disease_a, disease_b),
     ]
 
     return CropComparisonResponse(
@@ -69,6 +81,16 @@ def _total_actual_yield(db: Session, crop_cycle_id: uuid.UUID):
     if not quantities:
         return None
     return sum(quantities)
+
+
+def _disease_recurrence_count(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) -> int | None:
+    """D96-07 (docs/audit/FINAL_CANONICAL_group_D.md): None (not zero)
+    when literally no AI analysis has ever been run for this cycle -
+    'never checked' and 'checked and always healthy' are different facts."""
+    analyses = ai_analysis_repository.list_for_crop_cycle(db, crop_cycle_id, farmer_id)
+    if not analyses:
+        return None
+    return sum(1 for a in analyses if a.result_status == ResultStatus.DISEASE_DETECTED)
 
 
 def _build_metric(name: str, value_a, value_b, *, comparable: bool = True) -> ComparisonMetric:

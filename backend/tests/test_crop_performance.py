@@ -28,6 +28,18 @@ def _create_second_crop_cycle(client, tokens, sample_crop_id):
     return cycle["id"]
 
 
+def _create_crop_cycle_with_variety(client, tokens, crop_id, variety_id):
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(crop_id, variety_id=variety_id), headers=headers
+    ).json()
+    return cycle["id"]
+
+
 # --- Performance Score ---
 
 def test_performance_with_no_data_at_all_is_insufficient_data(client, farmer_with_crop_cycle):
@@ -151,6 +163,84 @@ def test_comparison_reports_insufficient_data_for_yield_when_nothing_harvested_y
     body = response.json()
     yield_metric = next(m for m in body["metrics"] if m["metric_name"] == "actual_yield")
     assert yield_metric["comparison"] == "insufficient_data"
+
+
+def test_comparison_variety_is_insufficient_data_when_either_cycle_has_no_variety(client, farmer_with_crop_cycle, sample_crop_id):
+    """D96-02 (docs/audit/FINAL_CANONICAL_group_D.md): the default
+    farmer_with_crop_cycle/second-cycle fixtures never set variety_id."""
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    variety_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "variety")
+    assert variety_metric["comparison"] == "insufficient_data"
+
+
+def test_comparison_variety_reports_equal_for_the_same_variety(client, registered_farmer, sample_crop_id, db_session):
+    """D96-02 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.test_crop_variety import _create_variety
+
+    _, tokens = registered_farmer
+    # Unique per run - the persistent shared test DB never truncates
+    # crop_varieties between runs, and (crop_id, name) is a real DB
+    # uniqueness constraint (same convention as tests/test_crop_variety.py's
+    # own _unique() helper).
+    variety_id = _create_variety(db_session, sample_crop_id, f"Hybrid Variety {uuid.uuid4().hex[:8]}")
+    crop_cycle_id_1 = _create_crop_cycle_with_variety(client, tokens, sample_crop_id, variety_id)
+    crop_cycle_id_2 = _create_crop_cycle_with_variety(client, tokens, sample_crop_id, variety_id)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    variety_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "variety")
+    assert variety_metric["comparison"] == "equal"
+
+
+def test_comparison_variety_reports_not_directly_comparable_for_different_varieties(client, registered_farmer, sample_crop_id, db_session):
+    """D96-02 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.test_crop_variety import _create_variety
+
+    _, tokens = registered_farmer
+    suffix = uuid.uuid4().hex[:8]
+    variety_id_1 = _create_variety(db_session, sample_crop_id, f"Variety One {suffix}")
+    variety_id_2 = _create_variety(db_session, sample_crop_id, f"Variety Two {suffix}")
+    crop_cycle_id_1 = _create_crop_cycle_with_variety(client, tokens, sample_crop_id, variety_id_1)
+    crop_cycle_id_2 = _create_crop_cycle_with_variety(client, tokens, sample_crop_id, variety_id_2)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    variety_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "variety")
+    assert variety_metric["comparison"] == "not_directly_comparable"
+
+
+def test_comparison_disease_recurrence_is_insufficient_data_with_no_analysis(client, farmer_with_crop_cycle, sample_crop_id):
+    """D96-07 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    disease_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "disease_recurrence_count")
+    assert disease_metric["comparison"] == "insufficient_data"
+
+
+def test_comparison_disease_recurrence_correctly_identifies_fewer_occurrences_as_favorable(
+    client, farmer_with_crop_cycle, sample_crop_id
+):
+    """D96-07 (docs/audit/FINAL_CANONICAL_group_D.md): lower disease
+    recurrence is favorable ('a_higher' means cycle A wins) - reuses the
+    exact same AIAnalysis data crop_risk_service._disease_recurrence_factor
+    is built on."""
+    from tests.test_crop_performance import _upload_and_analyze
+    from app.services.ai.model_provider import TopKPrediction
+
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    _upload_and_analyze(client, tokens, crop_cycle_id_1, [TopKPrediction("Healthy", 0.95)])
+    _upload_and_analyze(client, tokens, crop_cycle_id_2, [TopKPrediction("Early Blight", 0.90)])
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    disease_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "disease_recurrence_count")
+    assert disease_metric["value_a"] == "0"
+    assert disease_metric["value_b"] == "1"
+    assert disease_metric["comparison"] == "a_higher"
 
 
 def test_comparison_reports_same_crop_true_when_both_cycles_share_a_crop(client, farmer_with_crop_cycle, sample_crop_id):

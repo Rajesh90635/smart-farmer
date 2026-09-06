@@ -254,6 +254,173 @@ def test_daily_summary_includes_spray_advisory_when_weather_is_unsuitable_for_sp
     assert any(line.startswith("Spray advisory:") for line in lines), f"Expected a spray-advisory line, got: {lines}"
 
 
+def test_daily_summary_includes_an_irrigation_line_when_a_real_recommendation_exists(client, farmer_with_crop_cycle):
+    """D93-05 (docs/audit/FINAL_CANONICAL_group_D.md): irrigation_intelligence_service.py
+    already existed - only wiring it into the daily brief was missing."""
+    from datetime import date
+
+    from tests.conftest import override_weather_provider
+    from tests.fake_weather_provider import FakeWeatherProvider
+    from app.services.weather.weather_provider import ForecastDay, WeatherReading
+
+    tokens, _ = farmer_with_crop_cycle
+    forecast = [ForecastDay(forecast_date=date.today(), reading=WeatherReading(rain_probability_percent=95.0))]
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(temperature_c=28), forecast=forecast)):
+        response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    lines = response.json()["lines"]
+    assert any(line.startswith("Irrigation:") for line in lines), f"Expected an irrigation line, got: {lines}"
+
+
+def test_daily_summary_never_shows_an_irrigation_line_for_no_action(client, farmer_with_crop_cycle):
+    """D93-05: never fabricated noise when there's genuinely nothing to
+    flag - SAFE weather (the fake provider's default 20%/30% forecast,
+    well below the rain-probability threshold) with no pending
+    irrigation task correctly yields NO_ACTION."""
+    from tests.conftest import override_weather_provider
+    from tests.fake_weather_provider import FakeWeatherProvider
+    from app.services.weather.weather_provider import WeatherReading
+
+    tokens, _ = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(temperature_c=28))):
+        response = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens))
+    lines = response.json()["lines"]
+    assert not any(line.startswith("Irrigation:") for line in lines)
+
+
+def test_daily_summary_flags_weather_changed_since_last_visit(client, farmer_with_crop_cycle):
+    """D94-01 (docs/audit/FINAL_CANONICAL_group_D.md): a distinct,
+    weather-specific line - never fires on the first visit, only on a
+    real difference against the stored snapshot."""
+    from datetime import date, datetime, timedelta, timezone
+
+    from tests.conftest import override_weather_provider
+    from tests.fake_weather_provider import FakeWeatherProvider
+    from app.services.weather.weather_provider import ForecastDay, WeatherReading
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(temperature_c=25))):
+        first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any(line.startswith("Weather has changed") for line in first)
+
+    # Weather is cached (weather_current_cache_minutes) - force expiry so
+    # the second call genuinely re-fetches from the (changed) provider,
+    # same technique as test_weather.py's own cache-expiry test.
+    import uuid as uuid_mod
+
+    from app.db.session import SessionLocal
+    from app.models.weather_snapshot import WeatherSnapshot
+
+    cycle = client.get(f"/api/v1/crops/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+    plot = client.get(f"/api/v1/plots/{cycle['plot_id']}", headers=auth_headers(tokens)).json()
+    db = SessionLocal()
+    for s in db.query(WeatherSnapshot).filter(WeatherSnapshot.farm_id == uuid_mod.UUID(plot["farm_id"])).all():
+        s.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+    db.close()
+
+    forecast = [ForecastDay(forecast_date=date.today(), reading=WeatherReading(rain_probability_percent=95.0))]
+    with override_weather_provider(FakeWeatherProvider(current=WeatherReading(temperature_c=40), forecast=forecast)):
+        second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert any(line.startswith("Weather has changed") for line in second), f"Expected a weather-changed line, got: {second}"
+
+
+def test_daily_summary_flags_crop_stage_changed_since_last_visit(client, farmer_with_crop_cycle):
+    """D94-02 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any("stage has changed" in line for line in first)
+
+    client.put(f"/api/v1/crops/{crop_cycle_id}", json={"cultivation_status": "sown"}, headers=auth_headers(tokens))
+
+    second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert any("stage has changed to sown" in line for line in second), f"Expected a stage-changed line, got: {second}"
+
+
+def test_daily_summary_flags_risk_level_changed_since_last_visit(client, farmer_with_crop_cycle):
+    """D94-03 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.conftest import override_model_provider, override_weather_provider
+    from tests.fake_model_provider import FakeModelProvider
+    from tests.fake_weather_provider import FakeWeatherProvider
+    from app.services.ai.model_provider import TopKPrediction
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any("risk level has changed" in line for line in first)
+
+    session = client.post("/api/v1/crop-photo-sessions", json={"crop_cycle_id": crop_cycle_id}, headers=auth_headers(tokens)).json()
+    import io
+
+    from tests.photo_factories import make_test_jpeg
+
+    files = {"file": ("leaf.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    data = {"client_upload_id": f"upload-{uuid.uuid4().hex[:8]}", "source": "camera"}
+    photo = client.post(f"/api/v1/crop-photo-sessions/{session['id']}/photos", files=files, data=data, headers=auth_headers(tokens)).json()
+    with override_model_provider(FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.92)])):
+        client.post(f"/api/v1/crop-photos/{photo['id']}/analyze", headers=auth_headers(tokens))
+
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert any("risk level has changed" in line for line in second), f"Expected a risk-changed line, got: {second}"
+
+
+def test_daily_summary_flags_tasks_changed_since_last_visit(client, farmer_with_crop_cycle):
+    """D94-04 (docs/audit/FINAL_CANONICAL_group_D.md): a since-timestamp
+    count, not a snapshot-diff."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert not any("task(s) completed" in line for line in first)
+
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks", json={"task_type": "irrigation", "title": "Irrigate"}, headers=auth_headers(tokens)
+    ).json()
+    client.post(f"/api/v1/tasks/{task['id']}/complete", headers=auth_headers(tokens))
+
+    second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    assert any("task(s) completed" in line for line in second), f"Expected a task-changed line, got: {second}"
+
+
+def test_daily_summary_flags_expert_responded_since_last_visit(client, registered_farmer, sample_crop_id, verified_expert):
+    """D94-06 (docs/audit/FINAL_CANONICAL_group_D.md): reuses D78-04's
+    existing CASE_REVIEWED event/data - no new mechanism."""
+    from tests.professional_factories import valid_case_payload
+    from tests.test_cases import _create_crop_cycle
+
+    _, farmer_tokens = registered_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens)).json()
+
+    first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(farmer_tokens)).json()["lines"]
+    assert not any("expert has responded" in line for line in first)
+
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+    client.post(f"/api/v1/cases/{case['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens))
+
+    second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(farmer_tokens)).json()["lines"]
+    assert any("expert has responded" in line for line in second), f"Expected an expert-responded line, got: {second}"
+
+
+def test_daily_summary_flags_payment_status_changed_since_last_visit(client, registered_farmer, verified_dealer, approved_product):
+    """D94-07 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from tests.marketplace_factories import valid_dealer_listing_payload
+
+    _, farmer_tokens = registered_farmer
+    dealer_tokens, _ = verified_dealer
+    listing = client.post(
+        "/api/v1/dealer-products", json=valid_dealer_listing_payload(approved_product["id"]), headers=auth_headers(dealer_tokens)
+    ).json()
+    cart = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 1}, headers=auth_headers(farmer_tokens)).json()
+
+    first = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(farmer_tokens)).json()["lines"]
+    assert not any("order status has changed" in line for line in first)
+
+    client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_tokens))
+
+    second = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(farmer_tokens)).json()["lines"]
+    assert any("order status has changed to confirmed" in line for line in second), f"Expected a payment-changed line, got: {second}"
+
+
 def test_daily_summary_flags_what_changed_since_last_visit(client, farmer_with_crop_cycle):
     """D94-08 (docs/FINAL_GAP_REPORT.md): diffs a stored snapshot of the
     raw facts behind the lines above, not the rendered text - so this

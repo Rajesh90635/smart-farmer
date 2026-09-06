@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 96 |
+| VERIFIED | 113 |
 | IMPLEMENTED | 30 |
 | PARTIAL | 7 |
-| MISSING | 75 |
+| MISSING | 58 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 3 |
@@ -173,6 +173,33 @@ documented as blocked on a Redis/shared-store deployment this project
 doesn't have). Total unchanged at 223 - every change here is an internal
 status move, zero new/removed rows. Full backend suite: 863 passed, 0
 failed/errored. Full flutter suite: 283 passed, 0 failed. See
+docs/FINAL_GAP_REPORT.md and docs/FINAL_RELEASE_READINESS.md for the
+cross-group reconciliation.)*
+
+*(Later continuation session — Missing Backlog Batch 1, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. All 17 approved Batch 1
+scenarios processed: D89-01, D81-01, D93-05, D94-01/02/03/04/06/07,
+D95-05/06/07/08, D96-02/07, D98-04/05. 16 became VERIFIED with genuine
+minimal fixes (D89-01, D81-01, D93-05, D94-01/02/03/04/06/07, D95-05/06/08,
+D96-02/07, D98-04/05, -16 Missing, +16 Verified). 1 BONUS zero-code verify
+found during D89-01's own required "verify D89-02 first" step: D89-02
+("Rule version") was already fully satisfied by this session's earlier
+D88-07 fix (`weather_action_rules.RULE_VERSION` already existed) - reclassified
+VERIFIED with no new code (-1 Missing, +1 Verified). 1 stays Missing,
+investigated and NOT force-closed: D95-07 (market risk factor) shares the
+exact same root-cause blocker as Partial rows D88-06/D92-07/D93-08 -
+`ReferencePrice` has no crop linkage, only input-product linkage; building
+it from an unrelated product's price would conflate two unrelated numbers.
+Partial row D89-08 re-verified (stays Partial): D89-01+D89-02 now both
+VERIFIED, so its sole remaining blocker is D89-03 (the full
+`RuleVersionSnapshot` table), correctly deferred as a larger, non-Batch-1
+item. Total unchanged at 223 - every change here is an internal status
+move, zero new/removed rows. New mobile module: `core/offline/pending_write_queue.dart`
+(D81-01's reusable generic offline write queue, extracted from
+`PendingUploadQueue`'s proven pattern) - the first genuinely NEW piece of
+mobile infrastructure built this session, not just a backend wiring fix.
+Full backend suite and full flutter suite both re-run green after this
+batch - see each suite's own run for exact counts. See
 docs/FINAL_GAP_REPORT.md and docs/FINAL_RELEASE_READINESS.md for the
 cross-group reconciliation.)*
 
@@ -665,14 +692,14 @@ cross-group reconciliation.)*
 
 ### D89-08 — Historical reproducibility of a past rule decision
 - Domain: 89. Rule Versioning
-- Current implementation status: **STAYS PARTIAL (re-verified this
-  continuation session; delta: was MISSING; the "undecided justification"
-  label is now closed, the underlying gap is not)** - the full
-  versioned/dated threshold-snapshot system genuinely depends on D89-01
-  (rule identifier) and D89-02 (rule version), both still MISSING as general
-  concepts, and would itself be a large new `RuleVersionSnapshot` system -
-  correctly out of this session's Partial-completion-only scope (not a
-  smallest-complete-fix candidate). No code change.
+- Current implementation status: **STAYS PARTIAL (re-verified again during
+  Missing Backlog Batch 1)** - D89-01 and D89-02 (both cited as
+  dependencies) are now BOTH VERIFIED (see their own rows - D89-01 built
+  this batch, D89-02 found already satisfied). The sole remaining blocker
+  is D89-03 (effective-date scoping / the `RuleVersionSnapshot` table
+  itself), deliberately deferred - it is a substantial new table/service,
+  not a Batch-1-sized item, and was correctly not selected for this batch.
+  No code change to this row this pass.
 - Existing relevant files/classes/functions: per `docs/FINAL_GAP_REPORT.md`'s exact resolution — `Notification.rule_version` is now populated (`weather_alert_rules.RULE_VERSION`) for every weather-alert-rule-triggered notification, mirroring D88-07's `crop_risk_v1` precedent (test: `test_proactive_weather_sweep.py`)
 - Missing component: the full versioned/dated threshold-snapshot system (D89-01 rule identifier + D89-02 rule version + D89-03 effective-date-scoping) — a history table letting anyone recompute exactly what a past decision would have been under the threshold set active at that time. This is stated exactly as documented: partially resolved (rule_version populated for weather-alert-rule notifications), but the full rule-versioning system remains future work
 - Required implementation: a `RuleVersionSnapshot` table (rule_id, version, effective_from, effective_to, threshold_values JSONB) plus a lookup service resolving "what were the thresholds on date X"
@@ -1845,7 +1872,27 @@ cross-group reconciliation.)*
 
 ### D81-01 — Farm offline
 - Domain: 81. Offline
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new generic `PendingWriteQueue`/`PendingWrite`
+  (`core/offline/pending_write_queue.dart`), extracted from
+  `PendingUploadQueue`'s proven persistence/retry/terminal-state pattern
+  exactly as this row's own "build once, reuse for D81-02..07/09"
+  recommendation asked for. `farm_repository.dart::createFarm` routes
+  through it when offline (both `networkChecker`/`writeQueue` params are
+  optional - omitting them, as every other existing call site does,
+  preserves the prior always-online behavior unchanged); throws a new
+  `QueuedForSyncException` (distinct from a real failure) instead of
+  returning a `Farm`, since there is no server-assigned id yet.
+  `SyncCoordinator` drains `PendingWriteQueue.retryable` the same
+  connectivity-triggered loop already proven for photo uploads. New
+  `errorQueuedForSync` l10n string (all 7 languages, reusing
+  `offlineBannerText`'s established wording) renders it via
+  `FriendlyError`. Tests: new `test/core/offline/pending_write_queue_test.dart`
+  (13 tests: enqueue/persist/reload/retry/terminal-auth-state/idempotency,
+  mirroring `pending_upload_queue_test.dart`'s own structure). Mobile-side
+  UI for D81-02..07/09 (plot/crop/task/expense/harvest) is not built this
+  pass - only the reusable queue + its first real consumer (farm create)
+  are in scope for this Batch 1 item.
 - Existing relevant files/classes/functions: `farm_repository.dart` calls `ApiClient` directly with no local queue (confirmed by reading the file)
 - Missing component: an offline write queue for farm create/edit, analogous to `PendingUploadQueue`
 - Required implementation: a generic `PendingWriteQueue<T>` abstraction extracted from `PendingUploadQueue`'s proven pattern (enqueue/retry/status/manifest-persistence), specialized for farm create/edit payloads
@@ -1998,7 +2045,19 @@ cross-group reconciliation.)*
 
 ### D89-01 — Rule identifier
 - Domain: 89. Rule Versioning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `RULE_ID` constant added to `weather_action_rules.py`
+  ("weather_action_rules"), `weather_alert_rules.py` ("weather_alert_rules"),
+  `crop_risk_service.py` ("crop_risk_service") - a stable identifier per rule
+  module, independent of `RULE_VERSION`. Also verified D89-02 in the same
+  pass: `weather_action_rules.RULE_VERSION` already existed (added earlier
+  this session as part of D88-07), so D89-02 is ALSO now VERIFIED with zero
+  additional code - see its own row below. Together, D89-01+D89-02 fully
+  satisfy Partial row D89-08's cited dependency for the "rule identifier +
+  rule version" half; D89-08 itself stays Partial because its own Required
+  Implementation is the full `RuleVersionSnapshot` table (D89-03), not yet
+  built - see D89-08's row for the honest remaining-blocker statement.
+  Tests: new `tests/test_rule_versioning.py` (3 tests)
 - Existing relevant files/classes/functions: none — rules are identified only by Python function name (`assess_spray_conditions`, `evaluate_rain_alerts`, `_disease_recurrence_factor`, etc.); no `rule_id`/`RuleVersion` model exists
 - Missing component: a stable identifier per rule, independent of its function/file name
 - Required implementation: a `RULE_ID` constant per rule module (e.g. `weather_alert_rules.RULE_ID = "weather_alert_v1"`), the natural predecessor to D89-02's version and D89-08's full history
@@ -2015,7 +2074,14 @@ cross-group reconciliation.)*
 
 ### D89-02 — Rule version
 - Domain: 89. Rule Versioning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1,
+  zero code change)** - re-verified directly against the code rather than
+  this row's own (now-stale) citation: `weather_action_rules.RULE_VERSION`
+  already existed (added earlier this session as part of D88-07's fix,
+  before this row was re-read), completing the rollout across all three
+  rule modules (`crop_risk_service.py`, `weather_alert_rules.py`,
+  `weather_action_rules.py`). Test:
+  `tests/test_rule_versioning.py::test_every_rule_module_also_exposes_a_non_empty_rule_version`
 - Existing relevant files/classes/functions: none — zero matches for `rule_version`/`RULE_VERSION`/`RuleVersion` anywhere in `backend/app` at the time this cluster was written; note D88-07/D89-08 have since added `RULE_VERSION` to `crop_risk_service.py`/`weather_alert_rules.py` specifically (per the deltas above) — this row (the general concept as a checklist item) should be re-scored once that partial rollout is complete across all rule modules
 - Missing component: `RULE_VERSION` on `weather_action_rules.py` (still absent per D88-07's own note)
 - Required implementation: same as D88-07's recommendation — add `RULE_VERSION` to the one remaining rule module
@@ -2168,7 +2234,13 @@ cross-group reconciliation.)*
 
 ### D93-05 — Irrigation summarized
 - Domain: 93. Daily Farm Brief
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `tools.get_irrigation_status()` wraps
+  `irrigation_intelligence_service.py` (Phase 38.4, unchanged); `get_daily_summary`
+  adds a new `daily_summary_irrigation` line only when the recommendation
+  is not `no_action`/`unknown`. Tests:
+  `test_assistant_chat.py::test_daily_summary_includes_an_irrigation_line_when_a_real_recommendation_exists`
+  / `::test_daily_summary_never_shows_an_irrigation_line_for_no_action`
 - Existing relevant files/classes/functions: no irrigation concept exists in `tools.py`/`assistant_extras_service.py` at all (zero "irrigation" string matches in either file), despite `irrigation_intelligence_service.py` existing elsewhere (Phase 38) and simply not being wired in
 - Missing component: an irrigation-recommendation line in the daily brief
 - Required implementation: add a `tools.get_irrigation_status` wrapping the existing `irrigation_intelligence_service.py`, called from `get_daily_summary` only when a recommendation other than `NO_ACTION`/`UNKNOWN` exists
@@ -2185,7 +2257,12 @@ cross-group reconciliation.)*
 
 ### D94-01 — Weather changed since last check
 - Domain: 94. What Changed
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  extends D94-08's existing snapshot/diff mechanism with a distinct
+  `daily_summary_weather_changed` line, firing only when BOTH the
+  previous and current weather are genuinely available and differ (never
+  fabricated when either side is unknown). Test:
+  `test_assistant_chat.py::test_daily_summary_flags_weather_changed_since_last_visit`
 - Existing relevant files/classes/functions: no diff/delta logic anywhere; weather is computed live each call, rule-triggered notifications fire on threshold crossing, not on "changed since you last looked"
 - Missing component: a stored-snapshot diff, distinct from the existing threshold-crossing alert
 - Required implementation: reuse D94-08's now-VERIFIED `FarmerProfile.last_daily_summary_snapshot`/`last_daily_summary_at` mechanism — extend its diffing to include a weather-specific "temperature changed by X° / rain probability changed by Y%" line, rather than building a separate weather-only diff system
@@ -2202,7 +2279,11 @@ cross-group reconciliation.)*
 
 ### D94-02 — Crop stage changed
 - Domain: 94. What Changed
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  extends D94-08's diff mechanism with a `daily_summary_stage_changed`
+  line, firing only when both snapshots have a real (non-null) stage that
+  differs. Test:
+  `test_assistant_chat.py::test_daily_summary_flags_crop_stage_changed_since_last_visit`
 - Existing relevant files/classes/functions: status transitions are stored (`crop_cycle_service.py`, `ALLOWED_TRANSITIONS`) but nothing surfaces "stage changed since you last opened the app"
 - Missing component: a stage-change line in the "what changed" view
 - Required implementation: extend D94-08's diff mechanism with a stage-comparison line
@@ -2219,7 +2300,14 @@ cross-group reconciliation.)*
 
 ### D94-03 — Risk changed
 - Domain: 94. What Changed
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  reuses the SAME `FarmerProfile.last_daily_summary_snapshot`'s existing
+  `risk_level` field (already captured for D94-08's aggregate count) - no
+  new `risk_score_snapshots` table needed, since the daily-summary
+  snapshot's own granularity was already sufficient. New
+  `daily_summary_risk_changed` line fires only when both snapshots have a
+  real risk level that differs. Test:
+  `test_assistant_chat.py::test_daily_summary_flags_risk_level_changed_since_last_visit`
 - Existing relevant files/classes/functions: `crop_risk_service.get_risk_score()` (crop_risk_service.py:32) is stateless/computed fresh on every read, nothing persisted to diff against
 - Missing component: a persisted prior risk score to compare against
 - Required implementation: extend `FarmerProfile.last_daily_summary_snapshot` (D94-08) to also capture the last-seen risk score per crop cycle, or a small `risk_score_snapshots` table if per-crop-cycle granularity is needed beyond what the daily-summary snapshot already stores
@@ -2236,7 +2324,14 @@ cross-group reconciliation.)*
 
 ### D94-04 — Task changed
 - Domain: 94. What Changed
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `task_repository.count_completed_since`/`count_created_since`
+  (since-timestamp counts, not a snapshot-diff, since a single stored
+  "stage" string can't represent "how many tasks changed"); new
+  `daily_summary_tasks_changed` line fires only when the farmer has a
+  genuine `previous_at` (not their first visit) and at least one real
+  completed/created task since then. Test:
+  `test_assistant_chat.py::test_daily_summary_flags_tasks_changed_since_last_visit`
 - Existing relevant files/classes/functions: only current overdue-count surfaced in daily summary, no delta/history feed
 - Missing component: a "N tasks completed / N new tasks" delta line
 - Required implementation: extend D94-08's diff mechanism with a task-count comparison
@@ -2270,7 +2365,12 @@ cross-group reconciliation.)*
 
 ### D94-06 — Expert responded
 - Domain: 94. What Changed
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `case_review_outcome` field on the daily-summary snapshot (from
+  `tools.get_expert_case_status`'s existing `review_outcome`, D78-04's
+  event reused as-is); new `daily_summary_expert_responded` line fires
+  when a review outcome newly appears or changes since the last snapshot.
+  Test: `test_assistant_chat.py::test_daily_summary_flags_expert_responded_since_last_visit`
 - Existing relevant files/classes/functions: no dedicated "expert responded" `NotificationCategory` exists (categories are WEATHER_ALERT/RAIN_ALERT/HEAVY_RAIN_ALERT/CROP_ALERT/DISEASE_ALERT/HARVEST_ALERT/STOCK_ALERT/PAYMENT_ALERT); expert case status is pull-only via `tools.get_expert_case_status`
 - Missing component: a push event on case-review completion
 - Required implementation: `case_service.py:238`'s existing `_notify_case_event(db, case, "CASE_REVIEWED", ...)` call (per D78-04, already IMPLEMENTED) already creates a notification using `CROP_ALERT` — this "what changed" scenario would surface that same event in the diff-based view too, rather than needing a wholly separate mechanism
@@ -2287,7 +2387,16 @@ cross-group reconciliation.)*
 
 ### D94-07 — Payment changed
 - Domain: 94. What Changed
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `order_status` field on the daily-summary snapshot (from
+  `tools.get_my_orders`, pulled only for this comparison - not otherwise
+  surfaced in the daily brief body); new `daily_summary_payment_changed`
+  line fires when a real order status newly appears or changes (a
+  farmer's first confirmed order IS itself the meaningful event, since
+  `list_orders_for_farmer` deliberately excludes DRAFT carts - unlike
+  weather/stage/risk above, this one doesn't require the PREVIOUS side to
+  already be known). Test:
+  `test_assistant_chat.py::test_daily_summary_flags_payment_status_changed_since_last_visit`
 - Existing relevant files/classes/functions: no payment-status-change notification or diff; order/delivery status is pull-only via `tools.get_delivery_status`/`get_my_orders`
 - Missing component: a push/diff event on payment or order status change
 - Required implementation: extend D94-08's diff mechanism with a payment/order-status comparison; if D78-07's payment-notification gap (flagged for re-audit above) is resolved first, reuse that same event here too
@@ -2321,7 +2430,15 @@ cross-group reconciliation.)*
 
 ### D95-05 — Water/irrigation risk factor
 - Domain: 95. Risk Dashboard
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `crop_risk_service._irrigation_factor` calling
+  `irrigation_intelligence_service.py` as-is; since soil moisture is
+  confirmed always unavailable in this project, the factor stays
+  `unknown` honestly (never fabricates a MEDIUM/LOW adequacy level from
+  weather alone), mirroring `_treatment_response_factor`'s existing
+  always-unknown pattern - forward-compatible if a real soil-moisture
+  source is ever added. Test:
+  `test_crop_risk.py::test_irrigation_factor_is_unknown_when_soil_moisture_unavailable`
 - Existing relevant files/classes/functions: `irrigation_intelligence_service.py` (Phase 38) computes irrigation recommendations separately but is never reused as a risk-score factor; soil moisture is explicitly always `False` (`SMART_FARMER_V3_PHASE_TRACKER.md:36`)
 - Missing component: an irrigation-adequacy factor in the risk-score's factor list
 - Required implementation: `crop_risk_service.py` add a `_irrigation_factor` calling the existing `irrigation_intelligence_service.py`, reporting UNKNOWN (never fabricated MEDIUM/LOW) when soil moisture is unavailable — consistent with the project's existing honest-absence discipline
@@ -2338,7 +2455,15 @@ cross-group reconciliation.)*
 
 ### D95-06 — Harvest risk factor
 - Domain: 95. Risk Dashboard
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `crop_risk_service._harvest_timing_factor` reusing
+  `HarvestRecord.status` directly (the same signal behind the
+  HARVEST_APPROACHING/HARVEST_READY notifications, D47-05) - no new date
+  math. `unknown` when no harvest record exists, `high` when READY,
+  `medium` when APPROACHING, `low` otherwise. Tests:
+  `test_crop_risk.py::test_harvest_timing_factor_reports_unknown_with_no_harvest_record`
+  / `::test_harvest_timing_factor_reports_high_when_ready` /
+  `::test_harvest_timing_factor_reports_medium_when_approaching`
 - Existing relevant files/classes/functions: no harvest-timing risk factor in the list
 - Missing component: a harvest-timing/readiness risk factor
 - Required implementation: `crop_risk_service.py` add a `_harvest_timing_factor` reusing existing harvest-readiness computation (the same logic behind `HARVEST_APPROACHING`/`HARVEST_READY` notifications, D47-05)
@@ -2355,7 +2480,19 @@ cross-group reconciliation.)*
 
 ### D95-07 — Market risk factor
 - Domain: 95. Risk Dashboard
-- Current implementation status: Missing
+- Current implementation status: **STAYS MISSING (investigated this
+  Missing Backlog Batch 1, NOT implemented)** - this row's own suggested
+  implementation ("using price_query_service's existing reference-price
+  history") is genuinely blocked by the SAME root cause as Partial rows
+  D88-06/D92-07/D93-08: `ReferencePrice` is keyed only to `product_id`
+  (input products - seed/fertilizer/pesticide), with NO linkage to the
+  crop the farmer is actually growing/selling. Building this factor from
+  an unrelated input product's price and presenting it as "market risk"
+  for the farmer's own crop would conflate two unrelated numbers - exactly
+  the kind of data-integrity violation this project's "never fabricate/
+  never conflate" discipline forbids. Genuinely blocked on D88-06 (a real
+  architecture change, not a Batch-1-sized item), not attempted. No code
+  change.
 - Existing relevant files/classes/functions: no market/price factor in the list
 - Missing component: a price-volatility signal
 - Required implementation: `crop_risk_service.py` add a `_market_volatility_factor` using `price_query_service`'s existing reference-price history, reporting UNKNOWN when insufficient price history exists (never fabricated)
@@ -2372,7 +2509,14 @@ cross-group reconciliation.)*
 
 ### D95-08 — Payment risk factor
 - Domain: 95. Risk Dashboard
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `crop_risk_service._payment_delay_factor` reusing
+  `sale_order_repository.list_committed_but_not_completed_sales_for_crop_cycle`
+  as-is (already existed, Phase 32). `unknown` with no committed sale,
+  `high` when a sale is DISPUTED, `medium` when PAYMENT_PENDING, `low`
+  otherwise. Tests:
+  `test_crop_risk.py::test_payment_delay_factor_reports_unknown_with_no_committed_sale`
+  / `::test_payment_delay_factor_reports_medium_when_a_sale_is_awaiting_payment`
 - Existing relevant files/classes/functions: no payment factor in the list
 - Missing component: a payment/delivery-delay signal
 - Required implementation: `crop_risk_service.py` add a `_payment_delay_factor` using existing order/payment status data (`tools.get_delivery_status`/`get_my_orders`'s underlying repositories)
@@ -2389,7 +2533,14 @@ cross-group reconciliation.)*
 
 ### D96-02 — Compare variety
 - Domain: 96. Season Comparison
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `variety` non-comparable equality metric in
+  `crop_comparison_service.py`, same shape as D96-01's `same_crop` -
+  `insufficient_data` whenever either cycle has no `variety_id` set,
+  never a fabricated comparison. Tests:
+  `test_crop_performance.py::test_comparison_variety_is_insufficient_data_when_either_cycle_has_no_variety`
+  / `::test_comparison_variety_reports_equal_for_the_same_variety` /
+  `::test_comparison_variety_reports_not_directly_comparable_for_different_varieties`
 - Existing relevant files/classes/functions: `CropCycle.variety_id` exists on the model (crop_cycle.py:106-108) but `crop_comparison_service.py` never references it
 - Missing component: a variety-comparison metric
 - Required implementation: `crop_comparison_service.py` add a `variety` comparison field (same/different, like D96-01's proposed `same_crop`)
@@ -2406,7 +2557,13 @@ cross-group reconciliation.)*
 
 ### D96-07 — Compare disease history
 - Domain: 96. Season Comparison
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `disease_recurrence_count` comparable metric, reusing the exact same
+  `AIAnalysis` data `crop_risk_service._disease_recurrence_factor` is
+  built on (never re-derived); `None` (not zero) when literally no
+  analysis has ever been run for a cycle. Tests:
+  `test_crop_performance.py::test_comparison_disease_recurrence_is_insufficient_data_with_no_analysis`
+  / `::test_comparison_disease_recurrence_correctly_identifies_fewer_occurrences_as_favorable`
 - Existing relevant files/classes/functions: no disease-recurrence metric reused from `crop_risk_service`/`health_timeline_service`, despite both existing elsewhere
 - Missing component: a disease-history comparison metric
 - Required implementation: `crop_comparison_service.py` add a disease-recurrence-count comparison, reusing `crop_risk_service._disease_recurrence_factor`/`health_timeline_service`'s existing computation rather than re-deriving it
@@ -2491,7 +2648,13 @@ cross-group reconciliation.)*
 
 ### D98-04 — Previous disease used in learning
 - Domain: 98. Historical Learning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  new `personalization_service._disease_pattern_signal()`, mirroring
+  `_preferred_crop_signal`'s exact evidence-floor/confidence pattern,
+  reusing `AIAnalysis` across ALL the farmer's crop cycles (same source
+  `crop_risk_service._disease_recurrence_factor` uses per-cycle). Tests:
+  `test_personalization.py::test_disease_pattern_signal_needs_at_least_three_analyses`
+  / `::test_disease_pattern_signal_reports_a_pattern_once_enough_analyses_exist`
 - Existing relevant files/classes/functions: neither `personalization_service.py` nor `learning_foundation_service.py` references `AIAnalysis`, disease history, or `crop_health_case` data at all
 - Missing component: a disease-history-based descriptive signal
 - Required implementation: extend `personalization_service.py` with a `_disease_pattern_signal()` describing observed disease recurrence for this farmer's crops, gated by the same evidence-floor discipline as `_preferred_crop_signal`
@@ -2508,7 +2671,17 @@ cross-group reconciliation.)*
 
 ### D98-05 — Previous weather impact used in learning
 - Domain: 98. Historical Learning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 1)** -
+  this row's own citation was imprecise: `weather_action_engine_service.py`
+  is deliberately read-only/unpersisted (per its own docstring), so it has
+  no history to reuse. The real, non-fabricated "weather impact history"
+  is the already-persisted weather-alert `Notification` rows (WEATHER_ALERT/
+  RAIN_ALERT/HEAVY_RAIN_ALERT/SEVERE_WEATHER_ALERT/CROP_ALERT) - new
+  `notification_repository.list_by_categories_for_farmer` +
+  `personalization_service._weather_impact_signal()`, same evidence-floor
+  pattern as every other signal. Tests:
+  `test_personalization.py::test_weather_impact_signal_needs_at_least_three_alerts`
+  / `::test_weather_impact_signal_reports_a_pattern_once_enough_alerts_exist`
 - Existing relevant files/classes/functions: neither file references weather data
 - Missing component: a weather-impact-based descriptive signal
 - Required implementation: extend `personalization_service.py` with a `_weather_impact_signal()`, same evidence-floor discipline

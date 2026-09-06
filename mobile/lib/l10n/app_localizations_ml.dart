@@ -2184,6 +2184,10 @@ class AppLocalizationsMl extends AppLocalizations {
       'നിങ്ങളുടെ സെഷൻ അവസാനിച്ചു. ദയവായി വീണ്ടും ലോഗിൻ ചെയ്യുക.';
 
   @override
+  String get errorQueuedForSync =>
+      'നിങ്ങൾ ഓഫ്‌ലൈനിലാണ്. ഇത് ഞങ്ങൾ സേവ് ചെയ്ത് പിന്നീട് സിങ്ക് ചെയ്യും.';
+
+  @override
   String get errorRateLimited =>
       'വളരെയധികം തവണ ശ്രമിച്ചു. ദയവായി കുറച്ച് മിനിറ്റ് കാത്തിരുന്ന് വീണ്ടും ശ്രമിക്കുക.';
 

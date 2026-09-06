@@ -28,6 +28,19 @@ def list_for_farmer(db: Session, farmer_id: uuid.UUID, *, unread_only: bool, lim
     return list(items), total
 
 
+def list_by_categories_for_farmer(db: Session, farmer_id: uuid.UUID, categories: list) -> list[Notification]:
+    """D98-05 (docs/audit/FINAL_CANONICAL_group_D.md): every persisted
+    weather-alert-category notification this farmer has ever received -
+    the real, non-fabricated "weather impact history" signal, since
+    weather_action_engine_service.py itself is deliberately read-only/
+    unpersisted (see that module's own docstring)."""
+    return list(
+        db.execute(
+            select(Notification).where(Notification.farmer_id == farmer_id, Notification.category.in_(categories))
+        ).scalars().all()
+    )
+
+
 def get_owned(db: Session, notification_id: uuid.UUID, farmer_id: uuid.UUID) -> Notification | None:
     return db.execute(
         select(Notification).where(Notification.id == notification_id, Notification.farmer_id == farmer_id)

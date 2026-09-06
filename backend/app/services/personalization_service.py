@@ -23,9 +23,30 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.models.ai_analysis import ResultStatus
+from app.models.notification import NotificationCategory
 from app.models.task import TaskStatus
-from app.repositories import advisory_feedback_repository, crop_cycle_repository, ledger_entry_repository, task_repository, treatment_repository
+from app.repositories import (
+    advisory_feedback_repository,
+    ai_analysis_repository,
+    crop_cycle_repository,
+    ledger_entry_repository,
+    notification_repository,
+    task_repository,
+    treatment_repository,
+)
 from app.schemas.personalization import LearnedPreference, PersonalizationProfileResponse
+
+# D98-05 (docs/audit/FINAL_CANONICAL_group_D.md): every category the
+# weather-alert pipeline actually creates - CROP_ALERT included since
+# evaluate_crop_weather_alert also fires under this umbrella.
+_WEATHER_ALERT_CATEGORIES = [
+    NotificationCategory.WEATHER_ALERT,
+    NotificationCategory.RAIN_ALERT,
+    NotificationCategory.HEAVY_RAIN_ALERT,
+    NotificationCategory.SEVERE_WEATHER_ALERT,
+    NotificationCategory.CROP_ALERT,
+]
 
 
 def _confidence_for(evidence_count: int) -> str | None:
@@ -48,6 +69,8 @@ def get_personalization_profile(db: Session, farmer_id: str) -> PersonalizationP
         _task_completion_signal(db, farmer_uuid, crop_cycles),
         _advisory_feedback_signal(db, farmer_uuid),
         _cost_pattern_signal(db, farmer_uuid, crop_cycles),
+        _disease_pattern_signal(db, farmer_uuid, crop_cycles),
+        _weather_impact_signal(db, farmer_uuid),
     ]
 
     return PersonalizationProfileResponse(farmer_id=farmer_uuid, preferences=preferences)
@@ -236,4 +259,85 @@ def _cost_pattern_signal(db: Session, farmer_uuid: uuid.UUID, crop_cycles) -> Le
         confidence=confidence,
         last_observed_at=most_recent.created_at,
         explanation=f"Based on recorded costs across {evidence_count} crop cycles for this farmer.",
+    )
+
+
+def _disease_pattern_signal(db: Session, farmer_uuid: uuid.UUID, crop_cycles) -> LearnedPreference:
+    """D98-04 (docs/audit/FINAL_CANONICAL_group_D.md): a descriptive
+    observation of how often this farmer's AI photo checks have found
+    disease, across ALL their crop cycles - reuses AIAnalysis exactly as
+    crop_risk_service._disease_recurrence_factor does, never re-derived."""
+    all_analyses = []
+    for cc in crop_cycles:
+        all_analyses.extend(ai_analysis_repository.list_for_crop_cycle(db, cc.id, farmer_uuid))
+
+    evidence_count = len(all_analyses)
+    confidence = _confidence_for(evidence_count)
+    if confidence is None:
+        return LearnedPreference(
+            signal_name="disease_pattern",
+            observation=None,
+            evidence_count=evidence_count,
+            confidence=None,
+            last_observed_at=None,
+            explanation=f"Only {evidence_count} AI crop analysis(es) recorded - at least 3 are needed before a disease pattern can be identified.",
+        )
+
+    disease_count = sum(1 for a in all_analyses if a.result_status == ResultStatus.DISEASE_DETECTED)
+    ratio = disease_count / evidence_count
+    if ratio >= 0.5:
+        observation = "This farmer's crops have frequently shown signs of disease in AI photo checks."
+    elif ratio > 0:
+        observation = "This farmer's crops have occasionally shown signs of disease in AI photo checks."
+    else:
+        observation = "This farmer's crops have not shown signs of disease in AI photo checks so far."
+
+    most_recent = max(all_analyses, key=lambda a: a.created_at)
+    return LearnedPreference(
+        signal_name="disease_pattern",
+        observation=observation,
+        evidence_count=evidence_count,
+        confidence=confidence,
+        last_observed_at=most_recent.created_at,
+        explanation=f"Based on {disease_count} of {evidence_count} AI photo analyses detecting disease.",
+    )
+
+
+def _weather_impact_signal(db: Session, farmer_uuid: uuid.UUID) -> LearnedPreference:
+    """D98-05 (docs/audit/FINAL_CANONICAL_group_D.md): a descriptive
+    observation of how often this farmer has been alerted to severe/
+    heavy-weather conditions - reuses the already-persisted weather-alert
+    Notification history (weather_action_engine_service.py itself is
+    deliberately read-only/unpersisted, so it has no history to reuse)."""
+    alerts = notification_repository.list_by_categories_for_farmer(db, farmer_uuid, _WEATHER_ALERT_CATEGORIES)
+
+    evidence_count = len(alerts)
+    confidence = _confidence_for(evidence_count)
+    if confidence is None:
+        return LearnedPreference(
+            signal_name="weather_impact",
+            observation=None,
+            evidence_count=evidence_count,
+            confidence=None,
+            last_observed_at=None,
+            explanation=f"Only {evidence_count} weather alert(s) recorded - at least 3 are needed before a weather-impact pattern can be identified.",
+        )
+
+    severe_count = sum(1 for a in alerts if a.category in (NotificationCategory.HEAVY_RAIN_ALERT, NotificationCategory.SEVERE_WEATHER_ALERT))
+    ratio = severe_count / evidence_count
+    if ratio >= 0.5:
+        observation = "This farmer's farms have frequently been alerted to severe weather conditions."
+    elif severe_count > 0:
+        observation = "This farmer's farms have occasionally been alerted to severe weather conditions."
+    else:
+        observation = "This farmer's farms have mostly received routine (non-severe) weather alerts."
+
+    most_recent = max(alerts, key=lambda a: a.created_at)
+    return LearnedPreference(
+        signal_name="weather_impact",
+        observation=observation,
+        evidence_count=evidence_count,
+        confidence=confidence,
+        last_observed_at=most_recent.created_at,
+        explanation=f"Based on {severe_count} of {evidence_count} recorded weather alerts being severe.",
     )

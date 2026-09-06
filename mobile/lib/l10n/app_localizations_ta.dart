@@ -2194,6 +2194,10 @@ class AppLocalizationsTa extends AppLocalizations {
       'உங்கள் அமர்வு முடிந்துவிட்டது. தயவுசெய்து மீண்டும் உள்நுழையவும்.';
 
   @override
+  String get errorQueuedForSync =>
+      'நீங்கள் ஆஃப்லைனில் உள்ளீர்கள். இதை சேமித்து பின்னர் ஒத்திசைக்கிறோம்.';
+
+  @override
   String get errorRateLimited =>
       'பல முறை முயற்சிக்கப்பட்டது. தயவுசெய்து சில நிமிடங்கள் காத்திருந்து மீண்டும் முயற்சிக்கவும்.';
 

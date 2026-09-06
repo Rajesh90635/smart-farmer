@@ -142,6 +142,15 @@ def get_daily_summary(
         if finance.actual_cost and finance.actual_cost > 0:
             lines.append(get_message("daily_summary_finance", language_code, actual_cost=finance.actual_cost))
 
+    # D93-05 (docs/audit/FINAL_CANONICAL_group_D.md): irrigation_intelligence_service.py
+    # already existed (Phase 38.4) and was never wired into the daily
+    # brief - only surfaced when it says something actionable (never
+    # NO_ACTION/UNKNOWN noise), same discipline as every other line here.
+    if crop.get("available"):
+        irrigation = tools.get_irrigation_status(db, farmer_id, weather_provider, settings)
+        if irrigation.get("available") and irrigation["recommendation"] not in ("no_action", "unknown"):
+            lines.append(get_message("daily_summary_irrigation", language_code, reason=irrigation["reason"]))
+
     harvest = tools.get_harvest_status(db, farmer_id)
     if harvest.get("available") and harvest["status"] in ("approaching", "ready", "listed"):
         lines.append(get_message("daily_summary_harvest", language_code, status=harvest["status"]))
@@ -177,6 +186,11 @@ def get_daily_summary(
     if not lines:
         lines.append(get_message("daily_summary_no_updates", language_code))
 
+    # D94-07 (docs/audit/FINAL_CANONICAL_group_D.md): order/payment status
+    # was never pulled into the daily summary at all - reused here only
+    # for the "what changed" comparison below, same tool chat already uses.
+    order = tools.get_my_orders(db, farmer_id)
+
     # D94-08 (docs/FINAL_GAP_REPORT.md): a snapshot of the exact raw
     # facts feeding the lines above (never anything new), diffed against
     # the farmer's previous fetch to tell them what's changed since their
@@ -186,13 +200,60 @@ def get_daily_summary(
     if profile is not None:
         current_snapshot = _build_daily_summary_snapshot(
             weather=weather, crop=crop, disease=disease, risk=risk, finance=finance,
-            harvest=harvest, offers=offers, delivery=delivery, case=case, overdue_count=overdue_count,
+            harvest=harvest, offers=offers, delivery=delivery, case=case, overdue_count=overdue_count, order=order,
         )
         previous_snapshot = profile.last_daily_summary_snapshot
+        previous_at = profile.last_daily_summary_at
         if previous_snapshot is not None:
             changed_count = _count_changed_facts(previous_snapshot, current_snapshot)
             if changed_count > 0:
                 lines.insert(0, get_message("daily_summary_changed_since_last_visit", language_code, count=changed_count))
+
+            # D94-01/02/03/06/07: each is a distinct, named line on top of
+            # the aggregate count above - only ever fires on a REAL
+            # difference against the stored snapshot, never on the first
+            # visit (previous_snapshot is None then, handled by the outer
+            # `if`) and never fabricated when either side is unknown.
+            if (
+                weather.get("available") and previous_snapshot.get("weather_available")
+                and (weather.get("current_temperature_c") != previous_snapshot.get("weather_temp")
+                     or weather.get("rain_probability_today_percent") != previous_snapshot.get("weather_rain"))
+            ):
+                lines.append(get_message(
+                    "daily_summary_weather_changed", language_code,
+                    temp=weather.get("current_temperature_c", "?"), rain=weather.get("rain_probability_today_percent", "?"),
+                ))
+
+            new_stage = current_snapshot.get("crop_stage")
+            if new_stage is not None and previous_snapshot.get("crop_stage") is not None and new_stage != previous_snapshot.get("crop_stage"):
+                lines.append(get_message("daily_summary_stage_changed", language_code, stage=new_stage))
+
+            new_risk_level = current_snapshot.get("risk_level")
+            if new_risk_level is not None and previous_snapshot.get("risk_level") is not None and new_risk_level != previous_snapshot.get("risk_level"):
+                lines.append(get_message("daily_summary_risk_changed", language_code, level=new_risk_level))
+
+            new_review_outcome = current_snapshot.get("case_review_outcome")
+            if new_review_outcome is not None and new_review_outcome != previous_snapshot.get("case_review_outcome"):
+                lines.append(get_message("daily_summary_expert_responded", language_code))
+
+            # Unlike weather/stage/risk above, a None "previous" order status
+            # here means "had no confirmed order yet" (list_orders_for_farmer
+            # deliberately excludes DRAFT carts) - a farmer's first order
+            # reaching a real status IS itself the meaningful payment event,
+            # not an unknown-data case to suppress.
+            new_order_status = current_snapshot.get("order_status")
+            if new_order_status is not None and new_order_status != previous_snapshot.get("order_status"):
+                lines.append(get_message("daily_summary_payment_changed", language_code, status=new_order_status))
+
+            # D94-04: a since-timestamp count, not a snapshot-diff (a
+            # single stored "stage" string can't represent "how many
+            # tasks changed" the way it can for weather/stage/risk).
+            if previous_at is not None:
+                completed_since = task_repository.count_completed_since(db, uuid.UUID(farmer_id), previous_at)
+                created_since = task_repository.count_created_since(db, uuid.UUID(farmer_id), previous_at)
+                if completed_since > 0 or created_since > 0:
+                    lines.append(get_message("daily_summary_tasks_changed", language_code, completed=completed_since, created=created_since))
+
         profile.last_daily_summary_snapshot = current_snapshot
         profile.last_daily_summary_at = datetime.now(timezone.utc)
         db.commit()
@@ -200,7 +261,7 @@ def get_daily_summary(
     return DailySummaryResponse(language_code=language_code, lines=lines, generated_at=datetime.now(timezone.utc))
 
 
-def _build_daily_summary_snapshot(*, weather, crop, disease, risk, finance, harvest, offers, delivery, case, overdue_count: int) -> dict:
+def _build_daily_summary_snapshot(*, weather, crop, disease, risk, finance, harvest, offers, delivery, case, overdue_count: int, order: dict) -> dict:
     """JSON-safe raw facts only - never the rendered/localized line text,
     so a farmer switching language never registers as a spurious change."""
     return {
@@ -215,7 +276,13 @@ def _build_daily_summary_snapshot(*, weather, crop, disease, risk, finance, harv
         "offer_count": offers.get("offer_count") if offers.get("available") else None,
         "delivery_status": delivery.get("status") if delivery.get("available") else None,
         "case_status": case.get("status") if case.get("available") else None,
+        # D94-06 (docs/audit/FINAL_CANONICAL_group_D.md): distinct from
+        # case_status above - a case can stay "in_review" across two
+        # visits while still gaining a NEW review outcome in between.
+        "case_review_outcome": case.get("review_outcome") if case.get("available") else None,
         "overdue_count": overdue_count,
+        # D94-07: order/payment status, pulled only for this comparison.
+        "order_status": order.get("status") if order.get("available") else None,
     }
 
 

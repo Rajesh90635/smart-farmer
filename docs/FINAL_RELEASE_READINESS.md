@@ -4,19 +4,28 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 `docs/FINAL_CROSS_MODULE_WORKFLOW_REPORT.md`, and `docs/FINAL_GAP_REPORT.md` into a single
 release-readiness view.
 
-**Updated this later continuation session** (a dedicated Partial-functionality-completion
-pass, per the "SMART FARMER V3 PARTIAL FUNCTIONALITY COMPLETION" prompt) — see
+**Updated this later continuation session** (Missing Backlog Batch 1 - a credit-efficient
+prioritization pass across all 215 Missing scenarios, followed by implementing exactly the
+17 approved Batch 1 items, per the "SMART FARMER V3 MISSING BACKLOG" prompts) — see
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" for the current authoritative status
-totals (798 total: 417 Verified, 73 Implemented, 21 Partial, 215 Missing, 0 Broken, 38
-Future, 26 Out of Scope, 8 Environment Dependent; 236 current-scope items remain, down from
-312 at the start of this session, 391 two sessions ago). This session completed or honestly
-reclassified every genuine Partial scenario across all four `FINAL_CANONICAL_group_*.md`
-files (Partial 97→21, Verified 351→417) — see each group file's own batch note for the
-full per-scenario breakdown; the 21 that remain Partial each carry an individually-verified,
-non-fabricated reason (blocked on a still-Missing dependency, a real architecture change,
-an unavailable external service, or no authoritative source to draw from) rather than being
-force-closed. The 233/215 Missing scenarios were explicitly NOT started this session, per
-the prompt's own scope boundary. Prior sessions' work spans: all of P0; the P1
+totals (798 total: 434 Verified, 73 Implemented, 21 Partial, 198 Missing, 0 Broken, 38
+Future, 26 Out of Scope, 8 Environment Dependent; 219 current-scope items remain, down from
+236 at the start of this pass, 312 before the prior Partial-completion pass, 391 three
+sessions ago). This pass implemented 16 of the 17 approved Batch 1 scenarios (all in Group
+D: D89-01, D81-01, D93-05, D94-01/02/03/04/06/07, D95-05/06/08, D96-02/07, D98-04/05) plus
+1 zero-code bonus (D89-02, found already satisfied); 1 approved item (D95-07) was
+investigated and correctly left genuinely Missing rather than force-closed, since it shares
+Partial row D88-06's exact "no crop-linked reference price" blocker. Batches 2-4 (partial
+payments, new-domain foundations needing a product decision, and external/licensed-data/
+hardware-dependent items) are explicitly deferred, per the prioritization plan's own
+scope boundary - not started this pass. An earlier continuation session completed or
+honestly reclassified every genuine Partial scenario across all four
+`FINAL_CANONICAL_group_*.md` files (Partial 97→21, Verified 351→417) — see each group
+file's own batch note for the full per-scenario breakdown; the 21 that remain Partial each
+carry an individually-verified, non-fabricated reason (blocked on a still-Missing
+dependency, a real architecture change, an unavailable external service, or no
+authoritative source to draw from) rather than being force-closed. Prior sessions' work
+spans: all of P0; the P1
 task-management cluster; D1-19 account deactivation; the crop-failure reason taxonomy;
 crop-stage additions; the weather-risk safety-detection cluster; irrigation/soil data
 quality; the entire Soil Testing domain foundation; cluster #7 re-verification; the

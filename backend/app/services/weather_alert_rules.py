@@ -26,6 +26,10 @@ from app.services.weather.weather_provider import WeatherReading
 # crop_risk_service.RULE_VERSION's existing pattern.
 RULE_VERSION = "weather_alert_rules_v1"
 
+# D89-01: a stable identifier for this rule module, independent of
+# RULE_VERSION.
+RULE_ID = "weather_alert_rules"
+
 
 @dataclass(frozen=True)
 class AlertCandidate:

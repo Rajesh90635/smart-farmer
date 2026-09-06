@@ -5,7 +5,7 @@ Task.farmer_id == farmer_id, resolved from the authenticated session -
 never trusted from a client-supplied id.
 """
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -67,6 +67,22 @@ def list_overdue_for_farmer(db: Session, farmer_id: uuid.UUID, *, today: date) -
             select(Task).where(Task.farmer_id == farmer_id, Task.status == TaskStatus.PENDING, Task.due_date.is_not(None), Task.due_date < today)
         ).scalars().all()
     )
+
+
+def count_completed_since(db: Session, farmer_id: uuid.UUID, since: datetime) -> int:
+    """D94-04 (docs/audit/FINAL_CANONICAL_group_D.md): real completed-task
+    count since a specific point in time, for the daily brief's "what
+    changed" task-delta line."""
+    return db.execute(
+        select(func.count()).select_from(Task).where(Task.farmer_id == farmer_id, Task.completed_at.is_not(None), Task.completed_at > since)
+    ).scalar_one()
+
+
+def count_created_since(db: Session, farmer_id: uuid.UUID, since: datetime) -> int:
+    """D94-04: real new-task count since a specific point in time."""
+    return db.execute(
+        select(func.count()).select_from(Task).where(Task.farmer_id == farmer_id, Task.created_at > since)
+    ).scalar_one()
 
 
 def list_overdue_unalerted(db: Session, *, today: date) -> list[Task]:

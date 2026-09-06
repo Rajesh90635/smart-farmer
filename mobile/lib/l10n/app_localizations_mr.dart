@@ -2158,6 +2158,10 @@ class AppLocalizationsMr extends AppLocalizations {
       'तुमचे सत्र संपले आहे. कृपया पुन्हा लॉग इन करा.';
 
   @override
+  String get errorQueuedForSync =>
+      'तुम्ही ऑफलाइन आहात. आम्ही हे जतन करू आणि नंतर सिंक करू.';
+
+  @override
   String get errorRateLimited =>
       'खूप वेळा प्रयत्न झाले. कृपया काही मिनिटे थांबून पुन्हा प्रयत्न करा.';
 

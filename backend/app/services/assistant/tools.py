@@ -240,6 +240,27 @@ def get_expert_case_status(db: Session, farmer_id: str) -> dict:
     }
 
 
+def get_irrigation_status(db: Session, farmer_id: str, weather_provider: WeatherProvider, settings: Settings) -> dict:
+    """D93-05 (docs/audit/FINAL_CANONICAL_group_D.md): wraps the existing
+    irrigation_intelligence_service.py (Phase 38.4) - no new irrigation
+    logic, no second weather engine."""
+    from app.services import irrigation_intelligence_service
+
+    crop = get_crop_status(db, farmer_id)
+    if not crop.get("available"):
+        return {"available": False, "source": "Irrigation intelligence"}
+
+    result = irrigation_intelligence_service.get_irrigation_intelligence(
+        db, farmer_id, uuid.UUID(crop["crop_cycle_id"]), weather_provider, settings
+    )
+    return {
+        "available": True,
+        "source": "Irrigation intelligence (Phase 38.4)",
+        "recommendation": result.recommendation,
+        "reason": result.reason,
+    }
+
+
 def get_seed_products(db: Session, *, query: str | None = None) -> dict:
     from app.models.product import ProductCategory, ProductStatus
 

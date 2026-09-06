@@ -4144,6 +4144,12 @@ abstract class AppLocalizations {
   /// **'Your session has ended. Please log in again.'**
   String get errorSessionExpired;
 
+  /// No description provided for @errorQueuedForSync.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline - this will be saved automatically once you\'re back online.'**
+  String get errorQueuedForSync;
+
   /// No description provided for @errorRateLimited.
   ///
   /// In en, this message translates to:

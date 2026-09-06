@@ -24,7 +24,9 @@ from app.core import error_codes
 from app.core.errors import AppError
 from app.models.ai_analysis import ResultStatus
 from app.models.crop_health_case import CaseStatus
-from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, task_repository
+from app.models.harvest_record import HarvestStatus
+from app.models.sale_order import SaleOrderStatus
+from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, harvest_repository, sale_order_repository, task_repository
 from app.schemas.crop_risk import CropRiskScoreResponse, RiskFactor
 from app.services import crop_financial_service, task_service
 
@@ -33,6 +35,10 @@ from app.services import crop_financial_service, task_service
 # after the rule itself evolves - never silently reinterpreted under an
 # unversioned "current" rule.
 RULE_VERSION = "crop_risk_v1"
+
+# D89-01: a stable identifier for this rule module, independent of
+# RULE_VERSION.
+RULE_ID = "crop_risk_service"
 
 
 def get_risk_score(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, *, weather_provider=None, settings=None) -> CropRiskScoreResponse:
@@ -48,9 +54,12 @@ def get_risk_score(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, *, wea
         _operational_task_factor(db, crop_cycle_id, farmer_uuid),
         _financial_factor(db, farmer_id, crop_cycle_id),
         _treatment_response_factor(),
+        _harvest_timing_factor(db, crop_cycle_id),
+        _payment_delay_factor(db, crop_cycle_id, farmer_uuid),
     ]
     if weather_provider is not None and settings is not None:
         factors.append(_weather_factor(db, farmer_id, crop_cycle, weather_provider, settings))
+        factors.append(_irrigation_factor(db, farmer_id, crop_cycle_id, weather_provider, settings))
 
     overall = _aggregate(factors)
     recommendation = _build_recommendation(factors, overall)
@@ -197,6 +206,81 @@ def _weather_factor(db: Session, farmer_id: str, crop_cycle, weather_provider, s
     return RiskFactor(
         factor_name="Current Weather Risk", source="Weather service", value="low",
         explanation="Current weather conditions do not trigger any known alert.",
+    )
+
+
+def _harvest_timing_factor(db: Session, crop_cycle_id: uuid.UUID) -> RiskFactor:
+    """D95-06 (docs/audit/FINAL_CANONICAL_group_D.md): reuses the existing
+    HarvestRecord.status transitions (the same signal behind the
+    HARVEST_APPROACHING/HARVEST_READY notifications, D47-05) - no new
+    date math, no new logic."""
+    harvest = harvest_repository.get_most_recent_harvest_by_crop_cycle(db, crop_cycle_id)
+    if harvest is None:
+        return RiskFactor(
+            factor_name="Harvest Timing Risk", source="Harvest record", value="unknown",
+            explanation="No harvest record exists yet for this crop.",
+        )
+    if harvest.status == HarvestStatus.READY:
+        return RiskFactor(
+            factor_name="Harvest Timing Risk", source="Harvest record", value="high",
+            explanation="This crop is ready for harvest - delaying may risk quality or yield loss.",
+        )
+    if harvest.status == HarvestStatus.APPROACHING:
+        return RiskFactor(
+            factor_name="Harvest Timing Risk", source="Harvest record", value="medium",
+            explanation="This crop's harvest window is approaching.",
+        )
+    return RiskFactor(
+        factor_name="Harvest Timing Risk", source="Harvest record", value="low",
+        explanation="No immediate harvest-timing risk for this crop.",
+    )
+
+
+def _payment_delay_factor(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) -> RiskFactor:
+    """D95-08: reuses the existing SaleOrder status chain - a sale for
+    this crop still awaiting payment or under dispute is a real,
+    non-fabricated financial risk signal."""
+    sales = sale_order_repository.list_committed_but_not_completed_sales_for_crop_cycle(db, crop_cycle_id, farmer_id)
+    if not sales:
+        return RiskFactor(
+            factor_name="Payment Delay Risk", source="Sale order records", value="unknown",
+            explanation="No committed sale exists yet for this crop.",
+        )
+    if any(s.status == SaleOrderStatus.DISPUTED for s in sales):
+        return RiskFactor(
+            factor_name="Payment Delay Risk", source="Sale order records", value="high",
+            explanation="A sale for this crop is currently disputed.",
+        )
+    if any(s.status == SaleOrderStatus.PAYMENT_PENDING for s in sales):
+        return RiskFactor(
+            factor_name="Payment Delay Risk", source="Sale order records", value="medium",
+            explanation="A sale for this crop is awaiting payment.",
+        )
+    return RiskFactor(
+        factor_name="Payment Delay Risk", source="Sale order records", value="low",
+        explanation="No sale for this crop is currently awaiting payment.",
+    )
+
+
+def _irrigation_factor(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, weather_provider, settings) -> RiskFactor:
+    """D95-05: reuses irrigation_intelligence_service.py as-is (Dependencies:
+    none). Soil moisture is confirmed absent from this project (always
+    False, see that service's own docstring) - genuine irrigation
+    ADEQUACY can never be honestly assessed without it, so this factor
+    stays UNKNOWN rather than inferring adequacy from weather alone. If
+    soil_moisture_available is ever True in the future, this branches to
+    a real value using that real data - not fabricated in advance."""
+    from app.services import irrigation_intelligence_service
+
+    result = irrigation_intelligence_service.get_irrigation_intelligence(db, farmer_id, crop_cycle_id, weather_provider, settings)
+    if not result.soil_moisture_available:
+        return RiskFactor(
+            factor_name="Water/Irrigation Risk", source="Irrigation intelligence", value="unknown",
+            explanation="Soil moisture data is not available for this crop, so irrigation adequacy cannot be assessed.",
+        )
+    return RiskFactor(  # pragma: no cover - unreachable until a real soil-moisture source exists
+        factor_name="Water/Irrigation Risk", source="Irrigation intelligence", value="unknown",
+        explanation="Soil moisture data was reported but not yet mapped to a risk level.",
     )
 
 

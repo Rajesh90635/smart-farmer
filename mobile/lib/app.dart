@@ -34,6 +34,7 @@ import 'features/notifications/notification_repository.dart';
 import 'features/task/task_repository.dart';
 import 'features/treatment/treatment_repository.dart';
 import 'features/weather_action/weather_action_repository.dart';
+import 'core/offline/pending_write_queue.dart';
 import 'features/crop_photo/network_status_checker.dart';
 import 'features/crop_photo/pending_upload_queue.dart';
 import 'features/crop_photo/sync_coordinator.dart';
@@ -97,6 +98,10 @@ class SmartFarmerApp extends StatelessWidget {
         Provider<VoiceService>(create: (_) => FlutterTtsVoiceService()),
         Provider<NetworkStatusChecker>(create: (_) => NetworkStatusChecker()),
         ChangeNotifierProvider<PendingUploadQueue>(create: (_) => PendingUploadQueue()),
+        // D81-01 (docs/audit/FINAL_CANONICAL_group_D.md): the generic
+        // offline write queue - registered the same way as
+        // PendingUploadQueue above, for the same "reachable later" reason.
+        ChangeNotifierProvider<PendingWriteQueue>(create: (_) => PendingWriteQueue()),
         // Registered here (not constructed ad hoc in initializeOfflineSync)
         // so it's reachable later for a manual retry - see sync_coordinator.dart.
         Provider<SyncCoordinator>(
@@ -104,6 +109,8 @@ class SmartFarmerApp extends StatelessWidget {
             queue: context.read<PendingUploadQueue>(),
             networkChecker: context.read<NetworkStatusChecker>(),
             repository: context.read<CropPhotoRepository>(),
+            writeQueue: context.read<PendingWriteQueue>(),
+            apiClient: apiClient,
           ),
         ),
         ChangeNotifierProvider<AuthState>(create: (_) => AuthState(repository: authRepository)),

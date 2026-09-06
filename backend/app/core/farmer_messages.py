@@ -180,6 +180,15 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         "ml": "ചെലവുകൾ: ഈ വിളയ്ക്കായി നിങ്ങൾ ഇതുവരെ {actual_cost} ചെലവഴിച്ചു.",
         "mr": "खर्च: या पिकावर तुम्ही आतापर्यंत {actual_cost} खर्च केले आहेत.",
     },
+    "daily_summary_irrigation": {
+        "en": "Irrigation: {reason}",
+        "hi": "सिंचाई: {reason}",
+        "te": "నీటిపారుదల: {reason}",
+        "ta": "பாசனம்: {reason}",
+        "kn": "ನೀರಾವರಿ: {reason}",
+        "ml": "ജലസേചനം: {reason}",
+        "mr": "सिंचन: {reason}",
+    },
     "daily_summary_harvest": {
         "en": "Harvest: currently {status}.",
         "hi": "कटाई: वर्तमान स्थिति {status}।",
@@ -246,6 +255,30 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         "kn": "ನಿಮ್ಮ ಕೊನೆಯ ಭೇಟಿಯ ನಂತರ: ಮೇಲಿನ {count} ಅಪ್‌ಡೇಟ್‌ಗಳು ಬದಲಾಗಿವೆ.",
         "ml": "നിങ്ങളുടെ അവസാന സന്ദർശനത്തിന് ശേഷം: മുകളിലുള്ള {count} അപ്ഡേറ്റുകൾ മാറിയിട്ടുണ്ട്.",
         "mr": "तुमच्या शेवटच्या भेटीपासून: वरील {count} अपडेट्स बदलले आहेत.",
+    },
+    # D94-01/02/03/04/06/07 (docs/audit/FINAL_CANONICAL_group_D.md): each
+    # extends D94-08's existing snapshot-diff mechanism with one specific,
+    # named change - never a re-derivation of the aggregate count above.
+    # English-only pending native-speaker review, same posture as this
+    # file's weather-alert keys (not the fully-translated daily_summary_*
+    # family) - this is new farmer-facing content, not yet reviewed.
+    "daily_summary_weather_changed": {
+        "en": "Weather has changed since your last visit: now {temp}°C with a {rain}% chance of rain.",
+    },
+    "daily_summary_stage_changed": {
+        "en": "Your crop's stage has changed to {stage} since your last visit.",
+    },
+    "daily_summary_risk_changed": {
+        "en": "Your crop's risk level has changed to {level} since your last visit.",
+    },
+    "daily_summary_tasks_changed": {
+        "en": "{completed} task(s) completed and {created} new task(s) added since your last visit.",
+    },
+    "daily_summary_expert_responded": {
+        "en": "An expert has responded to your case since your last visit.",
+    },
+    "daily_summary_payment_changed": {
+        "en": "Your order status has changed to {status} since your last visit.",
     },
 }
 

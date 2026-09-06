@@ -2155,6 +2155,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session has ended. Please log in again.';
 
   @override
+  String get errorQueuedForSync =>
+      'You\'re offline - this will be saved automatically once you\'re back online.';
+
+  @override
   String get errorRateLimited =>
       'Too many attempts. Please wait a few minutes and try again.';
 

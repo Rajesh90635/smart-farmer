@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/offline/pending_write_queue.dart';
 import 'crop_photo_repository.dart';
 import 'network_status_checker.dart';
 import 'pending_upload_queue.dart';
@@ -24,15 +25,26 @@ class SyncCoordinator {
   final PendingUploadQueue _queue;
   final NetworkStatusChecker _networkChecker;
   final CropPhotoRepository _repository;
+  // D81-01 (docs/audit/FINAL_CANONICAL_group_D.md): optional - only farm
+  // create/edit routes through this today (see farm_repository.dart);
+  // future D81-02..07/09 entities reuse this SAME drain loop, no second
+  // coordinator. Omitting both (the default) preserves this class's
+  // exact prior photo-only behavior for any existing caller/test.
+  final PendingWriteQueue? _writeQueue;
+  final ApiClient? _apiClient;
   bool _syncing = false;
 
   SyncCoordinator({
     required PendingUploadQueue queue,
     required NetworkStatusChecker networkChecker,
     required CropPhotoRepository repository,
+    PendingWriteQueue? writeQueue,
+    ApiClient? apiClient,
   })  : _queue = queue,
         _networkChecker = networkChecker,
-        _repository = repository;
+        _repository = repository,
+        _writeQueue = writeQueue,
+        _apiClient = apiClient;
 
   /// Call once at app startup, after PendingUploadQueue.loadFromDisk().
   void start() {
@@ -58,8 +70,58 @@ class SyncCoordinator {
       for (final pending in toRetry) {
         await _attemptUpload(pending);
       }
+
+      final writeQueue = _writeQueue;
+      final apiClient = _apiClient;
+      if (writeQueue != null && apiClient != null) {
+        final toRetryWrites = List.of(writeQueue.retryable);
+        for (final write in toRetryWrites) {
+          await _attemptWrite(writeQueue, apiClient, write);
+        }
+      }
     } finally {
       _syncing = false;
+    }
+  }
+
+  /// D81-01: generic dispatch for any queued write - same idempotency
+  /// (clientRequestId), 401-terminal-state, and retry-exhaustion
+  /// semantics as _attemptUpload below, generalized past photo uploads.
+  Future<void> _attemptWrite(PendingWriteQueue writeQueue, ApiClient apiClient, PendingWrite write) async {
+    await writeQueue.updateStatus(write.clientRequestId, PendingWriteStatus.sending);
+    try {
+      if (write.method == 'PUT') {
+        await apiClient.put(write.path, body: write.body);
+      } else {
+        await apiClient.post(write.path, body: write.body);
+      }
+      await writeQueue.updateStatus(write.clientRequestId, PendingWriteStatus.sent);
+      await writeQueue.remove(write.clientRequestId);
+    } on SessionExpiredException {
+      await writeQueue.updateStatus(
+        write.clientRequestId, PendingWriteStatus.authenticationRequired,
+        errorMessage: 'Please log in again to finish this update.',
+      );
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        await writeQueue.updateStatus(
+          write.clientRequestId, PendingWriteStatus.authenticationRequired,
+          errorMessage: 'Please log in again to finish this update.',
+        );
+      } else {
+        await _recordWriteFailureAndMaybeExhaust(writeQueue, write, e.toString());
+      }
+    } catch (e) {
+      await _recordWriteFailureAndMaybeExhaust(writeQueue, write, e.toString());
+    }
+  }
+
+  Future<void> _recordWriteFailureAndMaybeExhaust(PendingWriteQueue writeQueue, PendingWrite write, String errorMessage) async {
+    write.retryCount += 1;
+    if (write.retryCount >= kMaxAutomaticWriteRetries) {
+      await writeQueue.updateStatus(write.clientRequestId, PendingWriteStatus.retriesExhausted, errorMessage: errorMessage);
+    } else {
+      await writeQueue.updateStatus(write.clientRequestId, PendingWriteStatus.failed, errorMessage: errorMessage);
     }
   }
 
@@ -144,5 +206,9 @@ class SyncCoordinator {
 Future<void> initializeOfflineSync(BuildContext context) async {
   final queue = context.read<PendingUploadQueue>();
   await queue.loadFromDisk();
+  // D81-01 (docs/audit/FINAL_CANONICAL_group_D.md): same startup-load
+  // requirement as PendingUploadQueue above - a farm queued offline
+  // before the app was last closed must not be silently lost.
+  await context.read<PendingWriteQueue>().loadFromDisk();
   context.read<SyncCoordinator>().start();
 }

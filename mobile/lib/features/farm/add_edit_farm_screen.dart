@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
 import '../../core/nominatim_reverse_geocoder.dart';
+import '../../core/offline/pending_write_queue.dart';
 import '../../l10n/app_localizations.dart';
+import '../crop_photo/network_status_checker.dart';
 import 'farm_models.dart';
 import 'farm_repository.dart';
 import 'location_models.dart';
@@ -309,6 +311,10 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
           areaUnit: _areaUnit,
         );
       } else {
+        // D81-01 (docs/audit/FINAL_CANONICAL_group_D.md): passing both
+        // params opts this call into offline queueing when the device is
+        // offline - omitting them elsewhere in this app preserves the
+        // always-online behavior unchanged.
         await repo.createFarm(
           farmName: _nameController.text.trim(),
           areaValue: areaValue,
@@ -319,12 +325,21 @@ class _AddEditFarmScreenState extends State<AddEditFarmScreen> {
           districtId: _selectedDistrictId,
           mandalId: _selectedMandalId,
           villageId: _selectedVillageId,
+          networkChecker: context.read<NetworkStatusChecker>(),
+          writeQueue: context.read<PendingWriteQueue>(),
         );
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_isEditing ? l10n.addEditFarmUpdatedMessage : l10n.addEditFarmAddedMessage)),
       );
+      Navigator.of(context).pop(true);
+    } on QueuedForSyncException catch (e) {
+      // Not a failure - the farm was saved locally and will be created
+      // automatically once back online; still worth returning to the
+      // list (there is no farm id yet to stay on this screen for).
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
