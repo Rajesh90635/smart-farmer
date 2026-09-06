@@ -131,6 +131,28 @@ def test_create_listing(client, farmer_with_crop_cycle):
     assert harvest_after["items"][0]["status"] == "listed"
 
 
+def test_create_listing_records_sorting_declaration(client, farmer_with_crop_cycle):
+    """D52-01 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
+    only, defaults to not-sorted when omitted."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    default_response = client.post(
+        f"/api/v1/harvests/{harvest['id']}/listing", json=valid_harvest_listing_payload(), headers=auth_headers(tokens)
+    )
+    assert default_response.json()["is_sorted"] is False
+    assert default_response.json()["sorting_notes"] is None
+
+    harvest2 = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}/new-harvest", headers=auth_headers(tokens)).json()
+    sorted_response = client.post(
+        f"/api/v1/harvests/{harvest2['id']}/listing",
+        json=valid_harvest_listing_payload(is_sorted=True, sorting_notes="Removed bruised and undersized produce"),
+        headers=auth_headers(tokens),
+    )
+    assert sorted_response.json()["is_sorted"] is True
+    assert sorted_response.json()["sorting_notes"] == "Removed bruised and undersized produce"
+
+
 def test_duplicate_active_listing_is_warned_not_silently_created(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()

@@ -44,6 +44,11 @@ class HarvestListing(Base):
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # D52-01 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared only -
+    # never inferred/verified by this system, same honesty convention as
+    # quality_grade.
+    is_sorted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sorting_notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(

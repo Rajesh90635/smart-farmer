@@ -52,6 +52,9 @@ class HarvestListingCreateRequest(BaseModel):
     delivery_option: CollectionOption
     notes: str | None = Field(default=None, max_length=1000)
     confirm_duplicate: bool = False  # set true to proceed despite an existing active listing warning
+    # D52-01 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared only.
+    is_sorted: bool = False
+    sorting_notes: str | None = Field(default=None, max_length=500)
 
 
 class HarvestListingResponse(BaseModel):
@@ -66,6 +69,8 @@ class HarvestListingResponse(BaseModel):
     preferred_price: Decimal | None
     delivery_option: CollectionOption
     is_active: bool
+    is_sorted: bool
+    sorting_notes: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -219,6 +219,8 @@ def create_listing(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: 
         preferred_price=payload.preferred_price,
         delivery_option=payload.delivery_option,
         notes=payload.notes,
+        is_sorted=payload.is_sorted,
+        sorting_notes=payload.sorting_notes,
     )
     harvest_repository.create_listing(db, listing)
     harvest.status = HarvestStatus.LISTED
