@@ -1,9 +1,92 @@
 # Final Gap Report
 
 Reconciles against `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`. Full per-row evidence is in
-`docs/audit/c01_foundation.md` through `c13_governance_farmbrain_security.md`.
+`docs/audit/c01_foundation.md` through `c13_governance_farmbrain_security.md`, superseded
+row-by-row by `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md` (the current authoritative
+source — see the frozen counts below).
 
-## Category counts (reconciles to 798)
+## FROZEN CANONICAL COUNTS (authoritative — supersedes every count below and in
+## `FINAL_100_DOMAIN_SCENARIO_MATRIX.md`/`FINAL_RELEASE_READINESS.md`/`FINAL_IMPLEMENTATION_PLAN.md`)
+
+Independently re-counted this session directly from the four `FINAL_CANONICAL_group_*.md`
+files (not taken on faith from any prior summary table), after resolving every flagged
+inconsistency:
+
+| Category | Count |
+|---|---:|
+| Verified | 323 |
+| Implemented | 73 |
+| **Attended (Verified + Implemented)** | **396** |
+| Partial | 108 |
+| Missing | 233 |
+| Broken | 0 |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **341** |
+| Future | 30 |
+| Out of Scope | 25 |
+| Environment Dependent | 6 |
+| **TOTAL** | **798** |
+
+(Verified rose from 278→323 and Missing fell from 273→233 this session, across: the P0 fix
+batch (D6-07/D11-05/D68-02 PARTIAL→VERIFIED); the P1 task-management cluster (D9-03/05/
+06/09/10/12/16, D37-04, D78-01 → VERIFIED; D37-03 → PARTIAL); D1-19 (account
+deactivation); the crop-failure reason taxonomy (D10-04/05/06/07); the crop-stage
+additions (D7-01/D7-03 VERIFIED, D7-07 OUT_OF_SCOPE — hence Out of Scope 24→25); the
+weather-risk safety-detection cluster (D15-04 frost, D15-08/D17-04 flood/waterlogging,
+D15-09/D17-05 drought, D75-01/D75-02 disaster-tagged duplicates — this batch also caught
+and fixed a genuine production timezone bug, see D15-09's entry); the irrigation/soil
+data-quality cluster (D3-08/D3-09/D17-01/D24-04 VERIFIED, D18-06/D18-08 new
+`IrrigationRecord` model VERIFIED); and the Soil Testing domain foundation (D20-01 through
+D20-12 VERIFIED — an entirely new domain built from zero code; D19-05 VERIFIED; D19-03
+reclassified FUTURE, hence Future 29→30). See `docs/FINAL_IMPLEMENTATION_PLAN.md`'s
+Summary counts section for the itemized before/after of each.)
+
+Reconciliation applied this session (see each canonical group file's own "Reconciliation
+deltas applied" table for full citations):
+
+- **D9-03** (Reminder): FUTURE → MISSING. The FUTURE citation's premise ("no background
+  scheduler exists") is now false — `scheduler.py` (APScheduler) exists with 3 registered
+  jobs. Merged into the Task-overdue-reminder cluster with D9-16/D78-01/D37-04.
+- **D9-14** (Dependent task): removed as a row — verbatim duplicate of D8-07 ("Task
+  dependencies"), already VERIFIED. Folding it rather than double-counting one finished
+  feature is why the total moved from 799 to 798.
+- **D9-11** (Rejection): stays OUT_OF_SCOPE, but the "questionable inferential absence"
+  flag is resolved — independently re-verified by grep that `task.py` has zero
+  assignee/reviewer/Role concept anywhere, consistent with the task domain's uniform
+  farmer-owned-only design, not merely "hard to build."
+- **D35-06** (Case SLA timeout): confirmed already correctly VERIFIED —
+  `case_sla_service.py::_expire_reassign_or_escalate` implements timeout/reassignment/
+  escalation, covered by `tests/test_case_sla_service.py`. No code change; no matrix change.
+- **D97-12** (new finding, closed-season task-creation guard): BROKEN → VERIFIED. Fixed in
+  `task_service.py::create_task` (added the same `_TERMINAL_CULTIVATION_STATUSES` guard its
+  siblings `complete_task`/`cancel_all_pending_for_crop_cycle` already had) and covered by
+  2 new tests in `test_tasks.py`.
+- **D78-07** (Payment notification): MISSING → VERIFIED. `payment_service._notify_payment_failed`
+  already fired the required notification; added `test_payments.py::test_payment_failure_notifies_the_farmer`
+  to close the "code exists, no test" gap.
+- **D78-09** (Stock notification): MISSING → VERIFIED. `input_inventory_service._check_low_stock`
+  already fired the required notification, already covered by an existing passing test
+  (`test_low_stock_alert_fires_once_then_stays_quiet_until_restocked`) — no code or test
+  change needed, only the status label was stale.
+- **D6-07 / D11-05** (Multiple cycles / Old cycle closure, the identical underlying gap):
+  PARTIAL → VERIFIED. Added `crop_cycle_repository.count_active_for_plot` and a guard in
+  `create_crop_cycle` rejecting a second non-terminal `CropCycle` on one plot (409),
+  ordered after the resowing-specific validation so a legitimate re-sow's own 422 still
+  fires first. 2 new tests in `test_crop_cycles.py`.
+- **D68-02** (Adjustment architecture / refund bounds): PARTIAL → VERIFIED.
+  `dispute_service.resolve_dispute` now rejects a non-positive `refund_amount` or one
+  exceeding `order.final_amount`. 1 new test in `test_orders.py`.
+- **D100-14** (Rate limiting): re-verified PARTIAL, no code change needed. Direct re-read
+  found `InMemoryRateLimiter` already wired into login/OTP-request/reset-password **and**
+  photo upload (each with a passing test) — the specific gap this row's citation named was
+  already closed by an earlier, undocumented pass. The genuinely remaining gap (global ASGI
+  middleware, Redis-backed multi-instance safety) needs infra this project doesn't have.
+
+The per-category counts and per-row citations immediately below (the pre-existing "798"
+table and the 9-row resolution table) are the state **before** this session's
+reconciliation pass and are kept for history/traceability only — do not treat them as
+current. The FROZEN CANONICAL COUNTS table above is the one authoritative number set.
+
+## Category counts (historical — see FROZEN CANONICAL COUNTS above for the current numbers)
 
 | Category | Count | Details |
 |---|---:|---|
@@ -17,12 +100,6 @@ Reconciles against `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`. Full per-row evid
 | Out of Scope | 25 | Requires a real external business/legal/regulated relationship this project structurally never fabricates |
 | Environment Dependent | 6 | Code correct/complete; real-world behavior depends on something this dev machine/session lacks |
 | **TOTAL** | **798** | |
-
-**Stale pending reconciliation:** the 9-row resolution below (7 IMPLEMENTED, 2 reclassified
-FUTURE) moves rows out of the 284 MISSING count into Implemented/Future, and D89-08 out of
-the 113 PARTIAL count. The table above is left as last independently verified rather than
-hand-adjusted here, to avoid guessing a new total without re-running the full 798-row
-reconciliation this session did not repeat.
 
 ## Zero-BROKEN verification (this session's direct contribution)
 

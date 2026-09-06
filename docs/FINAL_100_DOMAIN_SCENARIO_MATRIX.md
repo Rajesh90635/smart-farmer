@@ -115,6 +115,12 @@ were the ones that were flaky) but does not change any bucket.
 
 ## Reconciled final totals
 
+**SUPERSEDED.** This table predates a later, more granular reconciliation pass done
+directly against the per-scenario `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md` files
+(which this table's own totals don't quite match — see `docs/FINAL_GAP_REPORT.md`'s
+"FROZEN CANONICAL COUNTS" section, verified this session by independently re-counting
+every row in all four group files). Kept below for history only:
+
 | Status | Baseline | Delta | Final |
 |---|---:|---:|---:|
 | VERIFIED | 223 | +48 | **271** |
@@ -126,6 +132,13 @@ were the ones that were flaky) but does not change any bucket.
 | OUT_OF_SCOPE | 25 | 0 | **25** |
 | ENVIRONMENT_DEPENDENT | 6 | 0 | **6** |
 | **TOTAL** | **798** | **0** | **798** |
+
+**Current authoritative numbers (see `docs/FINAL_GAP_REPORT.md`):** VERIFIED 278,
+IMPLEMENTED 73, PARTIAL 115, MISSING 273, BROKEN 0, FUTURE 29, OUT_OF_SCOPE 24,
+ENVIRONMENT_DEPENDENT 6, TOTAL 798 (798 here is coincidentally the same digit-total as the
+superseded table above, but the underlying row identity differs by one — D9-14 was folded
+into D8-07 as a duplicate, and D97-12, discovered after this table was written, is counted
+in its place).
 
 **Disclosed reconciliation uncertainty (±1 row, inherited, not introduced here):** the
 original audit README itself disclosed that 2-4 rows had compound status text (e.g.
