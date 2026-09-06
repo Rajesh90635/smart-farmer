@@ -15,6 +15,10 @@ class InputInventoryItemCreateRequest(BaseModel):
     unit: str = Field(min_length=1, max_length=20)
     low_stock_threshold: Decimal | None = Field(default=None, ge=0)
     expiry_date: date | None = None
+    # D24-04: independent of created_at/any Order - defaults to today
+    # (the service layer, not this field default, applies that) when the
+    # farmer doesn't specify an earlier acquisition date.
+    acquired_at: date | None = None
 
     @model_validator(mode="after")
     def _require_name_when_no_product(self) -> "InputInventoryItemCreateRequest":
@@ -48,6 +52,7 @@ class InputInventoryItemResponse(BaseModel):
     low_stock_threshold: Decimal | None
     is_low_stock: bool
     expiry_date: date | None
+    acquired_at: date | None
     created_at: datetime
     updated_at: datetime
 

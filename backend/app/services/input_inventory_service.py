@@ -55,6 +55,7 @@ def create_item(db: Session, farmer_id: str, payload: InputInventoryItemCreateRe
         unit=payload.unit,
         low_stock_threshold=payload.low_stock_threshold,
         expiry_date=payload.expiry_date,
+        acquired_at=payload.acquired_at or date.today(),
     )
     input_inventory_repository.create(db, item)
     AuditLogger(db).log("INPUT_INVENTORY_CREATED", actor_id=farmer_id, actor_role="farmer", entity="input_inventory_item", entity_id=str(item.id))
@@ -145,6 +146,7 @@ def _to_response(item: InputInventoryItem, product) -> InputInventoryItemRespons
         low_stock_threshold=item.low_stock_threshold,
         is_low_stock=is_low_stock,
         expiry_date=item.expiry_date,
+        acquired_at=item.acquired_at,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )

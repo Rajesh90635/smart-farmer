@@ -46,6 +46,12 @@ class InputInventoryItem(Base):
     unit: Mapped[str] = mapped_column(String(20), nullable=False)
     low_stock_threshold: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    # D24-04 (docs/audit/FINAL_CANONICAL_group_A.md): when the input was
+    # actually acquired - independent of created_at (when the farmer
+    # RECORDED it in-app, which may be days later for an off-app
+    # purchase) and independent of any Order (this item may never have
+    # gone through an in-app order at all).
+    acquired_at: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     low_stock_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expiry_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

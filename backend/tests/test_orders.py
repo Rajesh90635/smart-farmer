@@ -287,6 +287,31 @@ def test_dispute_and_admin_resolution_with_refund(client, registered_farmer, ver
     assert refund_complete.json()["status"] == "completed"
 
 
+def test_refund_amount_cannot_exceed_the_orders_final_amount(client, registered_farmer, verified_dealer, approved_product, admin_tokens):
+    """D68-02 (docs/audit/FINAL_CANONICAL_group_C.md): an admin refunding
+    more than the farmer ever paid is a real financial-miscalculation/
+    fraud exposure, not just a display concern."""
+    _, farmer_tokens = registered_farmer
+    dealer_tokens, _ = verified_dealer
+    listing = _listing(client, verified_dealer, approved_product)
+    cart = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 1}, headers=auth_headers(farmer_tokens)).json()
+    order = client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/dealer/orders/{order['id']}/accept", headers=auth_headers(dealer_tokens))
+    for status in ["preparing", "ready_for_dispatch", "dispatched", "out_for_delivery", "delivered"]:
+        client.post(f"/api/v1/dealer/orders/{order['id']}/advance?target_status={status}", headers=auth_headers(dealer_tokens))
+    dispute = client.post(f"/api/v1/orders/{order['id']}/dispute", json={"reason": "damaged_product"}, headers=auth_headers(farmer_tokens)).json()
+
+    excessive_amount = str(float(order["final_amount"]) + 100)
+    response = client.post(
+        f"/api/v1/disputes/{dispute['id']}/resolve",
+        json={"status": "resolved", "refund_type": "full_refund", "refund_amount": excessive_amount},
+        headers=auth_headers(admin_tokens),
+    )
+    assert response.status_code == 422
+
+
 def test_admin_can_list_open_disputes_to_discover_what_needs_resolution(client, registered_farmer, verified_dealer, approved_product, admin_tokens):
     """The admin discovery gap: resolve_dispute already existed, but there
     was no way to find a dispute_id to resolve except being told one

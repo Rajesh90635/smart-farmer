@@ -57,6 +57,20 @@ def test_farmer_can_retry_payment_after_a_failure(client, registered_farmer, ver
     assert order_after["status"] == "paid"
 
 
+def test_payment_failure_notifies_the_farmer(client, registered_farmer, verified_dealer, approved_product):
+    """D78-07 (docs/audit/FINAL_CANONICAL_group_D.md): payment_service._notify_payment_failed
+    already fires a PAYMENT_ALERT/PAYMENT_FAILED notification (added for D64-06/D66-04) but no
+    test asserted it - this closes that verification gap."""
+    farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    failed = client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": False}, headers=auth_headers(farmer_tokens))
+    assert failed.json()["status"] == "failed"
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(farmer_tokens)).json()["items"]
+    payment_alerts = [n for n in notifications if n["category"] == "payment_alert"]
+    assert len(payment_alerts) == 1
+
+
 def test_cannot_initiate_a_second_payment_while_one_is_already_pending(client, registered_farmer, verified_dealer, approved_product):
     farmer_tokens, order = _confirmed_order(client, registered_farmer, verified_dealer, approved_product)
     client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))

@@ -33,6 +33,21 @@ def test_create_item_with_custom_name_no_product(client, registered_farmer):
     assert body["custom_name"] == "Urea"
     assert body["quantity"] == "50.00"
     assert body["is_low_stock"] is False
+    assert body["acquired_at"] == date.today().isoformat()
+
+
+def test_input_inventory_item_can_be_created_with_acquired_at_independent_of_an_order(client, registered_farmer):
+    """D24-04 (docs/audit/FINAL_CANONICAL_group_A.md): an off-app
+    purchase (e.g. bought at a local shop) has no Order at all - the
+    farmer must be able to record when it was actually acquired,
+    independent of created_at (when they got around to recording it)."""
+    _, tokens = registered_farmer
+    acquired = (date.today() - timedelta(days=10)).isoformat()
+    response = client.post(
+        "/api/v1/input-inventory", json=_valid_payload(acquired_at=acquired), headers=auth_headers(tokens)
+    )
+    assert response.status_code == 201
+    assert response.json()["acquired_at"] == acquired
 
 
 def test_create_item_linked_to_catalog_product_resolves_product_name(client, registered_farmer, approved_product):

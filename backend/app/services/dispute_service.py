@@ -58,6 +58,22 @@ def resolve_dispute(db: Session, admin_user_id: str, dispute_id: uuid.UUID, payl
     order = order_repository.get_order_by_id_admin(db, dispute.order_id)
 
     if payload.status == DisputeStatus.RESOLVED and payload.refund_type and payload.refund_type != RefundType.NO_REFUND:
+        # D68-02 (docs/audit/FINAL_CANONICAL_group_C.md): refund_amount had
+        # no upper-bound check against what the farmer actually paid - an
+        # admin typo or bad-faith entry could refund more than the order
+        # was ever worth, a real financial-miscalculation/fraud exposure.
+        if payload.refund_amount is not None and payload.refund_amount <= 0:
+            raise AppError(error_codes.VALIDATION_ERROR, "refund_amount must be greater than zero.", 422)
+        if (
+            payload.refund_amount is not None
+            and order is not None
+            and order.final_amount is not None
+            and payload.refund_amount > order.final_amount
+        ):
+            raise AppError(
+                error_codes.VALIDATION_ERROR, "refund_amount cannot exceed the order's final_amount.", 422
+            )
+
         refund = Refund(order_id=dispute.order_id, dispute_id=dispute.id, refund_type=payload.refund_type, amount=payload.refund_amount, reason=payload.resolution_note)
         order_repository.create_refund(db, refund)
         if order is not None:
