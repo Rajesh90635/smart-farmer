@@ -13,6 +13,7 @@ HARD RULES enforced here:
 - All thresholds come from Settings, never a literal buried in a
   conditional.
 """
+import math
 from dataclasses import dataclass
 
 from app.core.config import Settings
@@ -108,6 +109,85 @@ def evaluate_extreme_weather_alerts(current: WeatherReading | None, settings: Se
             )
 
     return candidates
+
+
+def _magnus_dew_point_c(temperature_c: float, humidity_percent: float) -> float | None:
+    """Magnus-formula dew-point approximation - standard meteorological
+    formula, not an invented one. Undefined/meaningless below 0% humidity."""
+    if humidity_percent <= 0:
+        return None
+    a, b = 17.27, 237.7
+    alpha = (a * temperature_c) / (b + temperature_c) + math.log(humidity_percent / 100.0)
+    return (b * alpha) / (a - alpha)
+
+
+def evaluate_frost_risk(current: WeatherReading | None, settings: Settings) -> "AlertCandidate | None":
+    """D15-04 (docs/audit/FINAL_CANONICAL_group_A.md): frost forms when
+    the dew point itself is at/below freezing (regardless of the
+    reported air temperature, which is measured at a height above the
+    colder near-surface layer where frost actually forms) - buildable
+    from already-fetched temperature_c/humidity_percent, no new data."""
+    if current is None or current.temperature_c is None or current.humidity_percent is None:
+        return None
+    dew_point_c = _magnus_dew_point_c(current.temperature_c, current.humidity_percent)
+    if dew_point_c is None or dew_point_c > settings.weather_frost_dewpoint_celsius_threshold:
+        return None
+
+    return AlertCandidate(
+        category=NotificationCategory.WEATHER_ALERT,
+        priority=NotificationPriority.HIGH,
+        message_key="frost_risk_alert",
+        message_params={"dew_point": round(dew_point_c, 1)},
+        dedup_suffix="frost_risk",
+    )
+
+
+def evaluate_cumulative_rainfall_risk(total_rainfall_mm: float, settings: Settings) -> list["AlertCandidate"]:
+    """D15-08/D17-04/D75-01 (docs/audit/FINAL_CANONICAL_group_{A,D}.md):
+    flood and waterlogging share the same underlying signal (excess
+    cumulative rainfall over a rolling window) at different severity
+    thresholds - a basic buildable increment, not real hydrological/
+    river-level modeling. Caller (weather_alert_orchestration_service.py)
+    computes total_rainfall_mm from weather_snapshots history; this stays
+    a pure function over the already-computed number."""
+    if total_rainfall_mm >= settings.weather_flood_risk_cumulative_rainfall_mm_threshold:
+        return [
+            AlertCandidate(
+                category=NotificationCategory.WEATHER_ALERT,
+                priority=NotificationPriority.HIGH,
+                message_key="flood_risk_alert",
+                message_params={"total_rainfall_mm": round(total_rainfall_mm, 1)},
+                dedup_suffix="flood_risk",
+            )
+        ]
+    if total_rainfall_mm >= settings.weather_waterlogging_risk_cumulative_rainfall_mm_threshold:
+        return [
+            AlertCandidate(
+                category=NotificationCategory.WEATHER_ALERT,
+                priority=NotificationPriority.MEDIUM,
+                message_key="waterlogging_risk_alert",
+                message_params={"total_rainfall_mm": round(total_rainfall_mm, 1)},
+                dedup_suffix="waterlogging_risk",
+            )
+        ]
+    return []
+
+
+def evaluate_consecutive_dry_days_risk(dry_days: int, settings: Settings) -> "AlertCandidate | None":
+    """D15-09/D17-05/D75-02 (docs/audit/FINAL_CANONICAL_group_{A,D}.md):
+    consecutive-dry-days tracking, a basic buildable increment - true
+    soil-moisture-based drought detection needs D18-10's disclosed-absent
+    IoT sensor data and stays out of scope until then. Caller computes
+    dry_days from weather_snapshots history."""
+    if dry_days < settings.weather_drought_risk_consecutive_dry_days_threshold:
+        return None
+    return AlertCandidate(
+        category=NotificationCategory.WEATHER_ALERT,
+        priority=NotificationPriority.MEDIUM,
+        message_key="drought_risk_alert",
+        message_params={"dry_days": dry_days},
+        dedup_suffix="drought_risk",
+    )
 
 
 def evaluate_crop_weather_alert(

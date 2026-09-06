@@ -50,3 +50,21 @@ def get_fresh_forecast(db: Session, farm_id: uuid.UUID) -> list[WeatherSnapshot]
 def save_snapshot(db: Session, snapshot: WeatherSnapshot) -> WeatherSnapshot:
     db.add(snapshot)
     return snapshot
+
+
+def list_current_since(db: Session, farm_id: uuid.UUID, since: datetime) -> list[WeatherSnapshot]:
+    """D15-08/D15-09/D17-04/D17-05 (docs/audit/FINAL_CANONICAL_group_A.md):
+    the cumulative-rainfall/consecutive-dry-days history query - CURRENT
+    snapshots accumulate one row per fetch (never upserted), so this is a
+    real history, not a single latest-value read."""
+    return list(
+        db.execute(
+            select(WeatherSnapshot)
+            .where(
+                WeatherSnapshot.farm_id == farm_id,
+                WeatherSnapshot.snapshot_type == WeatherSnapshotType.CURRENT,
+                WeatherSnapshot.fetched_at >= since,
+            )
+            .order_by(WeatherSnapshot.fetched_at.asc())
+        ).scalars().all()
+    )

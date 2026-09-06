@@ -2,8 +2,11 @@ from app.core.config import get_settings
 from app.core.farmer_messages import get_message
 from app.services.weather.weather_provider import WeatherReading
 from app.services.weather_alert_rules import (
+    evaluate_consecutive_dry_days_risk,
     evaluate_crop_weather_alert,
+    evaluate_cumulative_rainfall_risk,
     evaluate_extreme_weather_alerts,
+    evaluate_frost_risk,
     evaluate_rain_alerts,
     evaluate_spray_condition_warning,
 )
@@ -86,6 +89,56 @@ class TestCropWeatherAlert:
         candidate = evaluate_crop_weather_alert(crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings)
         forbidden = ["pesticide", "spray", "chemical", "dosage", "fungicide"]
         assert not any(term in candidate.message_key.lower() for term in forbidden)
+
+
+class TestFrostRisk:
+    """D15-04: dew point at RH=100% equals the air temperature exactly
+    (by definition of the Magnus formula), so setting temperature_c to
+    the threshold with humidity_percent=100 hits the boundary precisely."""
+
+    def test_frost_detected_below_threshold_dew_point(self):
+        # RH=100% makes dew point equal the air temperature (Magnus
+        # formula) - 1 degree under the threshold to stay clear of
+        # floating-point rounding right at the boundary itself.
+        reading = WeatherReading(temperature_c=settings.weather_frost_dewpoint_celsius_threshold - 1, humidity_percent=100)
+        candidate = evaluate_frost_risk(reading, settings)
+        assert candidate is not None
+        assert candidate.message_key == "frost_risk_alert"
+        assert candidate.priority.value == "high"
+
+    def test_no_frost_risk_in_warm_humid_conditions(self):
+        reading = WeatherReading(temperature_c=30, humidity_percent=100)
+        assert evaluate_frost_risk(reading, settings) is None
+
+    def test_no_data_produces_no_alert(self):
+        assert evaluate_frost_risk(None, settings) is None
+        assert evaluate_frost_risk(WeatherReading(temperature_c=2), settings) is None
+
+
+class TestCumulativeRainfallRisk:
+    def test_no_alert_below_waterlogging_threshold(self):
+        assert evaluate_cumulative_rainfall_risk(10.0, settings) == []
+
+    def test_waterlogging_risk_at_threshold(self):
+        candidates = evaluate_cumulative_rainfall_risk(settings.weather_waterlogging_risk_cumulative_rainfall_mm_threshold, settings)
+        assert candidates[0].message_key == "waterlogging_risk_alert"
+        assert candidates[0].priority.value == "medium"
+
+    def test_flood_risk_at_threshold_takes_priority_over_waterlogging(self):
+        candidates = evaluate_cumulative_rainfall_risk(settings.weather_flood_risk_cumulative_rainfall_mm_threshold, settings)
+        assert len(candidates) == 1
+        assert candidates[0].message_key == "flood_risk_alert"
+        assert candidates[0].priority.value == "high"
+
+
+class TestConsecutiveDryDaysRisk:
+    def test_no_alert_below_threshold(self):
+        assert evaluate_consecutive_dry_days_risk(settings.weather_drought_risk_consecutive_dry_days_threshold - 1, settings) is None
+
+    def test_drought_risk_at_threshold(self):
+        candidate = evaluate_consecutive_dry_days_risk(settings.weather_drought_risk_consecutive_dry_days_threshold, settings)
+        assert candidate is not None
+        assert candidate.message_key == "drought_risk_alert"
 
 
 class TestSprayConditionWarning:
