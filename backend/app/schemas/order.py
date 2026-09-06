@@ -67,6 +67,8 @@ class PaymentInitiateResponse(BaseModel):
     provider: PaymentProvider
     status: PaymentStatus
     amount: Decimal
+    created_at: datetime
+    completed_at: datetime | None
 
     model_config = {"from_attributes": True}
 
@@ -77,7 +79,11 @@ class PaymentInitiateResponse(BaseModel):
         # one response schema's preferred field name.
         if hasattr(obj, "id") and not hasattr(obj, "payment_id"):
             return super().model_validate(
-                {"payment_id": obj.id, "order_id": obj.order_id, "provider": obj.provider, "status": obj.status, "amount": obj.amount}, **kwargs
+                {
+                    "payment_id": obj.id, "order_id": obj.order_id, "provider": obj.provider, "status": obj.status,
+                    "amount": obj.amount, "created_at": obj.created_at, "completed_at": obj.completed_at,
+                },
+                **kwargs,
             )
         return super().model_validate(obj, **kwargs)
 

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, joinedload
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.delivery import Delivery
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.order_dispute import OrderDispute, Refund
-from app.models.payment import Payment
+from app.models.payment import Payment, PaymentStatus
 
 
 def create_order(db: Session, order: Order) -> Order:
@@ -79,6 +80,14 @@ def get_payment(db: Session, payment_id: uuid.UUID) -> Payment | None:
 
 def get_latest_payment_for_order(db: Session, order_id: uuid.UUID) -> Payment | None:
     return db.execute(select(Payment).where(Payment.order_id == order_id).order_by(Payment.created_at.desc()).limit(1)).scalar_one_or_none()
+
+
+def list_stale_pending_payments(db: Session, cutoff: datetime) -> list[Payment]:
+    """D66-03 (docs/audit/FINAL_CANONICAL_group_C.md): Payment is shared
+    across dealer orders (order_id) and marketplace sales (sale_order_id) -
+    this deliberately queries the table itself, not scoped to either, so
+    one sweep covers both payment sources."""
+    return list(db.execute(select(Payment).where(Payment.status == PaymentStatus.PENDING, Payment.created_at < cutoff)).scalars().all())
 
 
 def create_delivery(db: Session, delivery: Delivery) -> Delivery:

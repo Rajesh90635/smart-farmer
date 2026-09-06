@@ -61,6 +61,7 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "INPUT_EXPIRY_WARNING": {"en": "Your {item_name} is expiring on {expiry_date}. Consider using it soon."},
     "HARVEST_APPROACHING": {"en": "Your crop is approaching harvest. Start planning labour, storage, and buyers."},
     "PAYMENT_FAILED": {"en": "A payment of {amount} did not go through. You can retry it from your order."},
+    "PAYMENT_TIMED_OUT": {"en": "A payment of {amount} timed out waiting for confirmation. You can retry it from your order."},
     "SALE_PAYMENT_FAILED": {"en": "The buyer's payment of {amount} for your sale did not go through."},
     "HARVEST_READY": {"en": "Your harvest is confirmed ready. You can now create a marketplace listing."},
     "TASK_OVERDUE": {"en": "Your task '{title}' is overdue."},

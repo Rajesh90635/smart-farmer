@@ -23,6 +23,7 @@ from app.core.weather_provider_dependency import get_weather_provider
 from app.db.session import SessionLocal
 from app.services.case_sla_service import run_case_sla_sweep
 from app.services.input_inventory_service import run_expiry_check_sweep
+from app.services.payment_service import run_payment_timeout_sweep
 from app.services.task_service import run_overdue_task_alert_sweep
 from app.services.weather_alert_orchestration_service import run_proactive_weather_alert_sweep
 
@@ -82,6 +83,18 @@ def _run_task_overdue_alert_sweep_job(settings: Settings) -> None:
         db.close()
 
 
+def _run_payment_timeout_sweep_job(settings: Settings) -> None:
+    db = SessionLocal()
+    try:
+        timed_out = run_payment_timeout_sweep(db, settings)
+        logger.info("payment_timeout_sweep timed_out=%s", timed_out)
+    except Exception:
+        logger.exception("payment_timeout_sweep tick failed - will retry next interval")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
     """Idempotent - calling twice (e.g. lifespan re-entry in tests that
     build the app more than once) never starts a second scheduler."""
@@ -133,13 +146,25 @@ def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
         coalesce=True,
         misfire_grace_time=settings.task_overdue_alert_sweep_interval_seconds,
     )
+    scheduler.add_job(
+        _run_payment_timeout_sweep_job,
+        "interval",
+        seconds=settings.payment_timeout_sweep_interval_seconds,
+        args=[settings],
+        id="payment_timeout_sweep",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=settings.payment_timeout_sweep_interval_seconds,
+    )
     scheduler.start()
     _scheduler = scheduler
     logger.info(
         "Background scheduler started (case_sla_sweep every %ss, input_inventory_expiry_sweep every %ss, "
-        "proactive_weather_alert_sweep every %ss, task_overdue_alert_sweep every %ss)",
+        "proactive_weather_alert_sweep every %ss, task_overdue_alert_sweep every %ss, "
+        "payment_timeout_sweep every %ss)",
         settings.case_sla_sweep_interval_seconds, settings.input_inventory_expiry_sweep_interval_seconds,
         settings.proactive_weather_alert_sweep_interval_seconds, settings.task_overdue_alert_sweep_interval_seconds,
+        settings.payment_timeout_sweep_interval_seconds,
     )
     return scheduler
 

@@ -170,6 +170,12 @@ class Settings(BaseSettings):
     # this project's other threshold settings. ---
     soil_test_max_age_days: int = 730
 
+    # --- Payment timeout sweep (D66-03) - same scheduler; PaymentStatus.TIMEOUT
+    # already existed but nothing ever assigned it, so a payment could sit
+    # PENDING forever with no resolution. ---
+    payment_timeout_minutes: int = 30
+    payment_timeout_sweep_interval_seconds: int = 900
+
     def is_production(self) -> bool:
         return self.environment == "production"
 

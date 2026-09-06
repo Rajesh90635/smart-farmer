@@ -7,16 +7,17 @@ adapter is actually implemented (see
 app/services/payment/payment_gateway_provider.py, D90-10).
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
+from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.order import OrderStatus
 from app.models.payment import Payment, PaymentProvider, PaymentStatus
-from app.repositories import order_repository, user_repository
+from app.repositories import order_repository, sale_order_repository, user_repository
 from app.schemas.order import PaymentCompleteRequest, PaymentInitiateResponse
 from app.services import notification_service
 from app.services.audit_logger import AuditLogger
@@ -108,6 +109,59 @@ def complete_payment(
         _notify_payment_failed(db, farmer_id, payment)
     db.refresh(payment)
     return PaymentInitiateResponse.model_validate(payment)
+
+
+def run_payment_timeout_sweep(db: Session, settings: Settings) -> int:
+    """D66-03 (docs/audit/FINAL_CANONICAL_group_C.md): PaymentStatus.TIMEOUT
+    existed but nothing ever assigned it - a payment could sit PENDING
+    forever with no resolution. Payment is shared across dealer orders
+    (order_id) and marketplace sales (sale_order_id), so this one sweep
+    covers both sources rather than needing two."""
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=settings.payment_timeout_minutes)
+    stale_payments = order_repository.list_stale_pending_payments(db, cutoff)
+
+    timed_out = 0
+    for payment in stale_payments:
+        payment.status = PaymentStatus.TIMEOUT
+        payment.completed_at = datetime.now(timezone.utc)
+
+        farmer_id = _resolve_farmer_id_for_payment(db, payment)
+        AuditLogger(db).log(
+            "PAYMENT_TIMED_OUT", actor_id=None, actor_role="scheduler", entity="payment", entity_id=str(payment.id)
+        )
+        db.commit()
+
+        if farmer_id is not None:
+            _notify_payment_timed_out(db, farmer_id, payment)
+            timed_out += 1
+
+    return timed_out
+
+
+def _resolve_farmer_id_for_payment(db: Session, payment: Payment) -> str | None:
+    if payment.order_id is not None:
+        order = order_repository.get_order_by_id_admin(db, payment.order_id)
+        return str(order.farmer_id) if order is not None else None
+    if payment.sale_order_id is not None:
+        sale = sale_order_repository.get_sale_by_id(db, payment.sale_order_id)
+        return str(sale.farmer_id) if sale is not None else None
+    return None
+
+
+def _notify_payment_timed_out(db: Session, farmer_id: str, payment: Payment) -> None:
+    user = user_repository.get_by_id(db, uuid.UUID(farmer_id))
+    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+    candidate = AlertCandidate(
+        category=NotificationCategory.PAYMENT_ALERT,
+        priority=NotificationPriority.HIGH,
+        message_key="PAYMENT_TIMED_OUT",
+        message_params={"amount": str(payment.amount)},
+        dedup_suffix=f"payment_timed_out:{payment.id}",
+    )
+    notification_service.create_alert_notification(
+        db, farmer_id, candidate, dedup_scope=f"farmer:{farmer_id}", language_code=language_code,
+        related_entity_type="payment", related_entity_id=str(payment.id),
+    )
 
 
 def _notify_payment_failed(db: Session, farmer_id: str, payment: Payment) -> None:
