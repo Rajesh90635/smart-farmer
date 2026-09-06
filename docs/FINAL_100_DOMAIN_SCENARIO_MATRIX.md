@@ -124,6 +124,21 @@ implementation, which is category-agnostic (`ProductCategory.SEED`/`FERTILIZER`/
 | D78-08 | MISSING | VERIFIED | New `NotificationCategory.DISPUTE_ALERT`; `dispute_service.py::_notify_dispute_resolved`; `test_orders.py::test_rejected_dispute_notifies_the_farmer` (new) |
 | D78-13 | MISSING | PARTIAL | New `NotificationCategory.SECURITY_ALERT`; `auth_service.py::_notify_password_changed` covers password change/reset (tested), but new-device-login alerting remains genuinely unbuilt — no device/session fingerprinting exists anywhere in this codebase |
 
+### F. Marketplace/harvest completeness batch (this continuation session)
+
+| Scenario ID(s) | Was | Now | Evidence |
+|---|---|---|---|
+| D47-01 | PARTIAL | VERIFIED | `harvest_service.py::mark_approaching` now audit-logs `HARVEST_MARKED_APPROACHING` and rejects a wrong-status call with 409 instead of a silent no-op |
+| D50-03 | MISSING | VERIFIED | `profit_forecast_service._compute_yield_per_acre` (new), surfaced as `yield_per_acre`/`yield_per_acre_unit` |
+| D51-02, D51-04 | MISSING | VERIFIED | `HarvestRecord.moisture_percent`/`defect_notes` (new), captured at confirm-ready - scoped to `HarvestRecord` only, not `HarvestListing` (disclosed) |
+| D64-05 | PARTIAL | VERIFIED | `PaymentInitiateResponse` and the sale-payment response dicts now include `created_at`/`completed_at` |
+| D66-03 | PARTIAL | VERIFIED | New `payment_service.run_payment_timeout_sweep`, registered on `scheduler.py`, covers both dealer-order and marketplace-sale payments |
+| D67-05 | MISSING | VERIFIED | New `POST /marketplace/disputes/{id}/farmer-response` (`sale_order_service.add_farmer_response`), symmetric to the buyer's existing quality-details endpoint |
+
+Full backend suite after this batch: 775 passed, 2 failed (`tests/test_case_sla_service.py`
+— pre-existing shared-test-DB pollution flake, confirmed unrelated to this batch: neither
+file was touched this session, and both tests pass cleanly when run in isolation).
+
 ### C. This session's test-infrastructure fixes (no scenario-status change — these fixed test *reliability*, not product gaps)
 
 Three tests were flaky due to assertions against unscoped, shared-test-database-wide

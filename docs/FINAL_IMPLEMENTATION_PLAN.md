@@ -2,11 +2,11 @@
 
 Source: `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md`, frozen this session per
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" — see that section for the full
-reconciliation. Authoritative current-scope work remaining: **332** (223 Missing + 109
+reconciliation. Authoritative current-scope work remaining: **325** (219 Missing + 106
 Partial + 0 Broken) — see "Summary counts" at the bottom of this document for the current
 number; the 388 figure below is historical (predates this document's own P0-P4 batch, and
-predates the P1 fixes, cluster #7 re-verification, and notification-wiring batch all
-already applied since).
+predates the P1 fixes, cluster #7 re-verification, notification-wiring batch, and
+marketplace/harvest completeness batch all already applied since).
 
 **Status update this session (P0 batch, before the rest of this plan's own work began):**
 - **D97-12 (BROKEN) — FIXED.** `task_service.py::create_task` now guards against
@@ -270,21 +270,22 @@ D23-06, D24-03, D24-06, D24-07 all VERIFIED via the existing generic, category-a
 empty).
 
 ### Marketplace/harvest core-workflow completeness
+
+**DONE this continuation session** — D47-01 (approaching audit log/409), D64-05 (payment
+date), D66-03 (pending-payment timeout sweep) all VERIFIED (were Partial); D50-03
+(yield/acre), D51-02 (moisture), D51-04 (defects), D67-05 (farmer dispute response) all
+VERIFIED (were Missing). D51-02/D51-04 deliberately scoped to `HarvestRecord` only, not
+`HarvestListing` (disclosed, not a hidden gap). See
+`docs/audit/FINAL_CANONICAL_group_C.md`'s per-row entries. Removed from this table.
+
 | Scenario ID | Domain | Name | Why P1 | Depends on | Size |
 |---|---|---|---|---|---|
-| D47-01 | 47 Harvest Readiness | Harvest approaching (audit log) | Small completeness gap on an already-core, VERIFIED workflow | none | S |
-| D50-03 | 50 Yield | Yield/acre | Small, well-precedented (same pattern as VERIFIED D72-04/05/06) | D50-01 | S |
-| D51-02 | 51 Quality | Moisture | Core harvest-quality capture, farmer-entered only | none | S |
 | D51-03 | 51 Quality | Size (grading) | Cluster #23 (grading engine) | cluster #23 | S |
-| D51-04 | 51 Quality | Defects | Core harvest-quality capture | none | S |
 | D52-01 | 52 Post-Harvest | Sorting | Folds into cluster #23 | cluster #23 | S |
 | D52-02 | 52 Post-Harvest | Grading (engine) | Root of cluster #23 | cluster #23 | M |
 | D55-06 | 55 Transport | Pickup | Core sale-completion state, missing confirmation step | D62-08 | M |
 | D55-07 | 55 Transport | Delivery | Core sale-completion state | D62-08 | M |
 | D59-04 | 59 Buyer Matching | Quality (matching) | Cluster #23 | cluster #23 | S |
-| D64-05 | 64 Payments | Payment date | Small, core payment visibility | none | S |
-| D66-03 | 66 Failed Payments | Pending (timeout sweep) | Payments can sit PENDING forever with no resolution — core payment reliability | none | M |
-| D67-05 | 67 Disputes | Seller/farmer response | Symmetric, small fix mirroring the existing buyer-response endpoint; core dispute-resolution completeness | D67-04 (done) | S |
 
 ### Season closure (cluster: closure-snapshot table)
 | Scenario ID | Domain | Name | Why P1 | Depends on | Size |
@@ -719,17 +720,19 @@ top of this document. Removed from this table.)*
 | Priority | Count of Missing | Count of Partial | Count of Broken | Total |
 |---|---:|---:|---:|---:|
 | P0 | 0 | 1 | 0 | 1 |
-| P1 | 17 | 21 | 0 | 38 |
+| P1 | 13 | 18 | 0 | 31 |
 | P2 | 93 | 56 | 0 | 149 |
 | P3 | 73 | 24 | 0 | 97 |
 | P4 | 40 | 7 | 0 | 47 |
-| **Total (current-scope work remaining)** | **223** | **109** | **0** | **332** |
+| **Total (current-scope work remaining)** | **219** | **106** | **0** | **325** |
 
 This reconciles against the four canonical group files' own current totals (A:
-31M+28P=59; B: 63M+20P=83; C: 52M+24P+0=76; D: 77M+37P+0B=114; sum=332), after cluster #7's
--6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, re-verified with no new code) and
-the notification-wiring batch's -3 Missing/+1 Missing→Partial (D78-03/05/08 VERIFIED,
-D78-13 PARTIAL — see `docs/FINAL_GAP_REPORT.md`).
+31M+28P=59; B: 63M+20P=83; C: 48M+21P+0=69; D: 77M+37P+0B=114; sum=325), after cluster #7's
+-6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, re-verified with no new code), the
+notification-wiring batch's -3 Missing/+1 Missing→Partial (D78-03/05/08 VERIFIED, D78-13
+PARTIAL), and the marketplace/harvest completeness batch's -4 Missing/-3 Partial
+(D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05 all VERIFIED — see
+`docs/FINAL_GAP_REPORT.md`).
 
 *(Latest batches — irrigation/soil data quality cluster: D3-08/D3-09/D17-01/D24-04
 PARTIAL→VERIFIED (-4 Partial, P1); D18-06 MISSING→VERIFIED (-1 Missing, P1); D18-08

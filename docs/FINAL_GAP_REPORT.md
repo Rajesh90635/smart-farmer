@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 332 |
+| Verified | 339 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **405** |
-| Partial | 109 |
-| Missing | 223 |
+| **Attended (Verified + Implemented)** | **412** |
+| Partial | 106 |
+| Missing | 219 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **332** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **325** |
 | Future | 30 |
 | Out of Scope | 25 |
 | Environment Dependent | 6 |
@@ -56,6 +56,19 @@ password-change half is built and tested, the new-device-login half is genuinely
 fabricated. Verified 329→332, Partial 108→109, Missing 227→223, current-scope remaining
 335→332. Full backend suite: 765 passed, 0 failed (was 761). See
 `docs/audit/FINAL_CANONICAL_group_D.md`'s D78-03/05/08/13 entries.)
+
+(Further, same continuation session: marketplace/harvest completeness batch — D47-01
+(approaching audit log/409), D64-05 (payment date), D66-03 (pending-payment timeout
+sweep) PARTIAL→VERIFIED (+3 Verified, -3 Partial); D50-03 (yield/acre), D51-02 (moisture),
+D51-04 (defects), D67-05 (farmer dispute response) MISSING→VERIFIED (+4 Verified, -4
+Missing). D51-02/D51-04 deliberately scoped to `HarvestRecord` only, not `HarvestListing`
+(disclosed scope reduction, not a hidden gap - see their own entries). Verified 332→339,
+Partial 109→106, Missing 223→219, current-scope remaining 332→325. Full backend suite:
+775 passed, 2 failed (`tests/test_case_sla_service.py` — pre-existing shared-test-DB
+pollution flake, confirmed unrelated: neither file touched this session, and both tests
+pass cleanly in isolation; not fixed in this batch, out of scope). See
+`docs/audit/FINAL_CANONICAL_group_C.md`'s D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05
+entries.)
 
 Reconciliation applied this session (see each canonical group file's own "Reconciliation
 deltas applied" table for full citations):

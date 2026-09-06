@@ -42,10 +42,10 @@ D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE ro
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 58 |
+| VERIFIED | 65 |
 | IMPLEMENTED | 14 |
-| PARTIAL | 24 |
-| MISSING | 52 |
+| PARTIAL | 21 |
+| MISSING | 48 |
 | BROKEN | 0 |
 | FUTURE | 6 |
 | OUT_OF_SCOPE | 20 |
@@ -54,6 +54,12 @@ D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE ro
 
 *(Updated this session: D68-02 PARTIAL→VERIFIED, P0 refund-bounds fix — see its own entry
 below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
+
+*(Further updated this continuation session — marketplace/harvest completeness batch:
+D47-01 (approaching audit log/409) PARTIAL→VERIFIED; D64-05 (payment date), D66-03
+(pending-payment timeout sweep) PARTIAL→VERIFIED; D50-03 (yield/acre), D51-02 (moisture),
+D51-04 (defects), D67-05 (farmer dispute response) MISSING→VERIFIED. -3 PARTIAL, -4
+MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for evidence.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -137,20 +143,20 @@ below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
 - Domain: 47 Harvest Readiness
 - Scenario ID: D47-01
 - Exact scenario name: Harvest approaching
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `harvest_service.mark_approaching` (`harvest_service.py:97-105`); `harvest_list_screen.dart:369` (farmer tap)
-- Missing component: No `AuditLogger` call on this transition (unlike `confirm_ready`/`create_listing`); wrong-status calls are a silent no-op instead of a surfaced error
-- Required implementation: Add an audit log entry mirroring `confirm_ready`'s pattern; return an explicit 409/no-op indicator to the client instead of silently succeeding on a wrong-status call
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: `harvest_service.mark_approaching` (`harvest_service.py:100-116`) now audit-logs `HARVEST_MARKED_APPROACHING` on the transition and raises 409 on a wrong-status call instead of a silent no-op
+- Missing component: none
+- Required implementation: none
 - Dependencies: Shares the `HarvestRecord` status machine with D47-03/D49-05
-- Backend work: `harvest_service.py:97-105` — add `AuditLogger(db).log("HARVEST_MARKED_APPROACHING", ...)`
+- Backend work: done
 - Database/migration work: none
 - Mobile work: none — backend only
 - Automation work: none
 - Notification work: none (D47-05 already covers the notification side of this transition)
 - Offline/sync impact: none — this call has no offline queue today, consistent with the rest of the harvest module
 - Security/RBAC impact: none — purely additive
-- Tests required: a test asserting the audit log entry, and a test asserting the current no-op behavior on a wrong-status call (to lock in the intended behavior either way)
-- Verification method: automated test
+- Tests required: `tests/test_harvest.py::test_marking_approaching_is_audit_logged` (new), `::test_marking_approaching_twice_is_rejected_not_a_silent_noop` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D50-01 — Yield estimate
 - Domain: 50 Yield
@@ -479,39 +485,39 @@ below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
 - Domain: 64 Payments
 - Scenario ID: D64-05
 - Exact scenario name: Payment date
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `payments.created_at`/`completed_at` columns (`payment.py:66-67`); `PaymentInitiateResponse` schema (`schemas/order.py:64-71`)
-- Missing component: `PaymentInitiateResponse` has no date field at all (only `payment_id/order_id/provider/status/amount`) — a farmer cannot see "when" a payment happened without a direct DB query
-- Required implementation: Add `created_at`/`completed_at` to `PaymentInitiateResponse` (and any equivalent sale-payment response schema)
-- Dependencies: none — small, additive, no other scenario blocks this
-- Backend work: `schemas/order.py` (`PaymentInitiateResponse`), `payment_service.py` (populate the new fields on response construction)
-- Database/migration work: none — columns already exist
-- Mobile work: order/sale detail screens — display the date once the API returns it
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: `PaymentInitiateResponse` (`schemas/order.py`) now includes `created_at`/`completed_at`; the sale-payment endpoints' hand-built response dicts (`api/v1/marketplace.py::initiate_sale_payment`/`complete_sale_payment`) also now include both fields
+- Missing component: none
+- Required implementation: none
+- Dependencies: none
+- Backend work: done — `schemas/order.py`, `api/v1/marketplace.py`
+- Database/migration work: none — columns already existed
+- Mobile work: order/sale detail screens — display the date once the API returns it (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — purely additive
-- Tests required: a test asserting the response includes correct `created_at`/`completed_at` values
-- Verification method: automated test
+- Tests required: `tests/test_payments.py::test_payment_response_includes_created_and_completed_dates` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D66-03 — Pending (payment sits in PENDING state)
 - Domain: 66 Failed Payments
 - Scenario ID: D66-03
 - Exact scenario name: Pending
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `PaymentStatus.TIMEOUT` enum value (`payment.py:37`, defined but never assigned anywhere)
-- Missing component: No automatic timeout-to-FAILED handling — a payment can sit `PENDING` indefinitely with no timeout/expiry logic
-- Required implementation: A scheduled sweep (mirroring the existing `run_proactive_weather_alert_sweep`/Expert-SLA-sweep pattern already in this codebase) that transitions payments PENDING beyond a configurable window to `TIMEOUT`
-- Dependencies: D66-02 (retry — a timed-out payment would need the same retry path now fixed), D66-04 (notification — a timeout should also notify, reusing the `PAYMENT_ALERT` category)
-- Backend work: new `payment_timeout_sweep` job in `scheduler.py` (APScheduler, same infra as the existing Expert SLA/weather sweeps), `payment_service.py` (a `mark_timed_out` function)
-- Database/migration work: none — `PaymentStatus.TIMEOUT` already exists; possibly a `timeout_after` config value, not a schema change
-- Mobile work: none — backend only; existing payment-status polling would pick up the new status
-- Automation work: scheduler job — a new periodic sweep, consistent with existing scheduler.py patterns
-- Notification work: reuse `NotificationCategory.PAYMENT_ALERT` for a timeout event
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: new `payment_service.run_payment_timeout_sweep`, registered on `scheduler.py` (same APScheduler infra as case-SLA/weather/task sweeps); transitions stale `PENDING` payments to `TIMEOUT` and notifies the farmer via `PAYMENT_ALERT`/`PAYMENT_TIMED_OUT`. Covers both dealer-order (`order_id`) and marketplace-sale (`sale_order_id`) payments in one sweep since `Payment` is a shared table
+- Missing component: none
+- Required implementation: none
+- Dependencies: D66-02 (retry, VERIFIED — a timed-out payment reuses the same retry path since only `PENDING` blocks a new `initiate_payment` call, not `TIMEOUT`); D66-04 (notification, VERIFIED — reuses `PAYMENT_ALERT`)
+- Backend work: done — `payment_service.py`, `order_repository.py` (`list_stale_pending_payments`), `scheduler.py`, `core/config.py` (`payment_timeout_minutes`/`payment_timeout_sweep_interval_seconds`)
+- Database/migration work: none — `PaymentStatus.TIMEOUT` already existed
+- Mobile work: none — backend only; existing payment-status polling picks up the new status
+- Automation work: done — new periodic sweep
+- Notification work: done — reuses `NotificationCategory.PAYMENT_ALERT`
 - Offline/sync impact: none
-- Security/RBAC impact: none — system-initiated, no new permission surface
-- Tests required: a test asserting a payment past the timeout window transitions to `TIMEOUT` and the order becomes retryable
-- Verification method: automated test
+- Security/RBAC impact: none — system-initiated (`actor_role="scheduler"`), no new permission surface
+- Tests required: `tests/test_payments.py::test_payment_timeout_sweep_marks_stale_pending_payments_timed_out` (new), `::test_payment_timeout_sweep_never_touches_a_fresh_pending_payment` (new) - both use scoped assertions (specific payment/notification), not a global sweep-count, since the shared test DB persists leftover PENDING payments across runs
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D67-03 — Evidence
 - Domain: 67 Disputes
@@ -712,20 +718,20 @@ below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
 - Domain: 50 Yield
 - Scenario ID: D50-03
 - Exact scenario name: Yield/acre
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: `Plot.area_value`/`area_sqm` (`plot.py:38-43`); `HarvestRecord.estimated_quantity`/`actual_quantity`
-- Missing component: No code ever divides harvest quantity by plot area
-- Required implementation: A `_per_acre`-style helper (the same pattern now used for D72-04/05/06's `cost_per_acre` etc. in `crop_financial_service.py:122`) applied to harvest quantity instead of financial figures
-- Dependencies: D50-01 (yield estimate — the quantity input), none blocking otherwise; note the precedent set by D72-04/05/06 makes this a small, well-precedented addition
-- Backend work: `harvest_service.py` or `profit_forecast_service.py` — add a `quantity_per_acre` computed field, reusing `area_units.from_square_meters` per the D72-04 precedent
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `profit_forecast_service._compute_yield_per_acre` (new), surfaced as `yield_per_acre`/`yield_per_acre_unit` on `CropProfitForecastResponse` - same `_per_acre` pattern as D72-04/05/06's cost/revenue/profit_loss_per_acre, applied to harvest quantity (`actual_quantity` once harvested, else `estimated_quantity`) instead of financial figures
+- Missing component: none
+- Required implementation: none
+- Dependencies: D50-01 (yield estimate — the quantity input)
+- Backend work: done — `profit_forecast_service.py`, `schemas/profit_forecast.py`
 - Database/migration work: none — computed, not stored, following the same pattern as `cost_per_acre`
-- Mobile work: harvest detail / profit forecast screen — display the new field
+- Mobile work: harvest detail / profit forecast screen — display the new field (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — purely additive
-- Tests required: a test mirroring `test_per_acre_financials_scale_with_actual_plot_area` but for yield quantity
-- Verification method: automated test
+- Tests required: `tests/test_profit_forecast.py::test_yield_per_acre_scales_with_actual_plot_area` (new, mirrors `test_per_acre_financials_scale_with_actual_plot_area`), `::test_yield_per_acre_is_none_without_a_harvest_record` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D50-04 — Historical yield (past-season reference)
 - Domain: 50 Yield
@@ -769,20 +775,20 @@ below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
 - Domain: 51 Quality
 - Scenario ID: D51-02
 - Exact scenario name: Moisture
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: none — `irrigation_intelligence_service.py`'s `soil_moisture_available` flag is unrelated (soil moisture, always `False`, not harvest quality)
-- Missing component: Any moisture field/model for harvest quality
-- Required implementation: A `moisture_percent: Decimal | None` field on `HarvestRecord`/`HarvestListing`, farmer-entered (never fabricated, consistent with this project's no-invented-sensor-data convention)
+- Current implementation status: VERIFIED (this continuation session, was Missing) — scoped to `HarvestRecord` only, not `HarvestListing`
+- Existing relevant files/classes/functions: `HarvestRecord.moisture_percent` (new, `harvest_record.py`), farmer-entered at `confirm_ready` time via `HarvestConfirmReadyRequest.moisture_percent` - never fabricated sensor/lab data
+- Missing component: none on `HarvestRecord`. Not duplicated onto `HarvestListing` (buyers already see `quality_grade`; a disclosed, deliberate scope reduction to limit blast radius, not a hidden gap)
+- Required implementation: none
 - Dependencies: none blocking
-- Backend work: `harvest_record.py`, `harvest_listing.py`, `schemas/harvest.py`
-- Database/migration work: new nullable `moisture_percent` column(s), migration
-- Mobile work: confirm-ready / listing-creation forms — add a moisture input field
+- Backend work: done — `harvest_record.py`, `schemas/harvest.py`, `harvest_service.py`
+- Database/migration work: done — `a2b3c4d5e6f7_add_moisture_percent_and_defect_notes.py`
+- Mobile work: confirm-ready form — add a moisture input field (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none — travels with existing payloads
 - Security/RBAC impact: none — purely additive
-- Tests required: a persistence/round-trip test
-- Verification method: automated test
+- Tests required: `tests/test_harvest.py::test_confirm_ready_persists_moisture_and_defect_notes` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D51-03 — Size (grading by size)
 - Domain: 51 Quality
@@ -807,20 +813,20 @@ below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
 - Domain: 51 Quality
 - Scenario ID: D51-04
 - Exact scenario name: Defects
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: none — grep for "defect" returns zero real hits
-- Missing component: Any defects field/model
-- Required implementation: A `defect_notes`/`defect_tags` field on `HarvestRecord`/`HarvestListing`, farmer-entered free text or a small fixed tag list
-- Dependencies: none blocking; could be built alongside D52-02's grading work
-- Backend work: `harvest_record.py`, `harvest_listing.py`, `schemas/harvest.py`
-- Database/migration work: new nullable column(s), migration
-- Mobile work: confirm-ready / listing-creation forms
+- Current implementation status: VERIFIED (this continuation session, was Missing) — scoped to `HarvestRecord` only, not `HarvestListing`
+- Existing relevant files/classes/functions: `HarvestRecord.defect_notes` (new, `harvest_record.py`), farmer-entered free text at `confirm_ready` time via `HarvestConfirmReadyRequest.defect_notes`
+- Missing component: none on `HarvestRecord`. Not duplicated onto `HarvestListing` - same disclosed scope reduction as D51-02
+- Required implementation: none
+- Dependencies: none blocking
+- Backend work: done — `harvest_record.py`, `schemas/harvest.py`, `harvest_service.py`
+- Database/migration work: done — `a2b3c4d5e6f7_add_moisture_percent_and_defect_notes.py`
+- Mobile work: confirm-ready form (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — purely additive
-- Tests required: persistence/round-trip test
-- Verification method: automated test
+- Tests required: `tests/test_harvest.py::test_confirm_ready_persists_moisture_and_defect_notes` (new, shared with D51-02)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D51-06 — Certificate
 - Domain: 51 Quality
@@ -1529,20 +1535,20 @@ below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
 - Domain: 67 Disputes
 - Scenario ID: D67-05
 - Exact scenario name: Seller/farmer response
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: `QualityDispute.farmer_response: str | None` column exists (`sale_dispute.py:82`) but is always NULL — no endpoint writes it (confirmed by grep of `marketplace.py`/`sale_order_service.py`); explicitly disclosed as a real gap in `docs/QUALITY_DISPUTE.md:30-37`
-- Missing component: A farmer-response endpoint, mirroring D67-04's buyer-response endpoint
-- Required implementation: `POST /marketplace/disputes/{id}/farmer-response` (or similar), writing `farmer_response`, following the exact pattern of `add_quality_dispute_details()` (`sale_order_service.py:239-252`) — record-only, never auto-changing sale status
-- Dependencies: D67-04 (buyer response — the symmetric counterpart, same code pattern to replicate)
-- Backend work: `sale_order_service.py` — a new `add_farmer_response()` function mirroring `add_quality_dispute_details()`; `api/v1/marketplace.py` — new endpoint
-- Database/migration work: none — column already exists
-- Mobile work: dispute-detail screen — a farmer-response input, symmetric to the buyer's
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: new `POST /marketplace/disputes/{id}/farmer-response` (`api/v1/marketplace.py::add_farmer_dispute_response`) calling new `sale_order_service.add_farmer_response()`, mirroring `add_quality_dispute_details()` exactly - writes `QualityDispute.farmer_response`, creating the row if the buyer hasn't already; record-only, never auto-changes dispute/sale status
+- Missing component: none
+- Required implementation: none
+- Dependencies: D67-04 (buyer response, VERIFIED — the symmetric counterpart, same code pattern replicated)
+- Backend work: done — `sale_order_service.py`, `api/v1/marketplace.py`, `schemas/marketplace.py` (`FarmerDisputeResponseRequest`)
+- Database/migration work: none — column already existed
+- Mobile work: dispute-detail screen — a farmer-response input, symmetric to the buyer's (unverified this pass, backend-only re-check)
 - Automation work: none
-- Notification work: could notify the buyer that the farmer responded, reusing existing dispute-notification patterns if any exist
+- Notification work: not built this pass (buyer-notified-of-farmer-response would be a separate, smaller follow-on; not part of this row's own required implementation)
 - Offline/sync impact: none
-- Security/RBAC impact: none — same ownership check as other dispute actions (farmer must own the underlying sale)
-- Tests required: a test mirroring D67-04's endpoint test, asserting `farmer_response` persists and never auto-changes status
-- Verification method: automated test
+- Security/RBAC impact: 404-not-403 if the calling farmer doesn't own the underlying sale (this project's established ID-enumeration-avoidance convention, same as other dispute actions)
+- Tests required: `tests/test_marketplace_offers.py::test_farmer_can_respond_to_a_dispute_filed_against_them` (new), `::test_farmer_cannot_respond_to_another_farmers_dispute` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D71-05 — Plot P&L (aggregate across all crop cycles on one plot)
 - Domain: 71 Profit

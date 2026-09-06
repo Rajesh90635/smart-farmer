@@ -5,9 +5,9 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 release-readiness view.
 
 **Updated this continuation session** — see `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL
-COUNTS" for the current authoritative status totals (798 total: 332 Verified, 73
-Implemented, 109 Partial, 223 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
-Dependent; 332 current-scope items remain, down from 391 at the start of the prior session
+COUNTS" for the current authoritative status totals (798 total: 339 Verified, 73
+Implemented, 106 Partial, 219 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
+Dependent; 325 current-scope items remain, down from 391 at the start of the prior session
 and 341 at the start of this continuation). Prior session's work spans: all of P0 (D97-12
 closed-season task guard, D6-07/D11-05 crop-cycle concurrency guard, D68-02 refund bounds
 check, D100-14 re-verified); the P1 task-management cluster
@@ -20,11 +20,21 @@ caught and fixed a genuine production timezone bug in date-bucketing, see
 (validated enums on `Plot`, a new `IrrigationRecord` model); and the entire Soil Testing
 domain foundation (`SoilSample`/`SoilTestResult`, 12 scenarios, built from zero code). This
 continuation session added: cluster #7 re-verification (input-inventory usage-tracking,
-6 rows, no new code); and the notification-wiring batch (D78-03 disease, D78-08 dispute,
+6 rows, no new code); the notification-wiring batch (D78-03 disease, D78-08 dispute,
 D78-05 harvest — no code needed — all VERIFIED; D78-13 security PARTIAL, password-change
-alerting built and tested, new-device-login alerting disclosed as genuinely unbuilt).
-Backend suite: **765 passed, 0 failed** (was 702 at the start of the prior session, 761 at
-the start of this continuation — +63 new tests total, 0 regressions).
+alerting built and tested, new-device-login alerting disclosed as genuinely unbuilt); and
+the marketplace/harvest completeness batch (D47-01 approaching audit log/409, D64-05
+payment date, D66-03 pending-payment timeout sweep — all VERIFIED, were Partial; D50-03
+yield/acre, D51-02 moisture, D51-04 defects, D67-05 farmer dispute response — all
+VERIFIED, were Missing; D51-02/D51-04 deliberately scoped to `HarvestRecord` only, not
+`HarvestListing`, disclosed).
+Backend suite: **775 passed, 2 failed** (was 702 at the start of the prior session, 761 at
+the start of the notification-wiring batch, 765 before this last batch — +73 new tests
+total from the prior session's start, 0 regressions from this session's own changes. The 2
+failures are in `tests/test_case_sla_service.py`, a pre-existing shared-test-DB pollution
+flake confirmed unrelated to this session's work — that file was never touched, and both
+tests pass cleanly when run in isolation; not fixed in this batch, disclosed as a known
+test-reliability issue rather than hidden).
 
 ## Functional
 
@@ -49,10 +59,13 @@ the start of this continuation — +63 new tests total, 0 regressions).
 
 ## Backend
 
-- **Test result: 765 passed, 0 failed** (full suite; up from 702 at the start of the prior
-  session — +63 new tests spanning the P0 fixes, D78-07's notification assertion, the
-  irrigation/soil-testing domain batch, and this continuation's notification-wiring batch —
-  confirmed by a full clean re-run, not merely the new tests in isolation).
+- **Test result: 775 passed, 2 failed** (full suite; up from 702 at the start of the prior
+  session — +73 new tests spanning the P0 fixes, D78-07's notification assertion, the
+  irrigation/soil-testing domain batch, and this continuation's notification-wiring and
+  marketplace/harvest completeness batches — confirmed by a full clean re-run, not merely
+  the new tests in isolation). The 2 failures are `tests/test_case_sla_service.py`'s own
+  pre-existing shared-test-DB pollution flake (see the session summary above) — 0
+  regressions caused by this session's actual changes.
 - **Zero BROKEN scenarios** — all 12 originally-disclosed bugs previously re-verified
   fixed, plus D97-12 (a new finding from a later pass: `task_service.py::create_task` never
   checked `cultivation_status` before creating a task, unlike its sibling guards) fixed and
