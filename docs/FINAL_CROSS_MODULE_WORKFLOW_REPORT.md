@@ -105,9 +105,10 @@ event log at either end.
 
 Failure detection (D10-01, VERIFIED as of batch 4 — dedicated `report-failure` endpoint
 with a real reason taxonomy, distinct from a plain "changed my mind" cancel) → farmer
-confirmation (implicit in the report-failure call itself) → old cycle closure: **not
-enforced** — nothing prevents a second concurrently-active cycle on the same plot before
-the old one is closed (D6-07/D11-05, PARTIAL, a real double-tap/offline-replay risk) →
+confirmation (implicit in the report-failure call itself) → old cycle closure:
+`create_crop_cycle` now rejects (409) a second active `CropCycle` on the same plot before
+the old one is closed (D6-07/D11-05, VERIFIED this continuation session — closes the
+real double-tap/offline-replay risk this row previously disclosed) →
 re-sowing recommendation (D10-09/D11-01, VERIFIED as of batch 4 — category-driven,
 deliberately non-prescriptive, consistent with the project's no-fabrication convention) →
 farmer confirmation (D11-02, PARTIAL — generic create-flow only, no re-sowing-aware
@@ -116,29 +117,38 @@ confirmation step) → new sowing (D11-03/04, VERIFIED) → new cycle, linked vi
 **does not exist** — no task is ever auto-created for a new cycle, re-sown or not
 (D11-06, MISSING, same root cause as Workflow A's task gap).
 
-**Status: COMPLETE for failure→recommendation→re-sow-and-link; the old-cycle-exclusivity
-gap and the absent task regeneration are real, disclosed limitations.**
+**Status: COMPLETE for failure→recommendation→re-sow-and-link, including the
+old-cycle-exclusivity guard (VERIFIED this continuation session); the absent task
+regeneration remains a real, disclosed limitation.**
 
 ## Workflow H — Harvest → Sale → Payment → Profit
 
-Harvest readiness (D47-01/03, VERIFIED, farmer-confirmed only, no automatic maturity
-detection — D47-02, FUTURE) → harvest planning: **largely absent** (labour/machinery/
-transport/storage pre-harvest planning are all MISSING, D48-*) → quantity (D49-01,
-VERIFIED) → quality (D51-01, IMPLEMENTED, free-text grade by design) → sale (D52-06,
+Harvest readiness (D47-01/03, VERIFIED — D47-01's audit-log/409 gap closed this
+continuation session, farmer-confirmed only, no automatic maturity detection — D47-02,
+FUTURE) → harvest planning: **largely absent** (labour/machinery/transport/storage
+pre-harvest planning are all MISSING, D48-*) → quantity (D49-01, VERIFIED; D50-03
+yield/acre VERIFIED this continuation session) → quality (D51-01, IMPLEMENTED, free-text
+grade by design; D51-02 moisture, D51-04 defects VERIFIED this continuation session on
+`HarvestRecord`; D52-01 sorting, D52-02 formal per-crop grading engine, D51-03 size — all
+VERIFIED this continuation session via the new `CropGradeOption` table) → sale (D52-06,
 VERIFIED, full `HarvestListing`→`BuyerOffer`→`SaleOrder` lifecycle, row-locked
-concurrency-safe) → order (D63-*, VERIFIED, 16-state transition map) → payment (D64-01/02/03,
-VERIFIED, sandbox-only by disclosed design; retry now works, see zero-BROKEN
-reconciliation) → expense (D69-01, VERIFIED) → revenue (D70-01, VERIFIED, idempotent sale
-import) → profit (D71-01/03, VERIFIED, honest NULL-handling where no real yield/price
-dataset exists) → ROI (D72-01, IMPLEMENTED; D72-02/03, FUTURE — explicitly, deliberately
-`Literal[None]` since `Order` has no `crop_cycle_id` to attribute spend to revenue) →
-season closure (D97-11, VERIFIED for the status-transition itself; D97-02 through D97-10
-mostly PARTIAL/MISSING — quantity/quality/sale/revenue/costs/profit are all captured
-elsewhere live, never consolidated into a single closure snapshot).
+concurrency-safe; D59-04 quality-mismatch warning at accept-offer VERIFIED this
+continuation session) → order (D63-*, VERIFIED, 16-state transition map) → payment
+(D64-01/02/03, VERIFIED, sandbox-only by disclosed design; retry now works, see
+zero-BROKEN reconciliation; D64-05 payment date, D66-03 pending-payment timeout sweep
+VERIFIED this continuation session) → expense (D69-01, VERIFIED) → revenue (D70-01,
+VERIFIED, idempotent sale import) → profit (D71-01/03, VERIFIED, honest NULL-handling
+where no real yield/price dataset exists) → ROI (D72-01, IMPLEMENTED; D72-02/03, FUTURE —
+explicitly, deliberately `Literal[None]` since `Order` has no `crop_cycle_id` to attribute
+spend to revenue) → season closure (D97-11, VERIFIED for the status-transition itself;
+D97-02 through D97-09, all 8 rows, now VERIFIED this continuation session via the new
+`CropCycleClosureSnapshot` table - quantity/quality/sale/revenue/costs/profit/disease/
+weather-impact are all frozen at close time, verified against a later ledger edit).
 
-**Status: COMPLETE and thoroughly tested from harvest through profit; harvest *planning*
-(pre-harvest) and season-closure *snapshotting* are the two genuine structural gaps, both
-disclosed per-row in `c08`/`c13`.**
+**Status: COMPLETE and thoroughly tested from harvest through profit, including
+season-closure snapshotting (VERIFIED this continuation session, previously the one
+disclosed structural gap in this chain). Harvest *planning* (pre-harvest, D48-*) remains
+the sole genuine structural gap, disclosed per-row in `c08`.**
 
 ## Workflow I — Offline Photo
 
@@ -187,7 +197,7 @@ bugs sat on exactly this path) and is now closed.
 | D. Recommendation → Task | Literal chain MISSING; parallel Treatment→Follow-up chain COMPLETE |
 | E. Disease → Input → Inventory | COMPLETE from purchase onward; "recommendation" step is a deliberate safety boundary, not a gap |
 | F. Weather → Irrigation | PARTIAL (recommendation strong and honest; no auto-task, no event log) |
-| G. Crop Failure → Re-sowing | COMPLETE for failure→recommendation→link; exclusivity + task-regeneration gaps disclosed |
-| H. Harvest → Sale → Profit | COMPLETE and best-tested chain in the app; pre-harvest planning and closure-snapshotting are the real gaps |
+| G. Crop Failure → Re-sowing | COMPLETE for failure→recommendation→link + exclusivity guard (VERIFIED); task-regeneration gap disclosed |
+| H. Harvest → Sale → Profit | COMPLETE and best-tested chain in the app, now including closure-snapshotting (VERIFIED); pre-harvest planning (D48-*) is the sole remaining gap |
 | I. Offline Photo | COMPLETE for sync mechanics; sync-outcome notification MISSING; only entity with any offline support |
 | J. Auth Expiry During Sync | COMPLETE as of this session (previously the most-broken chain — 3 of 7 disclosed bugs) |
