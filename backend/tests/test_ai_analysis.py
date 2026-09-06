@@ -41,6 +41,21 @@ def test_disease_detected_result_with_fake_provider(client, uploaded_photo):
     assert body["predicted_class"] == "Early Blight"
 
 
+def test_disease_detected_result_notifies_the_farmer(client, uploaded_photo):
+    """D78-03 (docs/audit/FINAL_CANONICAL_group_D.md): DISEASE_ALERT and
+    disease_alerts_enabled were already scaffolded but nothing ever fired
+    a notification on a genuine disease-detected result."""
+    tokens, crop_cycle_id, photo_id, _ = uploaded_photo
+    fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.90)], supported_crops=["tomato"])
+    with override_model_provider(fake):
+        client.post(f"/api/v1/crop-photos/{photo_id}/analyze", headers=auth_headers(tokens))
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    disease_alerts = [n for n in notifications if n["category"] == "disease_alert"]
+    assert len(disease_alerts) == 1
+    assert "Early Blight" in disease_alerts[0]["body"]
+
+
 def test_low_confidence_result_never_names_a_disease(client, uploaded_photo):
     tokens, crop_cycle_id, photo_id, _ = uploaded_photo
     fake = FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.30)], supported_crops=["tomato"])

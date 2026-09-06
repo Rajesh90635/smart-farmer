@@ -13,12 +13,15 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.order import OrderStatus
 from app.models.order_dispute import DisputeStatus, OrderDispute, Refund, RefundStatus, RefundType
-from app.repositories import order_repository
+from app.repositories import order_repository, user_repository
 from app.schemas.order import DisputeCreateRequest, DisputeListResponse, DisputeResolveRequest, DisputeResponse, RefundResponse
+from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.order_transitions import apply_transition
+from app.services.weather_alert_rules import AlertCandidate
 
 _OPEN_DISPUTE_STATUSES = [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW, DisputeStatus.ESCALATED]
 
@@ -82,7 +85,37 @@ def resolve_dispute(db: Session, admin_user_id: str, dispute_id: uuid.UUID, payl
     AuditLogger(db).log("ORDER_DISPUTE_RESOLVED", actor_id=admin_user_id, actor_role="admin", entity="order", entity_id=str(dispute.order_id))
     db.commit()
     db.refresh(dispute)
+    if payload.status in (DisputeStatus.RESOLVED, DisputeStatus.REJECTED):
+        _notify_dispute_resolved(db, dispute, payload)
     return DisputeResponse.model_validate(dispute)
+
+
+def _notify_dispute_resolved(db: Session, dispute: OrderDispute, payload: DisputeResolveRequest) -> None:
+    """D78-08 (docs/audit/FINAL_CANONICAL_group_D.md): the farmer who filed
+    the dispute had no way to learn its outcome except polling the order/
+    dispute detail screen themselves."""
+    farmer_id = str(dispute.farmer_id)
+    user = user_repository.get_by_id(db, dispute.farmer_id)
+    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+
+    if payload.status == DisputeStatus.REJECTED:
+        message_key, message_params = "DISPUTE_REJECTED", {}
+    elif payload.refund_type and payload.refund_type != RefundType.NO_REFUND:
+        message_key, message_params = "DISPUTE_RESOLVED_REFUNDED", {"amount": str(payload.refund_amount)}
+    else:
+        message_key, message_params = "DISPUTE_RESOLVED_NO_REFUND", {}
+
+    candidate = AlertCandidate(
+        category=NotificationCategory.DISPUTE_ALERT,
+        priority=NotificationPriority.HIGH,
+        message_key=message_key,
+        message_params=message_params,
+        dedup_suffix=f"dispute_resolved:{dispute.id}",
+    )
+    notification_service.create_alert_notification(
+        db, farmer_id, candidate, dedup_scope=f"farmer:{farmer_id}", language_code=language_code,
+        related_entity_type="order_dispute", related_entity_id=str(dispute.id),
+    )
 
 
 def complete_refund(db: Session, admin_user_id: str, order_id: uuid.UUID) -> RefundResponse:

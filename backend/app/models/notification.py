@@ -33,6 +33,8 @@ class NotificationCategory(str, enum.Enum):
     STOCK_ALERT = "stock_alert"  # D22-06/D24-08/D24-09 (docs/audit/c04_inputs.md): input inventory low-stock/expiry
     PAYMENT_ALERT = "payment_alert"  # D64-06/D66-04 (docs/audit/c10_payments_finance.md): payment failure
     TASK_ALERT = "task_alert"  # D9-16/D9-03/D78-01/D37-04 (docs/audit/FINAL_CANONICAL_group_A.md): task overdue
+    DISPUTE_ALERT = "dispute_alert"  # D78-08 (docs/audit/FINAL_CANONICAL_group_D.md): dispute resolution
+    SECURITY_ALERT = "security_alert"  # D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): password change
     # ORDER_ALERT, MARKET_ALERT deliberately NOT included - future phases only.
 
 

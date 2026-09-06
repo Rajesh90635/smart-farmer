@@ -32,6 +32,25 @@ def test_reset_password_with_valid_otp_succeeds(client, registered_farmer):
     assert login_old.status_code == 401
 
 
+def test_reset_password_notifies_the_farmer(client, registered_farmer):
+    """D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): a password reset is
+    an even more security-sensitive event than a self-service change."""
+    payload, _ = registered_farmer
+    fake = FakeSmsOtpProvider(valid_code="654321")
+    with override_sms_provider(fake):
+        client.post("/api/v1/auth/reset-password/request-otp", json={"phone_number": payload["phone_number"]})
+        response = client.post(
+            "/api/v1/auth/reset-password",
+            json={"phone_number": payload["phone_number"], "new_password": "NewPass1!", "otp_code": "654321"},
+        )
+    tokens = response.json()
+    notifications = client.get(
+        "/api/v1/notifications", headers={"Authorization": f"Bearer {tokens['access_token']}"}
+    ).json()["items"]
+    security_alerts = [n for n in notifications if n["category"] == "security_alert"]
+    assert len(security_alerts) == 1
+
+
 def test_reset_password_rejects_wrong_otp(client, registered_farmer):
     payload, _ = registered_farmer
     fake = FakeSmsOtpProvider(valid_code="654321")

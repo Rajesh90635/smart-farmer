@@ -286,6 +286,38 @@ def test_dispute_and_admin_resolution_with_refund(client, registered_farmer, ver
     assert refund_complete.status_code == 200
     assert refund_complete.json()["status"] == "completed"
 
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(farmer_tokens)).json()["items"]
+    dispute_alerts = [n for n in notifications if n["category"] == "dispute_alert"]
+    assert len(dispute_alerts) == 1
+
+
+def test_rejected_dispute_notifies_the_farmer(client, registered_farmer, verified_dealer, approved_product, admin_tokens):
+    """D78-08 (docs/audit/FINAL_CANONICAL_group_D.md): the farmer had no
+    way to learn a dispute's outcome without polling for it themselves -
+    this must fire even when the dispute is rejected, not just refunded."""
+    _, farmer_tokens = registered_farmer
+    dealer_tokens, _ = verified_dealer
+    listing = _listing(client, verified_dealer, approved_product)
+    cart = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 1}, headers=auth_headers(farmer_tokens)).json()
+    order = client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/dealer/orders/{order['id']}/accept", headers=auth_headers(dealer_tokens))
+    for status in ["preparing", "ready_for_dispatch", "dispatched", "out_for_delivery", "delivered"]:
+        client.post(f"/api/v1/dealer/orders/{order['id']}/advance?target_status={status}", headers=auth_headers(dealer_tokens))
+    dispute = client.post(f"/api/v1/orders/{order['id']}/dispute", json={"reason": "damaged_product"}, headers=auth_headers(farmer_tokens)).json()
+
+    resolved = client.post(
+        f"/api/v1/disputes/{dispute['id']}/resolve",
+        json={"status": "rejected"},
+        headers=auth_headers(admin_tokens),
+    )
+    assert resolved.status_code == 200
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(farmer_tokens)).json()["items"]
+    dispute_alerts = [n for n in notifications if n["category"] == "dispute_alert"]
+    assert len(dispute_alerts) == 1
+
 
 def test_refund_amount_cannot_exceed_the_orders_final_amount(client, registered_farmer, verified_dealer, approved_product, admin_tokens):
     """D68-02 (docs/audit/FINAL_CANONICAL_group_C.md): an admin refunding

@@ -33,6 +33,11 @@ _CATEGORY_PREFERENCE_MAP = {
     NotificationCategory.STOCK_ALERT: "general_notifications_enabled",
     NotificationCategory.PAYMENT_ALERT: "general_notifications_enabled",
     NotificationCategory.TASK_ALERT: "general_notifications_enabled",
+    NotificationCategory.DISPUTE_ALERT: "general_notifications_enabled",
+    # SECURITY_ALERT deliberately NOT gated by any preference toggle - a
+    # farmer must never be able to silently miss being told their own
+    # account's password changed, the same reasoning that already exempts
+    # CRITICAL-priority alerts from quiet hours below.
 }
 
 _TITLE_BY_CATEGORY = {
@@ -45,6 +50,8 @@ _TITLE_BY_CATEGORY = {
     NotificationCategory.STOCK_ALERT: "Input Stock Alert",
     NotificationCategory.PAYMENT_ALERT: "Payment Update",
     NotificationCategory.TASK_ALERT: "Task Overdue",
+    NotificationCategory.DISPUTE_ALERT: "Dispute Update",
+    NotificationCategory.SECURITY_ALERT: "Security Alert",
 }
 
 

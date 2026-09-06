@@ -14,6 +14,7 @@ from app.core.security_passwords import DUMMY_PASSWORD_HASH, hash_password, veri
 from app.middleware.rate_limit import InMemoryRateLimiter
 from app.models.consent_record import REQUIRED_CONSENTS_AT_REGISTRATION, ConsentRecord, ConsentStatus
 from app.models.farmer_profile import FarmerProfile
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.user import AccountStatus, User
 from app.repositories import refresh_token_repository, user_repository
 from app.schemas.auth import (
@@ -26,8 +27,10 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenResponse,
 )
+from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.sms.sms_otp_provider import SmsOtpProvider
+from app.services.weather_alert_rules import AlertCandidate
 
 settings = get_settings()
 
@@ -260,6 +263,7 @@ def reset_password(db: Session, sms_provider: SmsOtpProvider, payload: ResetPass
     )
 
     db.commit()
+    _notify_password_changed(db, user, role)
     return tokens
 
 
@@ -284,6 +288,34 @@ def change_password(db: Session, current_user: CurrentUser, payload: ChangePassw
     )
 
     db.commit()
+    _notify_password_changed(db, user, current_user.role)
+
+
+def _notify_password_changed(db: Session, user: User, role: str) -> None:
+    """D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): a farmer had no way
+    to know if their own account's password changed without noticing
+    themselves. Scoped to the farmer role only, matching
+    NotificationPreference's "one row per farmer" design (see its own
+    docstring) - dealer/expert/admin accounts don't have a notification
+    inbox in this phase. Deliberately does NOT attempt new-device-login
+    alerting (D78-13's other half): no device/session fingerprinting
+    exists anywhere in this codebase (confirmed by grep of RefreshToken -
+    no user_agent/ip_address/device_id column), so that half stays
+    honestly undone rather than fabricated - see FINAL_GAP_REPORT.md."""
+    if role != RoleCode.FARMER.value:
+        return
+    language_code = user.farmer_profile.preferred_language_code if getattr(user, "farmer_profile", None) else "en"
+    candidate = AlertCandidate(
+        category=NotificationCategory.SECURITY_ALERT,
+        priority=NotificationPriority.CRITICAL,
+        message_key="PASSWORD_CHANGED_ALERT",
+        message_params={},
+        dedup_suffix=f"password_changed:{datetime.now(timezone.utc).isoformat()}",
+    )
+    notification_service.create_alert_notification(
+        db, str(user.id), candidate, dedup_scope=f"farmer:{user.id}", language_code=language_code,
+        related_entity_type="user", related_entity_id=str(user.id),
+    )
 
 
 def logout(db: Session, current_user: CurrentUser, payload: LogoutRequest) -> None:

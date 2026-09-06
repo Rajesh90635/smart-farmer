@@ -24,12 +24,15 @@ from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.ai_analysis import AIAnalysis, AnalysisStatus, ResultStatus
 from app.models.crop_photo import ImageQualityStatus
-from app.repositories import ai_analysis_repository, ai_reference_repository, crop_cycle_repository, crop_photo_repository
+from app.models.notification import NotificationCategory, NotificationPriority
+from app.repositories import ai_analysis_repository, ai_reference_repository, crop_cycle_repository, crop_photo_repository, user_repository
 from app.schemas.ai_analysis import AIAnalysisCorrectionRequest, AIAnalysisListResponse, AIAnalysisResponse
+from app.services import notification_service
 from app.services.ai.model_provider import ModelProvider
 from app.services.ai.prediction_validator import validate_disease_prediction
 from app.services.audit_logger import AuditLogger
 from app.services.storage.base import FileStorage
+from app.services.weather_alert_rules import AlertCandidate
 
 
 def analyze_photo(
@@ -133,6 +136,29 @@ def _run_analysis(
 
     analysis.processing_time_ms = int((time.monotonic() - start) * 1000)
     db.commit()
+
+    if analysis.result_status == ResultStatus.DISEASE_DETECTED:
+        _notify_disease_detected(db, analysis, crop_name)
+
+
+def _notify_disease_detected(db: Session, analysis: AIAnalysis, crop_name: str) -> None:
+    """D78-03 (docs/audit/FINAL_CANONICAL_group_D.md): DISEASE_ALERT and
+    disease_alerts_enabled were already scaffolded but nothing ever called
+    create_alert_notification with them."""
+    farmer_id = str(analysis.farmer_id)
+    user = user_repository.get_by_id(db, analysis.farmer_id)
+    language_code = user.farmer_profile.preferred_language_code if user and getattr(user, "farmer_profile", None) else "en"
+    candidate = AlertCandidate(
+        category=NotificationCategory.DISEASE_ALERT,
+        priority=NotificationPriority.HIGH,
+        message_key="ai_result_disease_detected",
+        message_params={"disease_name": analysis.predicted_class or "an issue", "crop_name": crop_name},
+        dedup_suffix=f"disease_detected:{analysis.id}",
+    )
+    notification_service.create_alert_notification(
+        db, farmer_id, candidate, dedup_scope=f"farmer:{farmer_id}", language_code=language_code,
+        related_entity_type="ai_analysis", related_entity_id=str(analysis.id),
+    )
 
 
 def get_analysis(db: Session, farmer_id: str, analysis_id: uuid.UUID) -> AIAnalysisResponse:
