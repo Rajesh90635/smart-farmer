@@ -21,8 +21,9 @@ from app.schemas.crop import (
     CropFailureReportRequest,
     CropMasterResponse,
 )
+from app.schemas.crop_grade_option import CropGradeOptionCreateRequest, CropGradeOptionResponse
 from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse
-from app.services import crop_cycle_service
+from app.services import crop_cycle_service, crop_grade_option_service
 
 router = APIRouter(tags=["crops"])
 
@@ -36,6 +37,28 @@ def search_crop_master(
 ) -> list[CropMasterResponse]:
     results = crop_master_repository.search(db, query, limit=limit)
     return [CropMasterResponse.model_validate(c) for c in results]
+
+
+@router.get("/crops/master/{crop_id}/grade-options", response_model=list[CropGradeOptionResponse])
+def list_crop_grade_options(
+    crop_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> list[CropGradeOptionResponse]:
+    """D52-02: empty until an admin has configured real grade options for
+    this crop - farmers see the configured choices, if any, before
+    entering a listing's quality_grade."""
+    return crop_grade_option_service.list_grade_options(db, crop_id)
+
+
+@router.post("/crops/master/{crop_id}/grade-options", response_model=CropGradeOptionResponse, status_code=status.HTTP_201_CREATED)
+def add_crop_grade_option(
+    crop_id: uuid.UUID,
+    payload: CropGradeOptionCreateRequest,
+    current_user: CurrentUser = Depends(require_role(Role.ADMIN.value)),
+    db: Session = Depends(get_db),
+) -> CropGradeOptionResponse:
+    return crop_grade_option_service.add_grade_option(db, crop_id, payload)
 
 
 @router.post("/plots/{plot_id}/crops", response_model=CropCycleResponse, status_code=status.HTTP_201_CREATED)

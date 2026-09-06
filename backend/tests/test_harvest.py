@@ -1,6 +1,28 @@
+import uuid
+
 from tests.conftest import auth_headers
 from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
 from tests.harvest_factories import valid_harvest_listing_payload
+
+
+def _unique_crop(db_session) -> str:
+    """A freshly created CropMaster row, not the shared seeded Tomato -
+    that accumulates test-created grade options across runs against the
+    same persistent test database, which would make grading assertions
+    flaky (matches the existing pattern in test_crop_variety.py)."""
+    from app.models.crop_master import CropMaster
+
+    crop = CropMaster(name=f"Test-Only Crop {uuid.uuid4().hex[:8]}", is_active=True)
+    db_session.add(crop)
+    db_session.commit()
+    return str(crop.id)
+
+
+def _create_harvest_for_crop(client, tokens, crop_id: str) -> dict:
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(crop_id), headers=auth_headers(tokens)).json()
+    return client.post(f"/api/v1/harvests/from-crop-cycle/{cycle['id']}", headers=auth_headers(tokens)).json()
 
 
 def test_harvest_created_from_crop_cycle_prefills_data(client, farmer_with_crop_cycle):
@@ -262,3 +284,88 @@ def test_existing_single_harvest_get_or_create_behavior_is_unchanged(client, far
 
     listed = client.get(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
     assert listed["total"] == 1
+
+
+# --- D52-02/D51-03: formal per-crop grading engine ---
+
+def test_admin_can_configure_grade_options_for_a_crop(client, registered_farmer, admin_tokens, db_session):
+    crop_id = _unique_crop(db_session)
+    response = client.post(
+        f"/api/v1/crops/master/{crop_id}/grade-options",
+        json={"grade_code": "GRADE_A", "display_name": "Grade A (Premium)", "sort_order": 1},
+        headers=auth_headers(admin_tokens),
+    )
+    assert response.status_code == 201
+    assert response.json()["grade_code"] == "GRADE_A"
+
+    _, farmer_tokens = registered_farmer
+    listed = client.get(f"/api/v1/crops/master/{crop_id}/grade-options", headers=auth_headers(farmer_tokens))
+    assert listed.status_code == 200
+    assert [o["grade_code"] for o in listed.json()] == ["GRADE_A"]
+
+
+def test_duplicate_grade_code_for_the_same_crop_is_rejected(client, admin_tokens, db_session):
+    crop_id = _unique_crop(db_session)
+    client.post(
+        f"/api/v1/crops/master/{crop_id}/grade-options",
+        json={"grade_code": "GRADE_A", "display_name": "Grade A"},
+        headers=auth_headers(admin_tokens),
+    )
+    duplicate = client.post(
+        f"/api/v1/crops/master/{crop_id}/grade-options",
+        json={"grade_code": "GRADE_A", "display_name": "Grade A (again)"},
+        headers=auth_headers(admin_tokens),
+    )
+    assert duplicate.status_code == 409
+
+
+def test_farmer_cannot_configure_grade_options(client, registered_farmer, db_session):
+    crop_id = _unique_crop(db_session)
+    _, tokens = registered_farmer
+    response = client.post(
+        f"/api/v1/crops/master/{crop_id}/grade-options",
+        json={"grade_code": "GRADE_A", "display_name": "Grade A"},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 403
+
+
+def test_listing_quality_grade_stays_free_text_when_no_options_configured(client, registered_farmer, db_session):
+    """D52-02: an unconfigured crop must never block a farmer's listing
+    over a schema nobody has actually set up."""
+    crop_id = _unique_crop(db_session)
+    _, tokens = registered_farmer
+    harvest = _create_harvest_for_crop(client, tokens, crop_id)
+
+    response = client.post(
+        f"/api/v1/harvests/{harvest['id']}/listing",
+        json=valid_harvest_listing_payload(quality_grade="Whatever the farmer wants to call it"),
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 201
+
+
+def test_listing_quality_grade_is_validated_once_options_are_configured(client, registered_farmer, admin_tokens, db_session):
+    crop_id = _unique_crop(db_session)
+    client.post(
+        f"/api/v1/crops/master/{crop_id}/grade-options",
+        json={"grade_code": "GRADE_A", "display_name": "Grade A"},
+        headers=auth_headers(admin_tokens),
+    )
+
+    _, tokens = registered_farmer
+    harvest = _create_harvest_for_crop(client, tokens, crop_id)
+
+    rejected = client.post(
+        f"/api/v1/harvests/{harvest['id']}/listing",
+        json=valid_harvest_listing_payload(quality_grade="Not A Real Grade"),
+        headers=auth_headers(tokens),
+    )
+    assert rejected.status_code == 422
+
+    accepted = client.post(
+        f"/api/v1/harvests/{harvest['id']}/listing",
+        json=valid_harvest_listing_payload(quality_grade="GRADE_A"),
+        headers=auth_headers(tokens),
+    )
+    assert accepted.status_code == 201

@@ -24,7 +24,7 @@ from app.schemas.harvest import (
     HarvestListResponse,
     HarvestResponse,
 )
-from app.services import notification_service
+from app.services import crop_grade_option_service, notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.weather_alert_rules import AlertCandidate
 
@@ -196,6 +196,8 @@ def create_listing(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: 
     harvest = harvest_repository.get_harvest_owned(db, harvest_id, farmer_uuid)
     if harvest is None:
         raise AppError(error_codes.NOT_FOUND, "Harvest record not found.", 404)
+
+    crop_grade_option_service.validate_quality_grade(db, harvest.crop_id, payload.quality_grade)
 
     existing_active = harvest_repository.get_active_listing_for_crop_cycle(db, harvest.id)
     if existing_active is not None and not payload.confirm_duplicate:
