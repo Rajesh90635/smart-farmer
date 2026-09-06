@@ -27,6 +27,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
+from app.core.area_units import AreaUnit, from_square_meters
 from app.core.errors import AppError
 from app.repositories import crop_cost_estimate_repository, crop_cycle_repository, harvest_repository, ledger_entry_repository, sale_order_repository
 from app.schemas.profit_forecast import CropProfitForecastResponse
@@ -63,6 +64,7 @@ def get_profit_forecast(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -
     committed_revenue = sum((s.net_value for s in committed_sales), Decimal("0"))
 
     potential_additional_revenue, potential_basis = _compute_potential_additional_revenue(db, crop_cycle_id, notes)
+    yield_per_acre, yield_per_acre_unit = _compute_yield_per_acre(db, crop_cycle, crop_cycle_id)
 
     projected_total_revenue = actual_revenue + committed_revenue + (potential_additional_revenue or Decimal("0"))
     revenue_projection_is_partial = potential_additional_revenue is None
@@ -88,6 +90,8 @@ def get_profit_forecast(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -
         revenue_projection_is_partial=revenue_projection_is_partial,
         projected_profit_loss=projected_profit_loss,
         projected_profit_loss_percent=projected_profit_loss_percent,
+        yield_per_acre=yield_per_acre,
+        yield_per_acre_unit=yield_per_acre_unit,
         data_completeness_notes=notes,
     )
 
@@ -115,3 +119,26 @@ def _compute_potential_additional_revenue(db: Session, crop_cycle_id: uuid.UUID,
     potential = (quantity * listing.preferred_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     basis = f"{quantity} {harvest.unit} ({quantity_label}) x Rs {listing.preferred_price}/{harvest.unit} (your listing price)"
     return potential, basis
+
+
+def _compute_yield_per_acre(db: Session, crop_cycle, crop_cycle_id: uuid.UUID) -> tuple[Decimal | None, str | None]:
+    """D50-03 (docs/audit/FINAL_CANONICAL_group_C.md): same _per_acre
+    pattern as crop_financial_service.py's cost/revenue/profit_loss_per_acre
+    (D72-04/05/06), applied to harvest quantity instead of financial
+    figures. Uses actual_quantity once harvested, else estimated_quantity -
+    same fallback as _compute_potential_additional_revenue above."""
+    harvest = harvest_repository.get_most_recent_harvest_by_crop_cycle(db, crop_cycle_id)
+    if harvest is None:
+        return None, None
+    quantity = harvest.actual_quantity if harvest.actual_quantity is not None else harvest.estimated_quantity
+    if quantity is None:
+        return None, None
+
+    plot = crop_cycle.plot
+    if plot is None or plot.area_sqm is None:
+        return None, None
+    acres = from_square_meters(plot.area_sqm, AreaUnit.ACRE)
+    if acres <= 0:
+        return None, None
+
+    return (quantity / acres).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP), harvest.unit

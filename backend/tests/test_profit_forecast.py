@@ -222,3 +222,37 @@ def test_forecast_uses_estimated_yield_label_when_only_estimate_exists(client, f
     response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/profit-forecast", headers=auth_headers(tokens))
     body = response.json()
     assert "estimated yield" in body["potential_additional_revenue_basis"]
+
+
+def test_yield_per_acre_scales_with_actual_plot_area(client, farmer_with_crop_cycle, sample_crop_id):
+    """D50-03 (docs/audit/FINAL_CANONICAL_group_C.md): same _per_acre
+    pattern as D72-04/05/06's cost/revenue/profit_loss_per_acre, applied
+    to harvest quantity - uses a real 2-acre plot since
+    farmer_with_crop_cycle's default plot is exactly 1 acre and would
+    never catch a scaling bug."""
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    tokens, _ = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(
+        f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(area_value="2.0", area_unit="acre"), headers=headers
+    ).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+    crop_cycle_id = cycle["id"]
+
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=headers).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "1000.00"}, headers=headers)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/profit-forecast", headers=headers)
+    body = response.json()
+    assert Decimal(body["yield_per_acre"]) == Decimal("500.00")
+    assert body["yield_per_acre_unit"] == "kg"
+
+
+def test_yield_per_acre_is_none_without_a_harvest_record(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/profit-forecast", headers=auth_headers(tokens))
+    body = response.json()
+    assert body["yield_per_acre"] is None
+    assert body["yield_per_acre_unit"] is None

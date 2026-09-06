@@ -29,4 +29,11 @@ class CropProfitForecastResponse(BaseModel):
     projected_profit_loss: Decimal | None
     projected_profit_loss_percent: Decimal | None
 
+    # D50-03 (docs/audit/FINAL_CANONICAL_group_C.md): same _per_acre pattern
+    # as D72-04/05/06's cost/revenue/profit_loss_per_acre, applied to
+    # harvest quantity instead - None whenever quantity or plot area is
+    # unavailable, never a fabricated figure.
+    yield_per_acre: Decimal | None
+    yield_per_acre_unit: str | None
+
     data_completeness_notes: list[str]
