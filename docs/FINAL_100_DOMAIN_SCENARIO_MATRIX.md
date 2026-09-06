@@ -152,6 +152,19 @@ Full backend suite after this batch: 778 passed, 0 failed (the prior batch's
 `test_case_sla_service.py` flake did not reproduce, consistent with non-deterministic
 shared-DB pollution rather than a real regression).
 
+### H. Grading-engine batch (this continuation session)
+
+| Scenario ID(s) | Was | Now | Evidence |
+|---|---|---|---|
+| D52-02 | PARTIAL | VERIFIED | New admin-authored `CropGradeOption` table (empty by default, no fabricated per-crop grading dataset), validated at `create_listing` |
+| D51-03 | MISSING | VERIFIED | Folded into `CropGradeOption`'s dimension-agnostic mechanism rather than a separate `size_grade` column |
+| D59-04 | PARTIAL | VERIFIED | `offer_service._quality_mismatch_warning`, persisted on `SaleOrder.quality_mismatch_warning` at `accept_offer` - informational only |
+| D52-01 | MISSING | VERIFIED | New `HarvestListing.is_sorted`/`sorting_notes`, farmer-declared only |
+
+Full backend suite after this batch: 787 passed, 0 failed. Also re-verified this session:
+`flutter analyze` (41 issues, 0 errors, matches prior claim) and, for the first time this
+session, `flutter test` (263 passed, 0 failed, confirming the previously-unverified claim).
+
 ### C. This session's test-infrastructure fixes (no scenario-status change — these fixed test *reliability*, not product gaps)
 
 Three tests were flaky due to assertions against unscoped, shared-test-database-wide

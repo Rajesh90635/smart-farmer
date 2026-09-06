@@ -2,12 +2,12 @@
 
 Source: `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md`, frozen this session per
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" — see that section for the full
-reconciliation. Authoritative current-scope work remaining: **317** (217 Missing + 100
+reconciliation. Authoritative current-scope work remaining: **313** (215 Missing + 98
 Partial + 0 Broken) — see "Summary counts" at the bottom of this document for the current
 number; the 388 figure below is historical (predates this document's own P0-P4 batch, and
 predates the P1 fixes, cluster #7 re-verification, notification-wiring batch,
-marketplace/harvest completeness batch, and season-closure batch all already applied
-since).
+marketplace/harvest completeness batch, season-closure batch, and grading-engine batch all
+already applied since).
 
 **Status update this session (P0 batch, before the rest of this plan's own work began):**
 - **D97-12 (BROKEN) — FIXED.** `task_service.py::create_task` now guards against
@@ -160,9 +160,11 @@ in this plan.
 22. **IoT sensor/actuation (needs physical hardware)** — D77-01 (root) through D77-07 (D, all
     Missing). Root: no physical sensor/controller hardware exists; `irrigation_intelligence_service.py`
     already honestly hardcodes `soil_moisture_available=False` pending this.
-23. **Grading-engine foundation** — D52-02 (root, C Partial), D51-03 (C), D51-07 (C, Partial),
-    D59-04 (C, Partial), D61-04 (C, Partial, additionally blocked on D61-02 pooling). Root:
-    `quality_grade` is unconstrained free text; no per-crop grading schema exists.
+23. **Grading-engine foundation** — DONE this continuation session: D52-02 (root), D51-03,
+    D59-04 all VERIFIED via the new admin-authored `CropGradeOption` table. Still open:
+    D51-07 (C, Partial, grade→price rule - needs a validated per-crop multiplier source
+    beyond just the grading engine existing), D61-04 (C, Partial, additionally blocked on
+    D61-02 pooling).
 24. **Government/external-data ecosystem (Schemes, Insurance)** — D73-01 (root) through
     D73-06, D74-01 (root) through D74-05 (D, all Missing). Root: no authoritative government
     scheme/insurance dataset sourced; self-reported shells are independently buildable now,
@@ -279,14 +281,15 @@ VERIFIED (were Missing). D51-02/D51-04 deliberately scoped to `HarvestRecord` on
 `HarvestListing` (disclosed, not a hidden gap). See
 `docs/audit/FINAL_CANONICAL_group_C.md`'s per-row entries. Removed from this table.
 
+**DONE this continuation session** — D52-02 (grading engine, root), D51-03 (size, folded
+into the same dimension-agnostic mechanism), D59-04 (quality matching, informational
+warning), D52-01 (sorting, built independently of D52-02) all VERIFIED. See
+`docs/audit/FINAL_CANONICAL_group_C.md`'s per-row entries. Removed from this table.
+
 | Scenario ID | Domain | Name | Why P1 | Depends on | Size |
 |---|---|---|---|---|---|
-| D51-03 | 51 Quality | Size (grading) | Cluster #23 (grading engine) | cluster #23 | S |
-| D52-01 | 52 Post-Harvest | Sorting | Folds into cluster #23 | cluster #23 | S |
-| D52-02 | 52 Post-Harvest | Grading (engine) | Root of cluster #23 | cluster #23 | M |
 | D55-06 | 55 Transport | Pickup | Core sale-completion state, missing confirmation step | D62-08 | M |
 | D55-07 | 55 Transport | Delivery | Core sale-completion state | D62-08 | M |
-| D59-04 | 59 Buyer Matching | Quality (matching) | Cluster #23 | cluster #23 | S |
 
 ### Season closure (cluster: closure-snapshot table)
 
@@ -721,19 +724,21 @@ top of this document. Removed from this table.)*
 | Priority | Count of Missing | Count of Partial | Count of Broken | Total |
 |---|---:|---:|---:|---:|
 | P0 | 0 | 1 | 0 | 1 |
-| P1 | 11 | 12 | 0 | 23 |
+| P1 | 9 | 10 | 0 | 19 |
 | P2 | 93 | 56 | 0 | 149 |
 | P3 | 73 | 24 | 0 | 97 |
 | P4 | 40 | 7 | 0 | 47 |
-| **Total (current-scope work remaining)** | **217** | **100** | **0** | **317** |
+| **Total (current-scope work remaining)** | **215** | **98** | **0** | **313** |
 
 This reconciles against the four canonical group files' own current totals (A:
-31M+28P=59; B: 63M+20P=83; C: 48M+21P+0=69; D: 75M+31P+0B=106; sum=317), after cluster #7's
+31M+28P=59; B: 63M+20P=83; C: 46M+19P+0=65; D: 75M+31P+0B=106; sum=313), after cluster #7's
 -6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, re-verified with no new code), the
 notification-wiring batch's -3 Missing/+1 Missing→Partial (D78-03/05/08 VERIFIED, D78-13
 PARTIAL), the marketplace/harvest completeness batch's -4 Missing/-3 Partial
-(D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05 all VERIFIED), and the season-closure
-batch's -2 Missing/-6 Partial (D97-02..09 all VERIFIED — see `docs/FINAL_GAP_REPORT.md`).
+(D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05 all VERIFIED), the season-closure
+batch's -2 Missing/-6 Partial (D97-02..09 all VERIFIED), and the grading-engine batch's
+-2 Missing/-2 Partial (D51-03/D52-01/D52-02/D59-04 all VERIFIED — see
+`docs/FINAL_GAP_REPORT.md`).
 
 *(Latest batches — irrigation/soil data quality cluster: D3-08/D3-09/D17-01/D24-04
 PARTIAL→VERIFIED (-4 Partial, P1); D18-06 MISSING→VERIFIED (-1 Missing, P1); D18-08

@@ -5,9 +5,9 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 release-readiness view.
 
 **Updated this continuation session** — see `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL
-COUNTS" for the current authoritative status totals (798 total: 347 Verified, 73
-Implemented, 100 Partial, 217 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
-Dependent; 317 current-scope items remain, down from 391 at the start of the prior session
+COUNTS" for the current authoritative status totals (798 total: 351 Verified, 73
+Implemented, 98 Partial, 215 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
+Dependent; 313 current-scope items remain, down from 391 at the start of the prior session
 and 341 at the start of this continuation). Prior session's work spans: all of P0 (D97-12
 closed-season task guard, D6-07/D11-05 crop-cycle concurrency guard, D68-02 refund bounds
 check, D100-14 re-verified); the P1 task-management cluster
@@ -30,15 +30,22 @@ VERIFIED, were Missing; D51-02/D51-04 deliberately scoped to `HarvestRecord` onl
 `HarvestListing`, disclosed); and the season-closure batch (new `CropCycleClosureSnapshot`
 table, created once by `close_my_crop_cycle` — D97-02 through D97-09, all 8 rows, now
 VERIFIED, consolidating what the source audit doc separately proposed as new `CropCycle`
-columns and a shared table into one table; verified frozen against a later ledger edit).
-Backend suite: **778 passed, 0 failed** (was 702 at the start of the prior session, 761 at
+columns and a shared table into one table; verified frozen against a later ledger edit);
+and the grading-engine batch (new admin-authored `CropGradeOption` table, empty by default,
+no fabricated per-crop grading dataset — D52-02 root VERIFIED, D51-03 folded into the same
+dimension-agnostic mechanism VERIFIED, D59-04 quality-mismatch warning at accept-offer
+VERIFIED, D52-01 sorting declaration built independently VERIFIED).
+Backend suite: **787 passed, 0 failed** (was 702 at the start of the prior session, 761 at
 the start of the notification-wiring batch, 765 before the marketplace/harvest batch, 775
-before this last batch — +76 new tests total from the prior session's start, 0 regressions
-from this session's own changes. The prior batch's 2 failures in
-`tests/test_case_sla_service.py` — a shared-test-DB pollution flake confirmed unrelated to
-this session's work, that file was never touched — did not reproduce this run, consistent
-with non-deterministic pollution rather than a real regression; not fixed in this batch,
-disclosed as a known test-reliability issue rather than hidden).
+before the season-closure batch, 778 before this last batch — +85 new tests total from the
+prior session's start, 0 regressions from this session's own changes. An earlier run in
+this continuation saw 2 failures in `tests/test_case_sla_service.py` — a shared-test-DB
+pollution flake confirmed unrelated to this session's work, that file was never touched —
+which did not reproduce in later runs, consistent with non-deterministic pollution rather
+than a real regression; not fixed in this batch, disclosed as a known test-reliability
+issue rather than hidden). Also independently re-verified this session: `flutter analyze`
+(41 issues, 0 errors, matches the prior claim) and, for the first time this session,
+`flutter test` (263 passed, 0 failed, confirming the previously-unverified claim).
 
 ## Functional
 
@@ -63,15 +70,19 @@ disclosed as a known test-reliability issue rather than hidden).
 
 ## Backend
 
-- **Test result: 778 passed, 0 failed** (full suite; up from 702 at the start of the prior
-  session — +76 new tests spanning the P0 fixes, D78-07's notification assertion, the
+- **Test result: 787 passed, 0 failed** (full suite; up from 702 at the start of the prior
+  session — +85 new tests spanning the P0 fixes, D78-07's notification assertion, the
   irrigation/soil-testing domain batch, and this continuation's notification-wiring,
-  marketplace/harvest completeness, and season-closure batches — confirmed by a full clean
-  re-run, not merely the new tests in isolation). An earlier run in this same continuation
-  saw 2 failures in `tests/test_case_sla_service.py`'s own pre-existing shared-test-DB
-  pollution flake (see the session summary above); this run's clean 0-failure result is
-  consistent with that being non-deterministic, not a regression caused by this session's
-  actual changes.
+  marketplace/harvest completeness, season-closure, and grading-engine batches — confirmed
+  by a full clean re-run, not merely the new tests in isolation). An earlier run in this
+  same continuation saw 2 failures in `tests/test_case_sla_service.py`'s own pre-existing
+  shared-test-DB pollution flake (see the session summary above); every later run's clean
+  0-failure result is consistent with that being non-deterministic, not a regression caused
+  by this session's actual changes.
+- **Flutter: independently re-verified this session** — `flutter analyze` (41 issues, all
+  info-level, 0 errors, matches the prior claim exactly) and `flutter test` (263 passed, 0
+  failed, "All tests passed!" - this specific claim had never been independently re-run
+  before this session and is now confirmed genuine, not carried forward on faith).
 - **Zero BROKEN scenarios** — all 12 originally-disclosed bugs previously re-verified
   fixed, plus D97-12 (a new finding from a later pass: `task_service.py::create_task` never
   checked `cultivation_status` before creating a task, unlike its sibling guards) fixed and

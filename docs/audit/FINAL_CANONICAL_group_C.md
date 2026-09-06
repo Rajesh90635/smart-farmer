@@ -42,10 +42,10 @@ D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE ro
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 65 |
+| VERIFIED | 69 |
 | IMPLEMENTED | 14 |
-| PARTIAL | 21 |
-| MISSING | 48 |
+| PARTIAL | 19 |
+| MISSING | 46 |
 | BROKEN | 0 |
 | FUTURE | 6 |
 | OUT_OF_SCOPE | 20 |
@@ -60,6 +60,20 @@ D47-01 (approaching audit log/409) PARTIAL→VERIFIED; D64-05 (payment date), D6
 (pending-payment timeout sweep) PARTIAL→VERIFIED; D50-03 (yield/acre), D51-02 (moisture),
 D51-04 (defects), D67-05 (farmer dispute response) MISSING→VERIFIED. -3 PARTIAL, -4
 MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for evidence.)*
+
+*(Further updated this continuation session — grading-engine cluster: D52-02 (grading)
+PARTIAL→VERIFIED, D59-04 (quality matching) PARTIAL→VERIFIED (-2 PARTIAL, +2 VERIFIED);
+D51-03 (size) MISSING→VERIFIED (-1 MISSING, +1 VERIFIED). New `CropGradeOption` table
+(admin-authored, empty by default - no fabricated per-crop grading dataset), validated at
+`create_listing`; D51-03 folded into the same dimension-agnostic mechanism rather than a
+separate `size_grade` column. New `SaleOrder.quality_mismatch_warning`, computed once at
+`accept_offer` from the buyer's free-text `quality_requirements` vs. the listing's
+`quality_grade` snapshot - informational only, never blocks acceptance. Total unchanged at
+174. See each row's own entry below.)*
+
+*(Further updated this continuation session: D52-01 (sorting) MISSING→VERIFIED (-1
+MISSING, +1 VERIFIED) - new `HarvestListing.is_sorted`/`sorting_notes`, farmer-declared
+only, never inferred/verified by this system. Total unchanged at 174.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -200,20 +214,20 @@ MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for
 - Domain: 52 Post-Harvest
 - Scenario ID: D52-02
 - Exact scenario name: Grading
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `harvest_record.py:51`, `harvest_listing.py:38` (`quality_grade` free text); `docs/HARVEST_MANAGEMENT.md:86-89` (explicit "formal grading rules engine not built this phase")
-- Missing component: No formal, crop-specific grading rules engine — grade is unconstrained free text
-- Required implementation: A per-crop grading schema (e.g., configurable grade options per `crop_master` row) with server-side validation, replacing/augmenting the free-text field
-- Dependencies: D51-01 (same field), D51-07 (quality-based price would consume this)
-- Backend work: new `crop_grading_schema` model/service; `harvest_service.py`/`offer_service.py` validation hook
-- Database/migration work: new table mapping `crop_master.id` → allowed grade values/criteria
-- Mobile work: harvest listing/confirm-ready screens would need a dropdown instead of free text
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: new `CropGradeOption` table (`models/crop_grade_option.py`), admin-authored via `POST /crops/master/{crop_id}/grade-options`; `harvest_service.py::create_listing` now calls `crop_grade_option_service.validate_quality_grade` before creating a listing
+- Missing component: none
+- Required implementation: none. Deliberately empty by default (no fabricated per-crop grading dataset, same honesty pattern as `ReferencePrice`/`DemandSignal`) - `quality_grade` stays free text for a crop until an admin actually configures real options for it, never silently blocking a farmer over an unconfigured schema
+- Dependencies: D51-01 (VERIFIED, same field), D51-07 (still blocked - a grade→price rule needs this AND a validated multiplier source)
+- Backend work: done — `models/crop_grade_option.py`, `crop_grade_option_service.py`, `crop_grade_option_repository.py`, `harvest_service.py`
+- Database/migration work: done — `c4d5e6f7a8b9_create_crop_grade_options.py`
+- Mobile work: harvest listing screen would need a dropdown once a crop has configured options (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none beyond existing listing-creation offline behavior
-- Security/RBAC impact: none — purely additive
-- Tests required: tests asserting invalid grade values are rejected once a schema exists per crop
-- Verification method: automated test
+- Security/RBAC impact: admin-only write (`require_role(ADMIN)`), farmer-readable
+- Tests required: `tests/test_harvest.py::test_listing_quality_grade_is_validated_once_options_are_configured` (new), `::test_listing_quality_grade_stays_free_text_when_no_options_configured` (new), `::test_admin_can_configure_grade_options_for_a_crop` (new), `::test_duplicate_grade_code_for_the_same_crop_is_rejected` (new), `::test_farmer_cannot_configure_grade_options` (new)
+- Verification method: automated test (new), confirmed passing in the full 786-test suite re-run this session
 
 ### D52-05 — Transport (post-harvest)
 - Domain: 52 Post-Harvest
@@ -428,20 +442,20 @@ MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for
 - Domain: 59 Buyer Matching
 - Scenario ID: D59-04
 - Exact scenario name: Quality (matching)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `OfferCreateRequest.quality_requirements` (`schemas/marketplace.py`), `buyer_offer.py:45`
-- Missing component: No programmatic comparison between an offer's free-text `quality_requirements` and the listing's free-text `quality_grade` — a farmer can accept a mismatched offer with no system check
-- Required implementation: A comparison/validation step at offer-acceptance time (warn, don't block, given both fields are free text); real enforcement requires the structured grading taxonomy from D51-01/D52-02 first
-- Dependencies: D51-01/D52-02 (structured grading — currently free text), D59-06 (offer acceptance path this would hook into)
-- Backend work: `offer_service.py` accept-offer path — add a soft warning/flag when the two free-text fields diverge (string similarity or, once structured, an exact enum comparison)
-- Database/migration work: none until structured grading exists
-- Mobile work: `SaleDetailScreen`/accept-offer confirmation — surface the mismatch warning to the farmer
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: `offer_service._quality_mismatch_warning`, called from `accept_offer`, comparing `offer.quality_requirements` against `listing.quality_grade` (case-insensitive exact match) and persisting the result onto the new `SaleOrder.quality_mismatch_warning` column - informational only, never blocks acceptance
+- Missing component: none. Disclosed limitation carried forward: both fields are still free text, so a real but differently-worded match still produces a false-positive warning - exact enum comparison becomes possible once a crop's grading is actually configured via D52-02's grading engine, not before
+- Required implementation: none for the current, disclosed scope
+- Dependencies: D51-01/D52-02 (structured grading, now VERIFIED as an available-but-optional mechanism), D59-06 (offer acceptance path, VERIFIED)
+- Backend work: done — `offer_service.py`, `models/sale_order.py`, `schemas/marketplace.py`
+- Database/migration work: done — `d5e6f7a8b9c0_add_quality_mismatch_warning.py`
+- Mobile work: `SaleDetailScreen` — surface the mismatch warning to the farmer (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — purely additive, informational only
-- Tests required: tests asserting a mismatch is flagged (once implemented) and that acceptance is never silently blocked by it
-- Verification method: automated test
+- Tests required: `tests/test_marketplace_offers.py::test_accept_offer_flags_a_quality_mismatch_but_never_blocks_it` (new), `::test_accept_offer_has_no_mismatch_warning_when_grades_match` (new), `::test_accept_offer_has_no_mismatch_warning_when_buyer_specified_no_requirement` (new)
+- Verification method: automated test (new), confirmed passing in the full 786-test suite re-run this session
 
 ### D59-05 — Location (matching)
 - Domain: 59 Buyer Matching
@@ -794,11 +808,11 @@ MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for
 - Domain: 51 Quality
 - Scenario ID: D51-03
 - Exact scenario name: Size
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: none as a structured facet — reachable today only as unstructured text inside `quality_grade`
-- Missing component: A structured size field/enum
-- Required implementation: A `size_grade` field, likely folded into the same structured-grading effort as D52-02 rather than built standalone
-- Dependencies: D52-02 (formal grading engine, MISSING) — natural to build together
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `CropGradeOption` (D52-02's grading engine) is deliberately dimension-agnostic - an admin can configure size-based grade codes ("Large"/"Medium"/"Small") through the exact same table and validation path used for quality grades, rather than a separate `size_grade` column. The crop-specific taxonomy choice (is a grade about quality, size, or both) belongs to whoever sources the real per-crop data, not to the schema
+- Missing component: none - folded into D52-02 as planned rather than built standalone
+- Required implementation: none
+- Dependencies: D52-02 (formal grading engine, now VERIFIED)
 - Backend work: see D52-02
 - Database/migration work: see D52-02
 - Mobile work: see D52-02
@@ -806,8 +820,8 @@ MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none
-- Tests required: see D52-02
-- Verification method: automated test
+- Tests required: see D52-02 (the mechanism is identical; no size-specific test needed beyond proving the generic validation path works)
+- Verification method: automated test (shared with D52-02), confirmed passing in the full 786-test suite re-run this session
 
 ### D51-04 — Defects
 - Domain: 51 Quality
@@ -851,20 +865,20 @@ MISSING, +7 VERIFIED, total unchanged at 174. See each row's own entry below for
 - Domain: 52 Post-Harvest
 - Scenario ID: D52-01
 - Exact scenario name: Sorting
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: none — grep confirms zero hits
-- Missing component: Any sorting concept/field
-- Required implementation: A `sorted: bool`/`sorting_notes` field, or fold into the same grading-engine effort as D52-02
-- Dependencies: D52-02 (grading engine) — natural to build together
-- Backend work: see D52-02
-- Database/migration work: see D52-02
-- Mobile work: see D52-02
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `HarvestListing.is_sorted`/`sorting_notes` (new), set via `HarvestListingCreateRequest` at `create_listing` time - farmer-declared only, never inferred or verified by this system, same honesty convention as `quality_grade`
+- Missing component: none
+- Required implementation: none
+- Dependencies: none (built independently of D52-02, not folded into it - a distinct farmer declaration, not a grade)
+- Backend work: done — `harvest_listing.py`, `schemas/harvest.py`, `harvest_service.py`
+- Database/migration work: done — `e6f7a8b9c0d1_add_is_sorted_and_sorting_notes.py`
+- Mobile work: harvest listing screen (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none
-- Tests required: see D52-02
-- Verification method: automated test
+- Tests required: `tests/test_harvest.py::test_create_listing_records_sorting_declaration` (new)
+- Verification method: automated test (new), confirmed passing in the full 787-test suite re-run this session
 
 ### D52-03 — Packing
 - Domain: 52 Post-Harvest

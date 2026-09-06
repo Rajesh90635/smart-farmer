@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 347 |
+| Verified | 351 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **420** |
-| Partial | 100 |
-| Missing | 217 |
+| **Attended (Verified + Implemented)** | **424** |
+| Partial | 98 |
+| Missing | 215 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **317** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **313** |
 | Future | 30 |
 | Out of Scope | 25 |
 | Environment Dependent | 6 |
@@ -80,6 +80,23 @@ current-scope remaining 325→317. Full backend suite: 778 passed, 0 failed (the
 test_case_sla_service.py flake from the previous batch did not reproduce this run,
 consistent with it being non-deterministic shared-DB pollution, not a real regression). See
 `docs/audit/FINAL_CANONICAL_group_D.md`'s D97-02..09 entries.)
+
+(Further, same continuation session: grading-engine batch — D52-02 (grading), D59-04
+(quality matching) PARTIAL→VERIFIED (+2 Verified, -2 Partial); D51-03 (size) MISSING→
+VERIFIED (+1 Verified, -1 Missing). New admin-authored `CropGradeOption` table (empty by
+default, no fabricated per-crop grading dataset), validated at `create_listing`; D51-03
+folded into the same dimension-agnostic mechanism. New `SaleOrder.quality_mismatch_warning`,
+computed once at `accept_offer`, informational only. Verified 347→350, Partial 100→98,
+Missing 217→216, current-scope remaining 317→314. Full backend suite: 786 passed, 0 failed.
+Also independently re-verified this session: Flutter analyze (41 issues, 0 errors, matches
+prior claim) and, for the first time this session, `flutter test` (263 passed, 0 failed,
+confirming the previously-unverified claim). See
+`docs/audit/FINAL_CANONICAL_group_C.md`'s D51-03/D52-02/D59-04 entries.)
+
+(Further, same continuation session: D52-01 (sorting) MISSING→VERIFIED (+1 Verified, -1
+Missing) - new `HarvestListing.is_sorted`/`sorting_notes`, farmer-declared only. Verified
+350→351, Missing 216→215, current-scope remaining 314→313. Full backend suite: 787 passed,
+0 failed. See `docs/audit/FINAL_CANONICAL_group_C.md`'s D52-01 entry.)
 
 Reconciliation applied this session (see each canonical group file's own "Reconciliation
 deltas applied" table for full citations):
