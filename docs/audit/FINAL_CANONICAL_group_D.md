@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 133 |
+| VERIFIED | 134 |
 | IMPLEMENTED | 30 |
 | PARTIAL | 7 |
-| MISSING | 38 |
+| MISSING | 37 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 3 |
@@ -2664,7 +2664,7 @@ see docs/FINAL_GAP_REPORT.md for exact counts.)*
 
 ### D96-08 — Compare weather impact
 - Domain: 96. Season Comparison
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - `crop_comparison_service._weather_impact_count` reuses the existing `Notification.related_entity_type`/`related_entity_id` link (the same one the season-closure snapshot's own `weather_impact_summary` reads), counting `crop_alert` notifications tied to each crop cycle - a real, persisted signal, since `weather_action_engine_service.py` is deliberately read-only/unpersisted and has no history of its own. **A real pre-existing bug found and fixed in the process**: `crop_cycle_service.py`'s own `_WEATHER_NOTIFICATION_CATEGORIES` set (used by the season-closure snapshot, D97-09) filtered for `weather_alert`/`rain_alert`/`heavy_rain_alert` only - none of which is ever actually tied to a `crop_cycle` entity (`weather_alert_orchestration_service.py` always ties those to `farm` instead; only the crop-specific `evaluate_crop_weather_alert` candidate, category `crop_alert`, is ever tied to `crop_cycle`) - so `weather_alert_count` was silently always 0 for every crop cycle ever closed, not caught by the existing test (which only asserted the zero case). Fixed by adding `crop_alert` to that set too, with a new regression test proving a real notification is now counted. Tests: `tests/test_crop_performance.py` (2 new), `tests/test_crop_cycles.py` (1 new regression test for the D97-09 fix).
 - Existing relevant files/classes/functions: `weather_action_engine_service`/`irrigation_intelligence_service` outputs are not fed into comparison at all
 - Missing component: a weather-impact comparison metric
 - Required implementation: `crop_comparison_service.py` add a weather-action-count/severity comparison, reusing existing weather-action history rather than re-deriving it

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core import error_codes
 from app.core.errors import AppError
 from app.models.ai_analysis import ResultStatus
-from app.repositories import ai_analysis_repository, crop_cycle_repository, harvest_repository
+from app.repositories import ai_analysis_repository, crop_cycle_repository, harvest_repository, notification_repository
 from app.schemas.crop_comparison import ComparisonMetric, CropComparisonResponse
 from app.services import crop_financial_service, crop_performance_service
 
@@ -24,7 +24,18 @@ _METRIC_DIRECTIONS = {
     "actual_profit_loss": "higher_better",
     "actual_yield": "higher_better",
     "disease_recurrence_count": "lower_better",
+    "weather_impact_count": "lower_better",
 }
+
+# D96-08 (docs/audit/FINAL_CANONICAL_group_D.md): same set
+# crop_cycle_service.py's own season-closure weather_impact_summary uses
+# (see that module's own constant for the real-bug disclosure this set's
+# membership is based on: "crop_alert" is the ONLY category ever actually
+# tied to a crop_cycle entity - weather_alert/rain_alert/heavy_rain_alert
+# are always tied to a farm instead). The real, persisted "weather
+# impacted this crop cycle" signal, since weather_action_engine_service.py
+# is deliberately read-only/unpersisted and has no history to reuse instead.
+_WEATHER_NOTIFICATION_CATEGORIES = {"weather_alert", "rain_alert", "heavy_rain_alert", "crop_alert"}
 
 
 def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID, crop_cycle_id_b: uuid.UUID) -> CropComparisonResponse:
@@ -43,6 +54,8 @@ def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID,
     yield_b = _total_actual_yield(db, crop_cycle_id_b)
     disease_a = _disease_recurrence_count(db, crop_cycle_id_a, farmer_uuid)
     disease_b = _disease_recurrence_count(db, crop_cycle_id_b, farmer_uuid)
+    weather_impact_a = _weather_impact_count(db, crop_cycle_id_a)
+    weather_impact_b = _weather_impact_count(db, crop_cycle_id_b)
 
     metrics = [
         _build_metric("overall_performance_score", performance_a.overall_score, performance_b.overall_score),
@@ -59,6 +72,13 @@ def compare_crop_cycles(db: Session, farmer_id: str, crop_cycle_id_a: uuid.UUID,
         # own _disease_recurrence_factor is built on - a raw comparable
         # count, not a re-derivation of that factor's HIGH/MEDIUM/LOW value.
         _build_metric("disease_recurrence_count", disease_a, disease_b),
+        # D96-08: a real count of weather-alert-category notifications tied
+        # to each crop cycle - 0 is a genuine, meaningful fact here (this
+        # cycle never had a weather-impact notification), never
+        # "insufficient_data", unlike disease_recurrence_count above where
+        # None means "no AI analysis was ever run" is a different fact
+        # from "checked and always healthy".
+        _build_metric("weather_impact_count", weather_impact_a, weather_impact_b),
     ]
 
     return CropComparisonResponse(
@@ -91,6 +111,15 @@ def _disease_recurrence_count(db: Session, crop_cycle_id: uuid.UUID, farmer_id: 
     if not analyses:
         return None
     return sum(1 for a in analyses if a.result_status == ResultStatus.DISEASE_DETECTED)
+
+
+def _weather_impact_count(db: Session, crop_cycle_id: uuid.UUID) -> int:
+    """D96-08 (docs/audit/FINAL_CANONICAL_group_D.md): reuses the existing
+    Notification.related_entity_type/related_entity_id link (the same one
+    crop_cycle_service.py's season-closure snapshot already reads) rather
+    than inventing a new weather-history concept."""
+    notifications = notification_repository.list_for_related_entity(db, "crop_cycle", str(crop_cycle_id))
+    return sum(1 for n in notifications if n.category.value in _WEATHER_NOTIFICATION_CATEGORIES)
 
 
 def _build_metric(name: str, value_a, value_b, *, comparable: bool = True) -> ComparisonMetric:

@@ -91,3 +91,82 @@ class SeasonFinancialTotalsResponse(BaseModel):
     total_cost: Decimal
     total_revenue: Decimal
     profit_loss: Decimal
+
+
+class PlotFinancialSummaryResponse(BaseModel):
+    """D71-05 (docs/audit/FINAL_CANONICAL_group_C.md): the fuller Plot P&L
+    view D70-04's own PlotFinancialTotalsResponse deliberately deferred -
+    same honest-NULL-handling conventions as CropFinancialSummaryResponse
+    (estimated_cost/cost_variance None when no estimate rows exist at
+    all, never a fabricated zero; per-acre None when the plot's area
+    can't be resolved). Deliberately NO stage_summaries here - stages are
+    a single crop cycle's own concept and don't aggregate meaningfully
+    across a plot's full multi-crop-cycle history."""
+    plot_id: uuid.UUID
+
+    estimated_cost: Decimal | None
+    actual_cost: Decimal
+    cost_variance: Decimal | None
+    cost_variance_percent: Decimal | None
+
+    expected_revenue: None = None
+    actual_revenue: Decimal
+
+    estimated_profit: None = None
+    actual_profit_loss: Decimal
+    profit_loss_percent: Decimal | None
+
+    revenue_to_cost_ratio: Decimal | None
+    has_any_actual_revenue: bool
+
+    cost_per_acre: Decimal | None = None
+    revenue_per_acre: Decimal | None = None
+    profit_loss_per_acre: Decimal | None = None
+
+
+class FarmFinancialSummaryResponse(BaseModel):
+    """D71-06: same shape as PlotFinancialSummaryResponse, one level up -
+    per-acre uses the sum of every plot's own area_sqm on this farm."""
+    farm_id: uuid.UUID
+
+    estimated_cost: Decimal | None
+    actual_cost: Decimal
+    cost_variance: Decimal | None
+    cost_variance_percent: Decimal | None
+
+    expected_revenue: None = None
+    actual_revenue: Decimal
+
+    estimated_profit: None = None
+    actual_profit_loss: Decimal
+    profit_loss_percent: Decimal | None
+
+    revenue_to_cost_ratio: Decimal | None
+    has_any_actual_revenue: bool
+
+    cost_per_acre: Decimal | None = None
+    revenue_per_acre: Decimal | None = None
+    profit_loss_per_acre: Decimal | None = None
+
+
+class SeasonFinancialSummaryResponse(BaseModel):
+    """D71-07: same shape as PlotFinancialSummaryResponse, scoped by
+    Season across every plot/farm the farmer owns. No per-acre figures -
+    a Season spans an arbitrary number of farms/plots with no single
+    area to divide by, unlike Plot/Farm which each have exactly one."""
+    season: str
+
+    estimated_cost: Decimal | None
+    actual_cost: Decimal
+    cost_variance: Decimal | None
+    cost_variance_percent: Decimal | None
+
+    expected_revenue: None = None
+    actual_revenue: Decimal
+
+    estimated_profit: None = None
+    actual_profit_loss: Decimal
+    profit_loss_percent: Decimal | None
+
+    revenue_to_cost_ratio: Decimal | None
+    has_any_actual_revenue: bool

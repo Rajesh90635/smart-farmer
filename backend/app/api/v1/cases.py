@@ -87,6 +87,17 @@ def submit_review(
     return case_service.submit_review(db, current_user.user_id, case_id, payload)
 
 
+@router.post("/{case_id}/reviews/{review_id}/acknowledge", response_model=CaseReviewResponse)
+def acknowledge_review(
+    case_id: uuid.UUID,
+    review_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> CaseReviewResponse:
+    """D36-04 (docs/audit/FINAL_CANONICAL_group_B.md)."""
+    return case_service.acknowledge_review(db, current_user.user_id, case_id, review_id)
+
+
 @router.post("/{case_id}/close", response_model=CaseResponse)
 def close_case(
     case_id: uuid.UUID,

@@ -39,6 +39,26 @@ discussed in `FINAL_GAP_REPORT.md` as a borderline case but its resolution is "k
 MISSING, not FUTURE" — i.e. **no status change** — so it appears below with no delta-table
 row, unchanged from the cluster file.)
 
+*(Later continuation session — Missing Backlog Batch 5, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 5's approved scenario count, same situation Batch 3/4
+disclosed. 4 rows in this group MISSING→VERIFIED (-4 Missing, +4
+Verified): D38-02/D38-05 (treatment follow-up reminder sweep +
+reschedule, both hard-blocked on D38-01 which was already VERIFIED) and
+D36-04/D36-07 (farmer acknowledgement + recommendation-version FK, both
+zero-dependency). D36-06 (expert identity) deliberately NOT built - its
+own row explicitly flags it as "a genuine product/privacy decision," not
+an engineering gap. A real pre-existing bug found and fixed while writing
+D36-07's own test: `case_repository.get_excluded_professional_ids` was
+missing `COMPLETED` from its exclusion set, so a second-opinion request
+could re-select a professional who already completed a review for the
+same case - fixed by adding `COMPLETED`, re-verified against
+`test_case_routing_and_escalation.py`/`test_case_sla_service.py` for
+non-regression. Total unchanged at 149 - every change here is an internal
+status move, zero new/removed rows. See docs/FINAL_GAP_REPORT.md for the
+cross-group reconciliation and exact full-suite counts.)*
+
 *(Later continuation session — Missing Backlog Batch 2, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. 2 approved Batch 2 items in
 this group both became VERIFIED with genuine new code: D30-05 (-1 MISSING,
@@ -55,10 +75,10 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 74 |
+| VERIFIED | 78 |
 | IMPLEMENTED | 4 |
 | PARTIAL | 4 |
-| MISSING | 61 |
+| MISSING | 57 |
 | BROKEN | 0 |
 | FUTURE | 5 |
 | OUT_OF_SCOPE | 0 |
@@ -817,7 +837,7 @@ bucket above.)
 - Domain: 36 (Expert Recommendation)
 - Scenario ID: D36-04
 - Exact scenario name: Farmer acknowledgement
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new `POST /cases/{case_id}/reviews/{review_id}/acknowledge` (`case_service.acknowledge_review`), distinct from the existing `professional_feedback` rating/helpfulness survey. Idempotent (a second call never overwrites the original timestamp) and owner-scoped (404 for another farmer's case). Migration `d3e4f5a6b7c8` (new `case_reviews.acknowledged_at`). Tests: `tests/test_cases.py` (2 new).
 - Existing relevant files/classes/functions: `POST /cases/{id}/feedback` (`professional_feedback` table — a rating/helpfulness survey, semantically distinct from acknowledgement); `case_review.py:7` docstring comment only
 - Missing component: No endpoint exists for a farmer to acknowledge/read-receipt a recommendation
 - Required implementation: Add a `read_at`/`acknowledged_at` timestamp to `CaseReview` (or a lightweight `POST /cases/{id}/reviews/{review_id}/acknowledge` endpoint), distinct from the existing feedback-survey mechanism
@@ -855,7 +875,7 @@ bucket above.)
 - Domain: 36 (Expert Recommendation)
 - Scenario ID: D36-07
 - Exact scenario name: Recommendation version
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new `CaseReview.supersedes_review_id` self-referential FK (migration `d3e4f5a6b7c8`), settable via `POST /cases/{id}/review`'s existing payload, validated to reference a real review of the SAME case (404 otherwise - never trusted merely because it parses, same discipline as D36-03's evidence citations). **A real pre-existing bug found and fixed while writing this row's own test**: `case_repository.get_excluded_professional_ids` was missing `COMPLETED` from its exclusion set, so requesting a second opinion (`request_second_opinion` -> `_try_auto_assign`) could re-select a professional who already completed a review for this exact case - not a second opinion at all, and a real crash (`IntegrityError` on the `(case_id, professional_id)` unique constraint) whenever that professional was the only, or the ranked-highest, remaining candidate. Fixed by adding `COMPLETED` to the exclusion set; re-verified against `test_case_routing_and_escalation.py`/`test_case_sla_service.py` for non-regression. Tests: `tests/test_cases.py` (2 new).
 - Existing relevant files/classes/functions: `case_reviews` table (multiple rows per `case_id` for second opinions, no versioning concept)
 - Missing component: No "version" field, no supersession logic — each review is an independent row, not a version chain
 - Required implementation: Add a `supersedes_review_id` FK on `CaseReview`, set when a second-opinion review is explicitly meant to revise a prior one (vs. simply being an additional independent opinion)
@@ -984,7 +1004,7 @@ bucket above.)
 - Domain: 38 (Follow-up)
 - Scenario ID: D38-02
 - Exact scenario name: Reminder
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new scheduler job `treatment_followup_reminder_sweep` (daily by default) mirrors `input_inventory_service.run_expiry_check_sweep`'s exact shape, alerting once per `TreatmentRecord` whose `next_check_due_date` (D38-01) has arrived/passed, via a fires-once-per-episode gate (`followup_reminder_alerted_at`, migrations `b1c2d3e4f5a6`/`c2d3e4f5a6b7`). Re-armed by D38-05's reschedule endpoint, not left stuck alerted from a superseded date. Tests: `tests/test_treatments.py` (2 new sweep tests).
 - Existing relevant files/classes/functions: none — depends on D38-01's `next_check_due_date` (Partial, not yet built)
 - Missing component: No reminder mechanism of any kind for a pending/overdue follow-up
 - Required implementation: A new scheduler sweep (`treatment_followup_reminder_service.py`, following the exact `case_sla_service.py` pattern) that finds `TreatmentRecord`s whose `next_check_due_date` (once D38-01 adds it) is approaching/passed, and sends a `TREATMENT_FOLLOWUP_REMINDER` notification
@@ -1003,7 +1023,7 @@ bucket above.)
 - Domain: 38 (Follow-up)
 - Scenario ID: D38-05
 - Exact scenario name: Reschedule
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new `POST /treatments/{id}/reschedule` (`treatment_service.reschedule_treatment`), owner-scoped (404 for another farmer's treatment). Updates `next_check_due_date` and clears `followup_reminder_alerted_at` so D38-02's sweep re-arms rather than staying silently alerted from the date just replaced. Tests: `tests/test_treatments.py` (2 new, including the re-arm behavior).
 - Existing relevant files/classes/functions: none — depends on D38-01's `next_check_due_date` existing
 - Missing component: There is nothing to reschedule since no scheduled follow-up date is ever stored
 - Required implementation: Once D38-01 exists, add a `PATCH /treatments/{id}` (or a dedicated `POST /treatments/{id}/reschedule`) endpoint allowing the farmer to update `next_check_due_date`

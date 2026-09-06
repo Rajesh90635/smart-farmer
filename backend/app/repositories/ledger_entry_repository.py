@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.crop_cycle import CropCycle, Season
 from app.models.ledger_entry import LedgerEntry, LedgerEntryType
+from app.models.plot import Plot
 
 
 def create(db: Session, entry: LedgerEntry) -> LedgerEntry:
@@ -75,6 +76,25 @@ def compute_totals_for_plot(db: Session, plot_id: uuid.UUID, farmer_id: uuid.UUI
         select(func.coalesce(func.sum(LedgerEntry.amount), 0))
         .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
         .where(CropCycle.plot_id == plot_id, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.REVENUE)
+    ).scalar_one()
+    return Decimal(total_expense), Decimal(total_revenue)
+
+
+def compute_totals_for_farm(db: Session, farm_id: uuid.UUID, farmer_id: uuid.UUID) -> tuple[Decimal, Decimal]:
+    """D71-06 (docs/audit/FINAL_CANONICAL_group_C.md): same aggregation as
+    compute_totals_for_plot above, one level up via Plot.farm_id - every
+    crop cycle on every plot this farm has ever had."""
+    total_expense = db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0))
+        .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
+        .join(Plot, CropCycle.plot_id == Plot.id)
+        .where(Plot.farm_id == farm_id, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.EXPENSE)
+    ).scalar_one()
+    total_revenue = db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0))
+        .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
+        .join(Plot, CropCycle.plot_id == Plot.id)
+        .where(Plot.farm_id == farm_id, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.REVENUE)
     ).scalar_one()
     return Decimal(total_expense), Decimal(total_revenue)
 

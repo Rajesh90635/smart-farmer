@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
@@ -39,3 +40,20 @@ def count_active_for_farmer(db: Session, farmer_id: uuid.UUID) -> int:
         .join(Farm, Plot.farm_id == Farm.id)
         .where(Farm.farmer_id == farmer_id, Plot.status == FarmStatus.ACTIVE)
     ).scalar_one()
+
+
+def sum_area_sqm_for_farm(db: Session, farm_id: uuid.UUID) -> Decimal | None:
+    """D71-06 (docs/audit/FINAL_CANONICAL_group_C.md): the farm's current
+    land area for the per-acre P&L figures - active plots only, same
+    scope as list_for_farm above. None (not 0) when the farm has no
+    active plot at all, so a per-acre figure is never fabricated as 0
+    rather than genuinely unavailable."""
+    has_any = db.execute(
+        select(Plot.id).where(Plot.farm_id == farm_id, Plot.status == FarmStatus.ACTIVE).limit(1)
+    ).scalar_one_or_none()
+    if has_any is None:
+        return None
+    total = db.execute(
+        select(func.coalesce(func.sum(Plot.area_sqm), 0)).where(Plot.farm_id == farm_id, Plot.status == FarmStatus.ACTIVE)
+    ).scalar_one()
+    return Decimal(total)

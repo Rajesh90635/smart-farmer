@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 465 |
+| Verified | 473 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **538** |
+| **Attended (Verified + Implemented)** | **546** |
 | Partial | 21 |
-| Missing | 167 |
+| Missing | 159 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **188** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **180** |
 | Future | 38 |
 | Out of Scope | 26 |
 | Environment Dependent | 8 |
@@ -45,6 +45,57 @@ unchanged at 798 - every change this pass was an internal status move,
 zero new/removed rows. Full backend suite and full flutter suite both
 re-run green after this batch. See docs/audit/FINAL_CANONICAL_group_D.md's
 own batch note for the full per-scenario breakdown.)*
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
+BACKLOG" prioritization plan's Batch 5. As with Batch 3/4, no persisted
+priority-plan doc in this repo names Batch 5's approved scenario count -
+assembled directly from the remaining backlog's own dependency graph
+(rows genuinely buildable now with no new product/business decision or
+unconfigured external provider needed, clustered where one small piece of
+work closes several rows at once). 8 rows moved Missing→VERIFIED: D71-05/
+06/07 (Plot/Farm/Season P&L - the fuller cost-variance/per-acre view
+D70-04/05's own totals-only responses deliberately deferred to these
+rows), D38-02/05 (treatment follow-up reminder sweep + reschedule, both
+hard-blocked on D38-01 which was already VERIFIED), D96-08 (season
+weather-impact comparison, reusing the real persisted crop_alert
+Notification history), and D36-04/07 (case acknowledgement +
+recommendation-version FK). D36-06 (expert identity) deliberately NOT
+built - its own row explicitly flags it as a genuine product/privacy
+decision, not an engineering gap. Verified 465→473 (+8), Missing
+167→159 (-8). Total unchanged at 798 - every change this pass was an
+internal status move, zero new/removed rows.
+
+Two real pre-existing bugs found and fixed this batch, neither caused by
+Batch 5's own changes but discovered while implementing it:
+1. `crop_cycle_service.py`'s season-closure `weather_impact_summary`
+   (D97-09, already VERIFIED) filtered for `weather_alert`/`rain_alert`/
+   `heavy_rain_alert` - none of which is ever actually tied to a
+   `crop_cycle` entity (only `crop_alert` is; the other three are always
+   farm-scoped). `weather_alert_count` had been silently always 0 for
+   every crop cycle ever closed, uncaught by the existing test (which
+   only asserted the zero case). Fixed by adding `crop_alert` to the
+   filter set, with a new regression test proving a real notification is
+   now counted.
+2. `case_repository.get_excluded_professional_ids` was missing
+   `COMPLETED` from its exclusion set, so requesting a second opinion
+   could re-select a professional who already completed a review for the
+   same case - a real crash (`IntegrityError` on the `(case_id,
+   professional_id)` unique constraint), reproduced directly while
+   writing D36-07's own test. Fixed by adding `COMPLETED`; re-verified
+   against the existing case-routing/SLA test suites for non-regression.
+
+Full backend suite: **972 passed, 0 failed, 1 error** (up from 950 tests
+collected pre-Batch-3 baseline growth). The 1 error,
+`test_personalization.py::test_personalization_evidence_count_reflects_real_task_data`,
+does not reproduce in isolation - 1/1 passes standalone, and 26/26 pass
+running that entire file alone - the same pre-existing, disclosed
+shared-test-database-scale flakiness pattern this project has repeatedly
+documented (the test DB is a real, persistent Postgres instance, never
+truncated between runs); this batch touched neither
+`personalization_service.py` nor anything that test depends on. Full
+Flutter suite: 312 passed, 0 failed (unchanged - no mobile changes this
+batch). See docs/audit/FINAL_CANONICAL_group_{B,C,D}.md's own batch notes
+for the full per-scenario breakdown.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
 BACKLOG" prioritization plan's Batch 4. As with Batch 3, no persisted

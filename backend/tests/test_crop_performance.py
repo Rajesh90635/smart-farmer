@@ -243,6 +243,42 @@ def test_comparison_disease_recurrence_correctly_identifies_fewer_occurrences_as
     assert disease_metric["comparison"] == "a_higher"
 
 
+def test_comparison_weather_impact_counts_real_crop_alert_notifications_per_cycle(client, farmer_with_crop_cycle, sample_crop_id, db_session):
+    """D96-08 (docs/audit/FINAL_CANONICAL_group_D.md): reuses the real,
+    persisted crop_alert Notification history (weather_action_engine_service.py
+    is deliberately read-only/unpersisted, so it has no history of its
+    own to reuse) - 0 is a genuine fact here, never insufficient_data."""
+    from app.models.notification import Notification, NotificationCategory, NotificationPriority
+
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+    farmer_id = client.get("/api/v1/farmers/me", headers=auth_headers(tokens)).json()["user_id"]
+
+    db_session.add(Notification(
+        farmer_id=uuid.UUID(farmer_id), category=NotificationCategory.CROP_ALERT, priority=NotificationPriority.MEDIUM,
+        title="Heavy Rain Warning", body="Heavy rain expected.", language_code="en",
+        dedup_key=f"test_crop_alert:{crop_cycle_id_1}", related_entity_type="crop_cycle", related_entity_id=crop_cycle_id_1,
+    ))
+    db_session.commit()
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    weather_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "weather_impact_count")
+    assert weather_metric["value_a"] == "1"
+    assert weather_metric["value_b"] == "0"
+    assert weather_metric["comparison"] == "b_higher"  # lower is better - cycle B (0 alerts) wins
+
+
+def test_comparison_weather_impact_is_zero_not_insufficient_data_with_no_alerts(client, farmer_with_crop_cycle, sample_crop_id):
+    tokens, crop_cycle_id_1 = farmer_with_crop_cycle
+    crop_cycle_id_2 = _create_second_crop_cycle(client, tokens, sample_crop_id)
+
+    response = client.get(f"/api/v1/crop-cycles/{crop_cycle_id_1}/comparison/{crop_cycle_id_2}", headers=auth_headers(tokens))
+    weather_metric = next(m for m in response.json()["metrics"] if m["metric_name"] == "weather_impact_count")
+    assert weather_metric["value_a"] == "0"
+    assert weather_metric["value_b"] == "0"
+    assert weather_metric["comparison"] == "equal"
+
+
 def test_comparison_reports_same_crop_true_when_both_cycles_share_a_crop(client, farmer_with_crop_cycle, sample_crop_id):
     """D96-01 (docs/audit/FINAL_CANONICAL_group_D.md)."""
     tokens, crop_cycle_id_1 = farmer_with_crop_cycle

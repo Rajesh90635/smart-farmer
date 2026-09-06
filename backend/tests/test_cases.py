@@ -4,6 +4,40 @@ from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, v
 from tests.professional_factories import valid_case_payload
 
 
+def _create_second_verified_expert():
+    """D36-07: a genuinely different professional for the second-opinion
+    flow to auto-assign to - mirrors conftest.py's verified_expert fixture
+    body exactly (that fixture can't be invoked a second time within one
+    test), avoiding the same professional's own (case_id, professional_id)
+    unique constraint a real second-opinion auto-reassignment would also
+    need a second professional to avoid."""
+    from app.core.jwt import create_access_token
+    from app.core.security_passwords import hash_password
+    from app.db.session import SessionLocal
+    from app.models.professional_profile import AvailabilityStatus, ProfessionalProfile, VerificationStatus
+    from app.models.user import User
+    from tests.professional_factories import unique_phone
+
+    db = SessionLocal()
+    user = User(phone_number=unique_phone(), password_hash=hash_password("Str0ngPass1"))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    profile = ProfessionalProfile(
+        user_id=user.id, role="expert", display_name="Second Verified Expert",
+        verification_status=VerificationStatus.VERIFIED, availability_status=AvailabilityStatus.AVAILABLE,
+        language_codes=["en"], crop_specialization_ids=[], disease_specialization_categories=[],
+        service_area={"state": "Kerala", "district": "Thrissur"},
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+
+    access_token = create_access_token(subject=str(user.id), role="expert")
+    return {"access_token": access_token, "refresh_token": "n/a"}
+
+
 def _create_crop_cycle(client, tokens, sample_crop_id):
     farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
     plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)).json()
@@ -287,3 +321,79 @@ def test_farmer_feedback_after_review(client, registered_farmer, sample_crop_id,
 
     response = client.post(f"/api/v1/cases/{case['id']}/feedback", json={"helpful": True, "rating": 5}, headers=auth_headers(farmer_tokens))
     assert response.status_code == 204
+
+
+# --- D36-04: farmer acknowledgement ---
+
+def test_farmer_can_acknowledge_a_review_and_it_is_idempotent(client, registered_farmer, sample_crop_id, verified_expert):
+    _, farmer_tokens = registered_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+    review = client.post(f"/api/v1/cases/{case['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens)).json()
+    assert review["acknowledged_at"] is None
+
+    first = client.post(f"/api/v1/cases/{case['id']}/reviews/{review['id']}/acknowledge", headers=auth_headers(farmer_tokens))
+    assert first.status_code == 200
+    first_timestamp = first.json()["acknowledged_at"]
+    assert first_timestamp is not None
+
+    second = client.post(f"/api/v1/cases/{case['id']}/reviews/{review['id']}/acknowledge", headers=auth_headers(farmer_tokens))
+    assert second.json()["acknowledged_at"] == first_timestamp  # idempotent - never overwritten
+
+
+def test_farmer_a_cannot_acknowledge_farmer_bs_review(client, registered_farmer, another_farmer, sample_crop_id, verified_expert):
+    _, farmer_a_tokens = registered_farmer
+    _, farmer_b_tokens = another_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id = _create_crop_cycle(client, farmer_a_tokens, sample_crop_id)
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_a_tokens)).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+    review = client.post(f"/api/v1/cases/{case['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens)).json()
+
+    response = client.post(f"/api/v1/cases/{case['id']}/reviews/{review['id']}/acknowledge", headers=auth_headers(farmer_b_tokens))
+    assert response.status_code == 404
+
+
+# --- D36-07: recommendation version (supersedes_review_id) ---
+
+def test_second_review_can_supersede_the_first_for_the_same_case(client, registered_farmer, sample_crop_id, verified_expert):
+    _, farmer_tokens = registered_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+    first_review = client.post(f"/api/v1/cases/{case['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens)).json()
+    assert first_review["supersedes_review_id"] is None
+
+    second_expert_tokens = _create_second_verified_expert()
+    client.post(f"/api/v1/cases/{case['id']}/second-opinion", json={}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(second_expert_tokens))
+    second_review = client.post(
+        f"/api/v1/cases/{case['id']}/review",
+        json={"outcome": "different_diagnosis", "alternative_disease_name": "Late Blight", "supersedes_review_id": first_review["id"]},
+        headers=auth_headers(second_expert_tokens),
+    ).json()
+    assert second_review["supersedes_review_id"] == first_review["id"]
+
+
+def test_supersedes_review_id_rejects_a_review_from_a_different_case(client, registered_farmer, sample_crop_id, verified_expert):
+    _, farmer_tokens = registered_farmer
+    expert_tokens, _ = verified_expert
+
+    crop_cycle_id_1 = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case_1 = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id_1), headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/cases/{case_1['id']}/accept", headers=auth_headers(expert_tokens))
+    review_1 = client.post(f"/api/v1/cases/{case_1['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens)).json()
+
+    crop_cycle_id_2 = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case_2 = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id_2), headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/cases/{case_2['id']}/accept", headers=auth_headers(expert_tokens))
+
+    response = client.post(
+        f"/api/v1/cases/{case_2['id']}/review",
+        json={"outcome": "confirmed", "supersedes_review_id": review_1["id"]},
+        headers=auth_headers(expert_tokens),
+    )
+    assert response.status_code == 404

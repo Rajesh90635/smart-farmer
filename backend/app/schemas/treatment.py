@@ -32,6 +32,11 @@ class TreatmentListResponse(BaseModel):
     items: list[TreatmentResponse]
 
 
+class TreatmentRescheduleRequest(BaseModel):
+    """D38-05 (docs/audit/FINAL_CANONICAL_group_B.md)."""
+    next_check_due_date: date
+
+
 class FollowUpCreateRequest(BaseModel):
     after_analysis_id: uuid.UUID | None = None
     observation_date: date

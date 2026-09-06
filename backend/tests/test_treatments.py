@@ -340,3 +340,98 @@ def test_list_follow_ups_for_treatment(client, farmer_with_crop_cycle):
     response = client.get(f"/api/v1/treatments/{treatment['id']}/follow-ups", headers=auth_headers(tokens))
     assert response.status_code == 200
     assert len(response.json()["items"]) == 2
+
+
+# --- D38-02/D38-05: follow-up reminder sweep + reschedule ---
+
+def test_reschedule_updates_next_check_due_date_and_is_owner_scoped(client, farmer_with_crop_cycle, another_farmer):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"application_date": "2026-01-01", "next_check_due_date": "2026-01-08"},
+        headers=auth_headers(tokens),
+    ).json()
+
+    response = client.post(
+        f"/api/v1/treatments/{treatment['id']}/reschedule", json={"next_check_due_date": "2026-01-15"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    assert response.json()["next_check_due_date"] == "2026-01-15"
+
+    _, other_tokens = another_farmer
+    other_response = client.post(
+        f"/api/v1/treatments/{treatment['id']}/reschedule", json={"next_check_due_date": "2026-02-01"}, headers=auth_headers(other_tokens)
+    )
+    assert other_response.status_code == 404
+
+
+def test_followup_reminder_sweep_alerts_once_for_a_due_date_and_never_duplicates(client, farmer_with_crop_cycle, db_session):
+    from datetime import date, timedelta
+
+    from app.core.config import get_settings
+    from app.models.treatment_record import TreatmentRecord
+    from app.services.treatment_service import run_treatment_followup_reminder_sweep
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    due_date = (date.today() - timedelta(days=1)).isoformat()
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"application_date": "2026-01-01", "next_check_due_date": due_date},
+        headers=auth_headers(tokens),
+    ).json()
+
+    settings = get_settings()
+    run_treatment_followup_reminder_sweep(db_session, settings)
+    stored = db_session.get(TreatmentRecord, uuid.UUID(treatment["id"]))
+    assert stored.followup_reminder_alerted_at is not None
+
+    run_treatment_followup_reminder_sweep(db_session, settings)  # must never duplicate
+
+    notifications = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()["items"]
+    reminders = [n for n in notifications if n["category"] == "treatment_followup_reminder"]
+    assert len(reminders) == 1
+
+
+def test_followup_reminder_sweep_ignores_a_future_due_date(client, farmer_with_crop_cycle, db_session):
+    from datetime import date, timedelta
+
+    from app.core.config import get_settings
+    from app.models.treatment_record import TreatmentRecord
+    from app.services.treatment_service import run_treatment_followup_reminder_sweep
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    future_date = (date.today() + timedelta(days=30)).isoformat()
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"application_date": "2026-01-01", "next_check_due_date": future_date},
+        headers=auth_headers(tokens),
+    ).json()
+
+    run_treatment_followup_reminder_sweep(db_session, get_settings())
+    stored = db_session.get(TreatmentRecord, uuid.UUID(treatment["id"]))
+    assert stored.followup_reminder_alerted_at is None
+
+
+def test_rescheduling_an_already_alerted_treatment_re_arms_the_reminder(client, farmer_with_crop_cycle, db_session):
+    from datetime import date, timedelta
+
+    from app.core.config import get_settings
+    from app.models.treatment_record import TreatmentRecord
+    from app.services.treatment_service import run_treatment_followup_reminder_sweep
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    due_date = (date.today() - timedelta(days=1)).isoformat()
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"application_date": "2026-01-01", "next_check_due_date": due_date},
+        headers=auth_headers(tokens),
+    ).json()
+
+    run_treatment_followup_reminder_sweep(db_session, get_settings())
+    stored = db_session.get(TreatmentRecord, uuid.UUID(treatment["id"]))
+    assert stored.followup_reminder_alerted_at is not None
+
+    new_due_date = (date.today() + timedelta(days=7)).isoformat()
+    client.post(f"/api/v1/treatments/{treatment['id']}/reschedule", json={"next_check_due_date": new_due_date}, headers=auth_headers(tokens))
+    db_session.refresh(stored)
+    assert stored.followup_reminder_alerted_at is None

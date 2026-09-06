@@ -305,6 +305,109 @@ def test_cannot_access_another_farmers_financial_summary(client, farmer_with_cro
     assert response.status_code == 404
 
 
+# --- D71-05/06/07: Plot/Farm/Season P&L (fuller view, cost-variance + per-acre) ---
+
+def test_plot_pnl_aggregates_across_every_cycle_and_computes_variance_and_per_acre(client, farmer_with_crop_cycle, sample_crop_id):
+    tokens, first_cycle_id = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    plot_id = client.get(f"/api/v1/crops/{first_cycle_id}", headers=headers).json()["plot_id"]
+    plot = client.get(f"/api/v1/plots/{plot_id}", headers=headers).json()
+
+    _create_estimate(client, tokens, first_cycle_id, "1000.00")
+    _create_ledger_expense(client, tokens, first_cycle_id, "300.00")
+    client.put(f"/api/v1/crops/{first_cycle_id}", json={"cultivation_status": "cancelled"}, headers=headers)
+
+    from tests.farm_factories import valid_crop_cycle_payload
+
+    second_cycle = client.post(f"/api/v1/plots/{plot_id}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+    _create_ledger_expense(client, tokens, second_cycle["id"], "200.00")
+    _create_ledger_revenue(client, tokens, second_cycle["id"], "1000.00")
+
+    summary = client.get(f"/api/v1/plots/{plot_id}/pnl-summary", headers=headers).json()
+    assert Decimal(summary["actual_cost"]) == Decimal("500.00")
+    assert Decimal(summary["actual_revenue"]) == Decimal("1000.00")
+    assert Decimal(summary["actual_profit_loss"]) == Decimal("500.00")
+    assert Decimal(summary["estimated_cost"]) == Decimal("1000.00")
+    assert Decimal(summary["cost_variance"]) == Decimal("500.00")  # 1000 estimated - 500 actual
+    assert summary["has_any_actual_revenue"] is True
+
+    expected_acres = Decimal(plot["area_value"]) if plot["area_unit"] == "acre" else None
+    if expected_acres is not None:
+        assert Decimal(summary["cost_per_acre"]) == (Decimal("500.00") / expected_acres).quantize(Decimal("0.01"))
+
+
+def test_plot_pnl_reports_none_estimated_cost_when_no_estimate_rows_exist(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    plot_id = client.get(f"/api/v1/crops/{crop_cycle_id}", headers=headers).json()["plot_id"]
+
+    summary = client.get(f"/api/v1/plots/{plot_id}/pnl-summary", headers=headers).json()
+    assert summary["estimated_cost"] is None
+    assert summary["cost_variance"] is None
+    assert Decimal(summary["actual_cost"]) == Decimal("0")
+
+
+def test_cannot_access_another_farmers_plot_pnl(client, farmer_with_crop_cycle, another_farmer):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    plot_id = client.get(f"/api/v1/crops/{crop_cycle_id}", headers=auth_headers(tokens)).json()["plot_id"]
+    _, other_tokens = another_farmer
+    response = client.get(f"/api/v1/plots/{plot_id}/pnl-summary", headers=auth_headers(other_tokens))
+    assert response.status_code == 404
+
+
+def test_farm_pnl_aggregates_across_every_plot_on_the_farm(client, farmer_with_crop_cycle, sample_crop_id):
+    tokens, first_cycle_id = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    plot_id = client.get(f"/api/v1/crops/{first_cycle_id}", headers=headers).json()["plot_id"]
+    farm_id = client.get(f"/api/v1/plots/{plot_id}", headers=headers).json()["farm_id"]
+    _create_ledger_expense(client, tokens, first_cycle_id, "100.00")
+
+    from tests.farm_factories import valid_crop_cycle_payload, valid_plot_payload
+
+    second_plot = client.post(f"/api/v1/farms/{farm_id}/plots", json=valid_plot_payload(), headers=headers).json()
+    second_cycle = client.post(
+        f"/api/v1/plots/{second_plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers
+    ).json()
+    _create_ledger_expense(client, tokens, second_cycle["id"], "50.00")
+    _create_ledger_revenue(client, tokens, second_cycle["id"], "400.00")
+
+    summary = client.get(f"/api/v1/farms/{farm_id}/pnl-summary", headers=headers).json()
+    assert Decimal(summary["actual_cost"]) == Decimal("150.00")
+    assert Decimal(summary["actual_revenue"]) == Decimal("400.00")
+    assert summary["cost_per_acre"] is not None  # two active plots on this farm - a real combined area exists
+
+
+def test_cannot_access_another_farmers_farm_pnl(client, farmer_with_crop_cycle, another_farmer):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    plot_id = client.get(f"/api/v1/crops/{crop_cycle_id}", headers=auth_headers(tokens)).json()["plot_id"]
+    farm_id = client.get(f"/api/v1/plots/{plot_id}", headers=auth_headers(tokens)).json()["farm_id"]
+    _, other_tokens = another_farmer
+    response = client.get(f"/api/v1/farms/{farm_id}/pnl-summary", headers=auth_headers(other_tokens))
+    assert response.status_code == 404
+
+
+def test_season_pnl_aggregates_across_plots_and_excludes_other_seasons(client, farmer_with_crop_cycle, sample_crop_id):
+    tokens, kharif_cycle_id = farmer_with_crop_cycle  # farmer_with_crop_cycle's default season is kharif
+    headers = auth_headers(tokens)
+
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    rabi_plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    rabi_cycle = client.post(
+        f"/api/v1/plots/{rabi_plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id, season="rabi"), headers=headers
+    ).json()
+
+    _create_estimate(client, tokens, kharif_cycle_id, "200.00")
+    _create_ledger_expense(client, tokens, kharif_cycle_id, "100.00")
+    _create_ledger_expense(client, tokens, rabi_cycle["id"], "999.00")
+
+    summary = client.get("/api/v1/farmers/me/seasons/kharif/pnl-summary", headers=headers).json()
+    assert Decimal(summary["actual_cost"]) == Decimal("100.00")
+    assert Decimal(summary["estimated_cost"]) == Decimal("200.00")
+    assert "cost_per_acre" not in summary or summary.get("cost_per_acre") is None  # no single area spans a Season
+
+
 def test_cannot_create_estimate_under_another_farmers_crop_cycle(client, farmer_with_crop_cycle, another_farmer):
     _, crop_cycle_id = farmer_with_crop_cycle
     _, tokens_b = another_farmer

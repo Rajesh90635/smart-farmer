@@ -36,7 +36,17 @@ from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse, Cr
 from app.services import crop_financial_service, task_service
 from app.services.audit_logger import AuditLogger
 
-_WEATHER_NOTIFICATION_CATEGORIES = {"weather_alert", "rain_alert", "heavy_rain_alert"}
+# A real pre-existing bug found and fixed while implementing D96-08
+# (docs/audit/FINAL_CANONICAL_group_D.md): every notification actually
+# tied to a crop_cycle entity (weather_alert_orchestration_service.py's
+# evaluate_crop_weather_alert candidate) is category "crop_alert" -
+# "weather_alert"/"rain_alert"/"heavy_rain_alert" are ALWAYS tied to
+# related_entity_type="farm" instead, never "crop_cycle" (confirmed by
+# direct grep of every create_alert_notification call site). This set
+# previously never matched anything, so weather_alert_count/categories
+# below were silently always 0/[] for every crop cycle ever closed - not
+# caught by the existing test, which only asserted the zero case.
+_WEATHER_NOTIFICATION_CATEGORIES = {"weather_alert", "rain_alert", "heavy_rain_alert", "crop_alert"}
 
 _DEFAULT_PAGE_SIZE = 50
 

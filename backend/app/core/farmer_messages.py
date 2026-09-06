@@ -72,6 +72,7 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "PASSWORD_CHANGED_ALERT": {"en": "Your account password was just changed. If this wasn't you, contact support immediately."},
     "NEW_DEVICE_LOGIN_ALERT": {"en": "Your account was just signed in to from a device we haven't seen before. If this wasn't you, contact support immediately and change your password."},
     "SOIL_TEST_REMINDER": {"en": "Your soil test for this plot is over {max_age_days} days old (last tested {test_date}). Consider scheduling a new one."},
+    "TREATMENT_FOLLOWUP_REMINDER": {"en": "It's time to check on your crop's treatment follow-up, scheduled for {due_date}."},
     "assistant_no_data_crop": {"en": "I don't have a current active crop record for you yet. Add a crop cycle to get started."},
     "assistant_crop_status": {"en": "Your {crop_name} on {farm_name} is currently at the {stage} stage."},
     "assistant_no_data_treatment": {"en": "No treatment has been recorded for this crop yet."},

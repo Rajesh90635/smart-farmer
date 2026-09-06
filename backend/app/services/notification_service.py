@@ -40,6 +40,7 @@ _CATEGORY_PREFERENCE_MAP = {
     NotificationCategory.DISPUTE_ALERT: "general_notifications_enabled",
     NotificationCategory.SEVERE_WEATHER_ALERT: "weather_alerts_enabled",
     NotificationCategory.SOIL_TEST_REMINDER: "general_notifications_enabled",
+    NotificationCategory.TREATMENT_FOLLOWUP_REMINDER: "disease_alerts_enabled",
     # SECURITY_ALERT deliberately NOT gated by any preference toggle - a
     # farmer must never be able to silently miss being told their own
     # account's password changed, the same reasoning that already exempts
@@ -60,6 +61,7 @@ _TITLE_BY_CATEGORY = {
     NotificationCategory.SECURITY_ALERT: "Security Alert",
     NotificationCategory.SEVERE_WEATHER_ALERT: "Severe Weather Warning",
     NotificationCategory.SOIL_TEST_REMINDER: "Soil Test Reminder",
+    NotificationCategory.TREATMENT_FOLLOWUP_REMINDER: "Treatment Follow-up Reminder",
 }
 
 # D88-01 (docs/audit/FINAL_CANONICAL_group_D.md): mirrors the "source"
@@ -80,6 +82,7 @@ _SOURCE_BY_CATEGORY = {
     NotificationCategory.DISPUTE_ALERT: "Dispute records",
     NotificationCategory.SECURITY_ALERT: "Account security",
     NotificationCategory.SOIL_TEST_REMINDER: "Soil testing",
+    NotificationCategory.TREATMENT_FOLLOWUP_REMINDER: "Treatment records",
 }
 
 # D79-04 (docs/audit/FINAL_CANONICAL_group_D.md): a category-specific

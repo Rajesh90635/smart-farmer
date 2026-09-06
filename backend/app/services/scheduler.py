@@ -26,6 +26,7 @@ from app.services.input_inventory_service import run_expiry_check_sweep
 from app.services.payment_service import run_payment_timeout_sweep
 from app.services.soil_testing_service import run_soil_test_reminder_sweep
 from app.services.task_service import run_overdue_task_alert_sweep
+from app.services.treatment_service import run_treatment_followup_reminder_sweep
 from app.services.weather_alert_orchestration_service import run_proactive_weather_alert_sweep
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,18 @@ def _run_soil_test_reminder_sweep_job(settings: Settings) -> None:
         db.close()
 
 
+def _run_treatment_followup_reminder_sweep_job(settings: Settings) -> None:
+    db = SessionLocal()
+    try:
+        alerted = run_treatment_followup_reminder_sweep(db, settings)
+        logger.info("treatment_followup_reminder_sweep alerted=%s", alerted)
+    except Exception:
+        logger.exception("treatment_followup_reminder_sweep tick failed - will retry next interval")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
     """Idempotent - calling twice (e.g. lifespan re-entry in tests that
     build the app more than once) never starts a second scheduler."""
@@ -179,15 +192,27 @@ def start_scheduler(settings: Settings) -> BackgroundScheduler | None:
         coalesce=True,
         misfire_grace_time=settings.soil_test_reminder_sweep_interval_seconds,
     )
+    scheduler.add_job(
+        _run_treatment_followup_reminder_sweep_job,
+        "interval",
+        seconds=settings.treatment_followup_reminder_sweep_interval_seconds,
+        args=[settings],
+        id="treatment_followup_reminder_sweep",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=settings.treatment_followup_reminder_sweep_interval_seconds,
+    )
     scheduler.start()
     _scheduler = scheduler
     logger.info(
         "Background scheduler started (case_sla_sweep every %ss, input_inventory_expiry_sweep every %ss, "
         "proactive_weather_alert_sweep every %ss, task_overdue_alert_sweep every %ss, "
-        "payment_timeout_sweep every %ss, soil_test_reminder_sweep every %ss)",
+        "payment_timeout_sweep every %ss, soil_test_reminder_sweep every %ss, "
+        "treatment_followup_reminder_sweep every %ss)",
         settings.case_sla_sweep_interval_seconds, settings.input_inventory_expiry_sweep_interval_seconds,
         settings.proactive_weather_alert_sweep_interval_seconds, settings.task_overdue_alert_sweep_interval_seconds,
         settings.payment_timeout_sweep_interval_seconds, settings.soil_test_reminder_sweep_interval_seconds,
+        settings.treatment_followup_reminder_sweep_interval_seconds,
     )
     return scheduler
 

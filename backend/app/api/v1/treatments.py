@@ -16,6 +16,7 @@ from app.schemas.treatment import (
     FollowUpResponse,
     TreatmentCreateRequest,
     TreatmentListResponse,
+    TreatmentRescheduleRequest,
     TreatmentResponse,
 )
 from app.services import treatment_service
@@ -59,6 +60,17 @@ def list_follow_ups(
     db: Session = Depends(get_db),
 ) -> FollowUpListResponse:
     return treatment_service.list_follow_ups(db, current_user.user_id, treatment_id)
+
+
+@router.post("/treatments/{treatment_id}/reschedule", response_model=TreatmentResponse)
+def reschedule_treatment(
+    treatment_id: uuid.UUID,
+    payload: TreatmentRescheduleRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> TreatmentResponse:
+    """D38-05 (docs/audit/FINAL_CANONICAL_group_B.md)."""
+    return treatment_service.reschedule_treatment(db, current_user.user_id, treatment_id, payload)
 
 
 @router.get("/treatments/{treatment_id}/effectiveness", response_model=EffectivenessResponse)

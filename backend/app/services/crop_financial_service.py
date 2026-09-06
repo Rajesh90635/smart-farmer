@@ -23,6 +23,7 @@ from app.repositories import (
     ai_reference_repository,
     crop_cost_estimate_repository,
     crop_cycle_repository,
+    farm_repository,
     ledger_entry_repository,
     plot_repository,
 )
@@ -31,7 +32,10 @@ from app.schemas.cost_estimate import (
     CropCostEstimateListResponse,
     CropCostEstimateResponse,
     CropFinancialSummaryResponse,
+    FarmFinancialSummaryResponse,
+    PlotFinancialSummaryResponse,
     PlotFinancialTotalsResponse,
+    SeasonFinancialSummaryResponse,
     SeasonFinancialTotalsResponse,
     StageFinancialSummary,
 )
@@ -139,6 +143,85 @@ def get_season_financial_summary(db: Session, farmer_id: str, season: Season) ->
     return SeasonFinancialTotalsResponse(
         season=season.value, total_cost=total_cost, total_revenue=total_revenue, profit_loss=total_revenue - total_cost
     )
+
+
+def _pnl_fields(estimated_cost: Decimal | None, actual_cost: Decimal, actual_revenue: Decimal) -> dict:
+    """D71-05/06/07 (docs/audit/FINAL_CANONICAL_group_C.md): the same
+    variance/percent/ratio math CropFinancialSummaryResponse already uses
+    at crop-cycle granularity, factored out so it isn't triplicated
+    across the Plot/Farm/Season rollups below."""
+    cost_variance = (estimated_cost - actual_cost) if estimated_cost is not None else None
+    cost_variance_percent = _percent(cost_variance, estimated_cost) if (cost_variance is not None and estimated_cost) else None
+    actual_profit_loss = actual_revenue - actual_cost
+    profit_loss_percent = _percent(actual_profit_loss, actual_cost) if actual_cost else None
+    revenue_to_cost_ratio = (actual_revenue / actual_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if actual_cost else None
+    return {
+        "estimated_cost": estimated_cost,
+        "actual_cost": actual_cost,
+        "cost_variance": cost_variance,
+        "cost_variance_percent": cost_variance_percent,
+        "actual_revenue": actual_revenue,
+        "actual_profit_loss": actual_profit_loss,
+        "profit_loss_percent": profit_loss_percent,
+        "revenue_to_cost_ratio": revenue_to_cost_ratio,
+        "has_any_actual_revenue": actual_revenue > 0,
+    }
+
+
+def get_plot_pnl(db: Session, farmer_id: str, plot_id: uuid.UUID) -> PlotFinancialSummaryResponse:
+    """D71-05 (docs/audit/FINAL_CANONICAL_group_C.md): the fuller Plot P&L
+    view D70-04's get_plot_financial_summary deliberately deferred."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    plot = plot_repository.get_owned(db, plot_id, farmer_uuid)
+    if plot is None:
+        raise AppError(error_codes.NOT_FOUND, "Plot not found.", 404)
+
+    estimated_cost = crop_cost_estimate_repository.total_for_plot(db, plot_id, farmer_uuid)
+    actual_cost, actual_revenue = ledger_entry_repository.compute_totals_for_plot(db, plot_id, farmer_uuid)
+    fields = _pnl_fields(estimated_cost, actual_cost, actual_revenue)
+
+    acres = from_square_meters(plot.area_sqm, AreaUnit.ACRE)
+    return PlotFinancialSummaryResponse(
+        plot_id=plot_id,
+        **fields,
+        cost_per_acre=_per_acre(fields["actual_cost"], acres),
+        revenue_per_acre=_per_acre(fields["actual_revenue"], acres),
+        profit_loss_per_acre=_per_acre(fields["actual_profit_loss"], acres),
+    )
+
+
+def get_farm_pnl(db: Session, farmer_id: str, farm_id: uuid.UUID) -> FarmFinancialSummaryResponse:
+    """D71-06 (docs/audit/FINAL_CANONICAL_group_C.md): same shape as
+    get_plot_pnl, one level up."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    farm = farm_repository.get_owned(db, farm_id, farmer_uuid)
+    if farm is None:
+        raise AppError(error_codes.NOT_FOUND, "Farm not found.", 404)
+
+    estimated_cost = crop_cost_estimate_repository.total_for_farm(db, farm_id, farmer_uuid)
+    actual_cost, actual_revenue = ledger_entry_repository.compute_totals_for_farm(db, farm_id, farmer_uuid)
+    fields = _pnl_fields(estimated_cost, actual_cost, actual_revenue)
+
+    total_area_sqm = plot_repository.sum_area_sqm_for_farm(db, farm_id)
+    acres = from_square_meters(total_area_sqm, AreaUnit.ACRE) if total_area_sqm is not None else None
+    return FarmFinancialSummaryResponse(
+        farm_id=farm_id,
+        **fields,
+        cost_per_acre=_per_acre(fields["actual_cost"], acres),
+        revenue_per_acre=_per_acre(fields["actual_revenue"], acres),
+        profit_loss_per_acre=_per_acre(fields["actual_profit_loss"], acres),
+    )
+
+
+def get_season_pnl(db: Session, farmer_id: str, season: Season) -> SeasonFinancialSummaryResponse:
+    """D71-07 (docs/audit/FINAL_CANONICAL_group_C.md): same shape as
+    get_plot_pnl, scoped by Season - no per-acre figures, see
+    SeasonFinancialSummaryResponse's own docstring for why."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    estimated_cost = crop_cost_estimate_repository.total_for_season(db, farmer_uuid, season)
+    actual_cost, actual_revenue = ledger_entry_repository.compute_totals_for_season(db, farmer_uuid, season)
+    fields = _pnl_fields(estimated_cost, actual_cost, actual_revenue)
+    return SeasonFinancialSummaryResponse(season=season.value, **fields)
 
 
 def _acres_for_crop_cycle(crop_cycle) -> Decimal | None:

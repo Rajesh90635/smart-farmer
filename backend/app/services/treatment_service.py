@@ -16,17 +16,21 @@ project. Confidence scores are NEVER used as a severity proxy - that
 would be fabricated precision.
 """
 import uuid
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
+from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.ai_analysis import ResultStatus
 from app.models.crop_health_case import CaseStatus
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.treatment_follow_up import TreatmentFollowUp
 from app.models.treatment_record import TreatmentRecord
-from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, treatment_repository
-from app.services import case_service
+from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, treatment_repository, user_repository
+from app.services import case_service, notification_service
+from app.services.weather_alert_rules import AlertCandidate
 from app.schemas.treatment import (
     EffectivenessResponse,
     FollowUpCreateRequest,
@@ -34,6 +38,7 @@ from app.schemas.treatment import (
     FollowUpResponse,
     TreatmentCreateRequest,
     TreatmentListResponse,
+    TreatmentRescheduleRequest,
     TreatmentResponse,
 )
 
@@ -158,6 +163,64 @@ def get_effectiveness(db: Session, farmer_id: str, treatment_id: uuid.UUID) -> E
         has_follow_up=most_recent_follow_up is not None,
         recommended_action=recommended_action,
     )
+
+
+def reschedule_treatment(db: Session, farmer_id: str, treatment_id: uuid.UUID, payload: TreatmentRescheduleRequest) -> TreatmentResponse:
+    """D38-05 (docs/audit/FINAL_CANONICAL_group_B.md): updates
+    next_check_due_date (D38-01) and re-arms the follow-up reminder sweep
+    (D38-02) by clearing followup_reminder_alerted_at - a rescheduled
+    follow-up must not stay silently alerted from the date it just
+    replaced."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    treatment = treatment_repository.get_treatment_owned(db, treatment_id, farmer_uuid)
+    if treatment is None:
+        raise AppError(error_codes.NOT_FOUND, "Treatment record not found.", 404)
+
+    treatment.next_check_due_date = payload.next_check_due_date
+    treatment.followup_reminder_alerted_at = None
+    db.commit()
+    db.refresh(treatment)
+    before_analysis = _get_analysis(db, treatment.before_analysis_id, farmer_uuid)
+    return _to_treatment_response(treatment, before_analysis)
+
+
+def run_treatment_followup_reminder_sweep(db: Session, settings: Settings) -> int:
+    """D38-02 (docs/audit/FINAL_CANONICAL_group_B.md): proactive reminder
+    that a farmer-scheduled follow-up check has arrived/passed, run by the
+    background scheduler (app/services/scheduler.py) - not farmer-screen-
+    triggered, so it fires even if the farmer never opens the treatment
+    screen. Mirrors input_inventory_service.run_expiry_check_sweep's exact
+    shape."""
+    today = date.today()
+    treatments = treatment_repository.list_due_unalerted_followups(db, on_or_before=today)
+
+    alerted = 0
+    for treatment in treatments:
+        candidate = AlertCandidate(
+            category=NotificationCategory.TREATMENT_FOLLOWUP_REMINDER,
+            priority=NotificationPriority.MEDIUM,
+            message_key="TREATMENT_FOLLOWUP_REMINDER",
+            message_params={"due_date": treatment.next_check_due_date.isoformat()},
+            dedup_suffix=f"treatment_followup_reminder:{treatment.id}",
+        )
+        language_code = _language_for(db, str(treatment.farmer_id))
+        created = notification_service.create_alert_notification(
+            db, str(treatment.farmer_id), candidate, dedup_scope=f"treatment_record:{treatment.id}", language_code=language_code,
+            related_entity_type="treatment_record", related_entity_id=str(treatment.id),
+        )
+        treatment.followup_reminder_alerted_at = datetime.now(timezone.utc)
+        db.commit()
+        if created is not None:
+            alerted += 1
+
+    return alerted
+
+
+def _language_for(db: Session, farmer_id: str) -> str:
+    user = user_repository.get_by_id(db, uuid.UUID(farmer_id))
+    if user and getattr(user, "farmer_profile", None):
+        return user.farmer_profile.preferred_language_code
+    return "en"
 
 
 def _get_analysis(db: Session, analysis_id, farmer_id: uuid.UUID):

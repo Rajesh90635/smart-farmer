@@ -16,7 +16,10 @@ from app.schemas.cost_estimate import (
     CropCostEstimateListResponse,
     CropCostEstimateResponse,
     CropFinancialSummaryResponse,
+    FarmFinancialSummaryResponse,
+    PlotFinancialSummaryResponse,
     PlotFinancialTotalsResponse,
+    SeasonFinancialSummaryResponse,
     SeasonFinancialTotalsResponse,
 )
 from app.schemas.profit_forecast import CropProfitForecastResponse
@@ -89,3 +92,33 @@ def get_season_financial_summary(
 ) -> SeasonFinancialTotalsResponse:
     """D70-05 (docs/audit/FINAL_CANONICAL_group_C.md)."""
     return crop_financial_service.get_season_financial_summary(db, current_user.user_id, season)
+
+
+@router.get("/plots/{plot_id}/pnl-summary", response_model=PlotFinancialSummaryResponse)
+def get_plot_pnl(
+    plot_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> PlotFinancialSummaryResponse:
+    """D71-05 (docs/audit/FINAL_CANONICAL_group_C.md)."""
+    return crop_financial_service.get_plot_pnl(db, current_user.user_id, plot_id)
+
+
+@router.get("/farms/{farm_id}/pnl-summary", response_model=FarmFinancialSummaryResponse)
+def get_farm_pnl(
+    farm_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> FarmFinancialSummaryResponse:
+    """D71-06 (docs/audit/FINAL_CANONICAL_group_C.md)."""
+    return crop_financial_service.get_farm_pnl(db, current_user.user_id, farm_id)
+
+
+@router.get("/farmers/me/seasons/{season}/pnl-summary", response_model=SeasonFinancialSummaryResponse)
+def get_season_pnl(
+    season: Season,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> SeasonFinancialSummaryResponse:
+    """D71-07 (docs/audit/FINAL_CANONICAL_group_C.md)."""
+    return crop_financial_service.get_season_pnl(db, current_user.user_id, season)

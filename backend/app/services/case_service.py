@@ -284,6 +284,15 @@ def submit_review(db: Session, user_id: str, case_id: uuid.UUID, payload: CaseRe
         if grant is None or not grant.is_active(datetime.now(timezone.utc)) or grant.case_id != case.id:
             raise AppError(error_codes.VALIDATION_ERROR, "You do not have access to one or more cited evidence analyses.", 403)
 
+    # D36-07 (docs/audit/FINAL_CANONICAL_group_B.md): a supersedes target
+    # must be a real review of THIS SAME case - never trusted merely
+    # because it parses as a UUID (same discipline as the evidence
+    # citations above).
+    if payload.supersedes_review_id is not None:
+        superseded = case_repository.get_review_for_case(db, payload.supersedes_review_id, case.id)
+        if superseded is None:
+            raise AppError(error_codes.NOT_FOUND, "The review to supersede was not found for this case.", 404)
+
     review = CaseReview(
         case_id=case.id,
         assignment_id=assignment.id,
@@ -294,6 +303,7 @@ def submit_review(db: Session, user_id: str, case_id: uuid.UUID, payload: CaseRe
         notes=payload.notes,
         evidence_photo_ids=[str(pid) for pid in payload.evidence_photo_ids] or None,
         evidence_analysis_ids=[str(aid) for aid in payload.evidence_analysis_ids] or None,
+        supersedes_review_id=payload.supersedes_review_id,
     )
     case_repository.create_review(db, review)
 
@@ -335,6 +345,27 @@ def submit_review(db: Session, user_id: str, case_id: uuid.UUID, payload: CaseRe
         )
     else:
         _notify_case_event(db, case, "CASE_REVIEWED", farmer_id=case.farmer_id)
+
+    return CaseReviewResponse.model_validate(review)
+
+
+def acknowledge_review(db: Session, farmer_id: str, case_id: uuid.UUID, review_id: uuid.UUID) -> CaseReviewResponse:
+    """D36-04 (docs/audit/FINAL_CANONICAL_group_B.md): a farmer read-
+    receipt, distinct from the existing professional_feedback rating/
+    helpfulness survey. Idempotent - a second call never overwrites the
+    original acknowledgement timestamp."""
+    case = case_repository.get_case_owned_by_farmer(db, case_id, uuid.UUID(farmer_id))
+    if case is None:
+        raise AppError(error_codes.NOT_FOUND, "Case not found.", 404)
+
+    review = case_repository.get_review_for_case(db, review_id, case_id)
+    if review is None:
+        raise AppError(error_codes.NOT_FOUND, "Review not found for this case.", 404)
+
+    if review.acknowledged_at is None:
+        review.acknowledged_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(review)
 
     return CaseReviewResponse.model_validate(review)
 

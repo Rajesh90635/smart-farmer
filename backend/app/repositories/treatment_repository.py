@@ -3,6 +3,7 @@ Treatment/follow-up repositories. Ownership enforced the same way as
 every other farmer-scoped entity in this project.
 """
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -49,6 +50,23 @@ def list_follow_ups_for_treatment(db: Session, treatment_id: uuid.UUID, farmer_i
             select(TreatmentFollowUp)
             .where(TreatmentFollowUp.treatment_id == treatment_id, TreatmentFollowUp.farmer_id == farmer_id)
             .order_by(TreatmentFollowUp.observation_date.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+
+def list_due_unalerted_followups(db: Session, *, on_or_before: date) -> list[TreatmentRecord]:
+    """D38-02 (docs/audit/FINAL_CANONICAL_group_B.md): used by the
+    background follow-up reminder sweep - a farmer-set next_check_due_date
+    that has arrived/passed and hasn't been alerted on yet."""
+    return list(
+        db.execute(
+            select(TreatmentRecord).where(
+                TreatmentRecord.next_check_due_date.isnot(None),
+                TreatmentRecord.next_check_due_date <= on_or_before,
+                TreatmentRecord.followup_reminder_alerted_at.is_(None),
+            )
         )
         .scalars()
         .all()

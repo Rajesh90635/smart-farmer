@@ -117,6 +117,35 @@ tests). Alembic migration chain re-verified single-headed and applies cleanly. S
 `docs/audit/FINAL_CANONICAL_group_A.md`'s and `docs/audit/FINAL_CANONICAL_group_D.md`'s
 per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
 
+**Updated this later continuation session** (Missing Backlog Batch 5 - assembled directly
+from the remaining backlog's own dependency graph, since no persisted priority-plan doc names
+Batch 5's approved scenario count either, same as Batch 3/4) — `docs/FINAL_GAP_REPORT.md`'s
+"FROZEN CANONICAL COUNTS" now read 798 total: 473 Verified, 73 Implemented, 21 Partial, 159
+Missing, 0 Broken, 38 Future, 26 Out of Scope, 8 Environment Dependent; 180 current-scope
+items remain (down from 188 after Batch 4). 8 rows moved Missing→VERIFIED: D71-05/06/07
+(Plot/Farm/Season P&L rollup), D38-02/05 (treatment follow-up reminder sweep + reschedule),
+D96-08 (season weather-impact comparison), and D36-04/07 (case acknowledgement +
+recommendation-version FK). D36-06 (expert identity) deliberately NOT built - a genuine
+product/privacy decision per its own row, not an engineering gap. Two real pre-existing bugs
+found and fixed while implementing this batch (neither caused by Batch 5's own changes): (1)
+the season-closure snapshot's `weather_impact_summary` (D97-09, already VERIFIED) filtered
+for notification categories that are never actually tied to a crop cycle - `weather_alert_count`
+had been silently always 0 for every crop cycle ever closed; fixed by adding the correct
+category (`crop_alert`) to the filter, with a new regression test. (2) `case_repository.
+get_excluded_professional_ids` was missing `COMPLETED` from its exclusion set, so a
+second-opinion request could re-select a professional who already reviewed the same case -
+a real crash reproduced directly while writing D36-07's own test; fixed, and re-verified
+against the existing case-routing/SLA suites for non-regression. Full backend suite: **972
+passed, 0 failed, 1 error** (up from 956). The 1 error,
+`test_personalization.py::test_personalization_evidence_count_reflects_real_task_data`, does
+not reproduce in isolation (1/1 standalone, 26/26 for the whole file) - the same
+pre-existing, disclosed shared-test-database-scale flakiness this project has repeatedly
+documented elsewhere; this batch touched neither `personalization_service.py` nor anything
+that test depends on. Full Flutter suite: **312 passed, 0 failed** (unchanged - no mobile
+changes this batch). Alembic migration chain re-verified single-headed and applies cleanly
+to both dev and test databases. See `docs/audit/FINAL_CANONICAL_group_{B,C,D}.md`'s
+per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
+
 ## Functional
 
 - 100 domains audited (13 cluster passes, `docs/audit/`), 798 individually-classified

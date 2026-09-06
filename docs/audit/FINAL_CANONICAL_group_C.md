@@ -38,6 +38,21 @@ changes, and are folded into this file's evidence rather than the deltas table: 
 (cited as examples of already-correctly-justified MISSING/FUTURE rows — see §3/§5), and
 D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE rows — see §6).
 
+*(Later continuation session — Missing Backlog Batch 5, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 5's approved scenario count, same situation Batch 3/4
+disclosed. 3 rows in this group MISSING→VERIFIED (-3 Missing, +3
+Verified): D71-05/06/07 (Plot/Farm/Season P&L - the fuller cost-variance/
+per-acre view D70-04/05's own totals-only `PlotFinancialTotalsResponse`/
+`SeasonFinancialTotalsResponse` deliberately deferred to this row, per
+those rows' own citations at line 37 above). Zero migration work - a
+query-layer addition only, reusing `Plot`/`CropCycle`/`LedgerEntry`/
+`CropCostEstimate` relationships that already existed. Total unchanged at
+174 - every change here is an internal status move, zero new/removed
+rows. See docs/FINAL_GAP_REPORT.md for the cross-group reconciliation and
+exact full-suite counts.)*
+
 *(Later continuation session — Missing Backlog Batch 2, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Of the 5 D65 Partial
 Payments items, 4 became VERIFIED with genuine new code (D65-01/02/03/05 -
@@ -57,10 +72,10 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 87 |
+| VERIFIED | 90 |
 | IMPLEMENTED | 14 |
 | PARTIAL | 4 |
-| MISSING | 42 |
+| MISSING | 39 |
 | BROKEN | 0 |
 | FUTURE | 7 |
 | OUT_OF_SCOPE | 20 |
@@ -1629,7 +1644,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 71 Profit
 - Scenario ID: D71-05
 - Exact scenario name: Plot P&L
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new `crop_financial_service.get_plot_pnl` / `GET /plots/{plot_id}/pnl-summary`, distinct from D70-04's totals-only `PlotFinancialTotalsResponse`. Same honest-NULL conventions as `CropFinancialSummaryResponse` (estimated_cost/cost_variance None when no estimate rows exist at all, never a fabricated zero; per-acre None only if the plot's area can't be resolved - a resolved Plot always has a real `area_sqm`, so this is never None in practice at this granularity). Deliberately no `stage_summaries` - stages are a single crop cycle's own concept and don't aggregate across a plot's whole multi-cycle history. Tests: `tests/test_crop_financials.py` (3 new).
 - Existing relevant files/classes/functions: `crop_financial_service.get_financial_summary()` (per-crop-cycle); `Plot` model fully exists (`plot.py`) but is never joined into any financial computation — confirmed by grep of `crop_financial_service.py`, `profit_forecast_service.py`, `crop_comparison_service.py`, `crop_performance_service.py` for "plot" (zero matches)
 - Missing component: Any aggregation function summing `get_financial_summary()` across every `CropCycle` sharing a `plot_id`
 - Required implementation: A new `plot_financial_service.py` (or a function added to `crop_financial_service.py`) that queries all `CropCycle`s for a given `plot_id`, sums their `LedgerEntry` aggregates, and returns a `PlotFinancialSummaryResponse` with the same honest-NULL-handling conventions as `crop_financial_service.py` (e.g. `has_any_actual_revenue`, `Literal[None]` for unavailable projected figures)
@@ -1648,7 +1663,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 71 Profit
 - Scenario ID: D71-06
 - Exact scenario name: Farm P&L
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new `crop_financial_service.get_farm_pnl` / `GET /farms/{farm_id}/pnl-summary`, same pattern as D71-05 one level up; per-acre uses the sum of every ACTIVE plot's own `area_sqm` on the farm (new `plot_repository.sum_area_sqm_for_farm`), None only if the farm has no active plot at all. Tests: `tests/test_crop_financials.py` (2 new).
 - Existing relevant files/classes/functions: same finding as D71-05, one level up (`Plot.farm_id`)
 - Missing component: Any aggregation summing across every `Plot`/`CropCycle` on a `Farm`
 - Required implementation: Same pattern as D71-05, one level up — a `farm_financial_service.py` (or extension) aggregating across all of a farm's plots
@@ -1667,7 +1682,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 71 Profit
 - Scenario ID: D71-07
 - Exact scenario name: Season P&L
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 5)** - new `crop_financial_service.get_season_pnl` / `GET /farmers/me/seasons/{season}/pnl-summary`, same pattern as D71-05, scoped by Season. No per-acre figures - a Season spans an arbitrary number of farms/plots with no single area to divide by, unlike Plot/Farm which each have exactly one; disclosed in `SeasonFinancialSummaryResponse`'s own docstring, not silently omitted. Tests: `tests/test_crop_financials.py` (1 new).
 - Existing relevant files/classes/functions: `CropCycle.season` (`crop_cycle.py:86`) exists but is never grouped by in any financial query — same finding as D70-05
 - Missing component: Any aggregation grouping by `CropCycle.season`
 - Required implementation: A query grouping a farmer's `CropCycle`s by `season` and summing their financial aggregates, same conventions as D71-05

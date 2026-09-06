@@ -510,6 +510,43 @@ def test_closing_a_crop_cycle_with_no_harvest_or_finances_creates_an_honest_empt
     assert snapshot["weather_impact_summary"] == {"weather_alert_count": 0, "categories": []}
 
 
+def test_closure_snapshot_weather_impact_counts_a_real_crop_alert_notification(client, registered_farmer, sample_crop_id, db_session):
+    """A real pre-existing bug found and fixed while implementing D96-08
+    (docs/audit/FINAL_CANONICAL_group_D.md): every notification actually
+    tied to a crop_cycle entity (weather_alert_orchestration_service.py's
+    evaluate_crop_weather_alert candidate) is category 'crop_alert' - the
+    closure snapshot's own weather_impact_summary previously filtered for
+    'weather_alert'/'rain_alert'/'heavy_rain_alert' only, none of which is
+    ever actually tied to a crop_cycle (those are always farm-scoped
+    instead), so weather_alert_count was silently always 0 for every crop
+    cycle ever closed. Inserting the real notification row directly here
+    (rather than wiring up a full weather-provider heavy-rain fixture) is
+    a direct, deterministic proof of the fix."""
+    from app.models.notification import Notification, NotificationCategory, NotificationPriority
+
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+
+    farmer_id = client.get("/api/v1/farmers/me", headers=auth_headers(tokens)).json()["user_id"]
+    db_session.add(Notification(
+        farmer_id=uuid.UUID(farmer_id), category=NotificationCategory.CROP_ALERT, priority=NotificationPriority.MEDIUM,
+        title="Heavy Rain Warning", body="Heavy rain expected for your Tomato crop.", language_code="en",
+        dedup_key=f"test_crop_alert:{cycle['id']}", related_entity_type="crop_cycle", related_entity_id=cycle["id"],
+    ))
+    db_session.commit()
+
+    response = client.post(f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=auth_headers(tokens))
+    assert response.status_code == 200
+    weather_impact = response.json()["closure_snapshot"]["weather_impact_summary"]
+    assert weather_impact["weather_alert_count"] == 1
+    assert weather_impact["categories"] == ["crop_alert"]
+
+
 def test_closing_a_crop_cycle_snapshots_the_linked_harvest_and_ledger(client, registered_farmer, sample_crop_id):
     _, tokens = registered_farmer
     plot = _create_plot(client, tokens)

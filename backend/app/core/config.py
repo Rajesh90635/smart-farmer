@@ -180,6 +180,10 @@ class Settings(BaseSettings):
     # unlike the higher-frequency sweeps above. ---
     soil_test_reminder_sweep_interval_seconds: int = 86400
 
+    # --- Treatment follow-up reminder sweep (D38-02) - same scheduler;
+    # daily cadence, same reasoning as the soil test reminder above. ---
+    treatment_followup_reminder_sweep_interval_seconds: int = 86400
+
     # --- Data provenance staleness (D88-10) - mirrors weather's own
     # is_stale/soil_test_max_age_days convention for the two other data
     # types that had no freshness signal at all: an AI photo diagnosis

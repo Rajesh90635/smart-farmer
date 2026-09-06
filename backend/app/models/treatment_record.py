@@ -50,4 +50,12 @@ class TreatmentRecord(Base):
     # Missing/FUTURE) - this row's own scope is only the field itself.
     next_check_due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    # D38-02 (docs/audit/FINAL_CANONICAL_group_B.md): fires-once-per-episode
+    # gate for the background follow-up reminder sweep, same pattern as
+    # InputInventoryItem.expiry_alerted_at/SoilTestResult.reminder_alerted_at.
+    # Reset to None by reschedule_treatment (D38-05) whenever the farmer
+    # pushes next_check_due_date forward, so a rescheduled follow-up is
+    # re-armed rather than silently staying alerted from the old date.
+    followup_reminder_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

@@ -60,6 +60,11 @@ class CaseReviewCreateRequest(BaseModel):
     # merely because it parses as a UUID.
     evidence_photo_ids: list[uuid.UUID] = Field(default_factory=list)
     evidence_analysis_ids: list[uuid.UUID] = Field(default_factory=list)
+    # D36-07 (docs/audit/FINAL_CANONICAL_group_B.md): optional - only set
+    # when this review is explicitly meant to revise a prior one for the
+    # SAME case (validated in case_service.submit_review), not simply an
+    # additional independent second opinion.
+    supersedes_review_id: uuid.UUID | None = None
 
 
 class CaseReviewResponse(BaseModel):
@@ -71,6 +76,10 @@ class CaseReviewResponse(BaseModel):
     notes: str | None
     evidence_photo_ids: list[uuid.UUID] | None = None
     evidence_analysis_ids: list[uuid.UUID] | None = None
+    supersedes_review_id: uuid.UUID | None = None
+    # D36-04 (docs/audit/FINAL_CANONICAL_group_B.md): a farmer read-receipt,
+    # None until the farmer explicitly acknowledges this review.
+    acknowledged_at: datetime | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

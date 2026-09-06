@@ -51,6 +51,22 @@ class CaseReview(Base):
     evidence_photo_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     evidence_analysis_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
+    # D36-04 (docs/audit/FINAL_CANONICAL_group_B.md): a farmer read-receipt,
+    # distinct from the existing professional_feedback rating/helpfulness
+    # survey - set once, idempotently, via case_service.acknowledge_review.
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # D36-07 (docs/audit/FINAL_CANONICAL_group_B.md): set when a second-
+    # opinion review is explicitly meant to revise a prior one for the
+    # SAME case (validated in case_service.submit_review), as opposed to
+    # simply being an additional independent opinion. Self-referential,
+    # not a version-number/sequence column - a chain is reconstructed by
+    # following this pointer, mirroring TreatmentRecord.before_analysis_id's
+    # own "reference, don't copy" pattern.
+    supersedes_review_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("case_reviews.id", ondelete="SET NULL"), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     case: Mapped["CropHealthCase"] = relationship(back_populates="reviews")

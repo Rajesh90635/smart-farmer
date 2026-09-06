@@ -88,10 +88,21 @@ def get_active_assignment(db: Session, case_id: uuid.UUID) -> CaseAssignment | N
 
 
 def get_excluded_professional_ids(db: Session, case_id: uuid.UUID) -> set:
+    # A real bug found and fixed while implementing D36-07
+    # (docs/audit/FINAL_CANONICAL_group_B.md): COMPLETED was missing from
+    # this exclusion set, so requesting a second opinion (case_service.
+    # request_second_opinion -> _try_auto_assign) could re-select a
+    # professional who already completed a review for this exact case -
+    # not a second opinion at all, and a real crash (IntegrityError on the
+    # (case_id, professional_id) unique constraint) whenever that
+    # professional happened to be the only - or the ranked-highest -
+    # remaining candidate.
     rows = db.execute(
         select(CaseAssignment.professional_id).where(
             CaseAssignment.case_id == case_id,
-            CaseAssignment.status.in_([AssignmentStatus.DECLINED, AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED, AssignmentStatus.EXPIRED]),
+            CaseAssignment.status.in_(
+                [AssignmentStatus.DECLINED, AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED, AssignmentStatus.EXPIRED, AssignmentStatus.COMPLETED]
+            ),
         )
     ).all()
     return {r[0] for r in rows}
@@ -140,6 +151,14 @@ def create_review(db: Session, review: CaseReview) -> CaseReview:
 
 def list_reviews_for_case(db: Session, case_id: uuid.UUID) -> list[CaseReview]:
     return list(db.execute(select(CaseReview).where(CaseReview.case_id == case_id).order_by(CaseReview.created_at.asc())).scalars().all())
+
+
+def get_review_for_case(db: Session, review_id: uuid.UUID, case_id: uuid.UUID) -> CaseReview | None:
+    """D36-04/D36-07 (docs/audit/FINAL_CANONICAL_group_B.md): used both to
+    validate a supersedes_review_id at submission time and to scope
+    acknowledge_review to a review that genuinely belongs to the case the
+    farmer is acting on."""
+    return db.execute(select(CaseReview).where(CaseReview.id == review_id, CaseReview.case_id == case_id)).scalar_one_or_none()
 
 
 def create_consent(db: Session, consent: CaseConsent) -> CaseConsent:
