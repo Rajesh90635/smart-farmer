@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 456 |
+| Verified | 465 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **529** |
+| **Attended (Verified + Implemented)** | **538** |
 | Partial | 21 |
-| Missing | 176 |
+| Missing | 167 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **197** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **188** |
 | Future | 38 |
 | Out of Scope | 26 |
 | Environment Dependent | 8 |
@@ -45,6 +45,38 @@ unchanged at 798 - every change this pass was an internal status move,
 zero new/removed rows. Full backend suite and full flutter suite both
 re-run green after this batch. See docs/audit/FINAL_CANONICAL_group_D.md's
 own batch note for the full per-scenario breakdown.)*
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
+BACKLOG" prioritization plan's Batch 4. As with Batch 3, no persisted
+priority-plan doc in this repo names Batch 4's approved scenario count
+the way Batch 1/2's own commit messages do - this batch was assembled
+directly from the remaining backlog's own dependency graph (rows genuinely
+buildable now with no new product/business decision or unconfigured
+external provider needed, clustered where one small piece of work closes
+several rows at once), the same method the original prioritization must
+have used. 9 rows moved Missing→VERIFIED: D81-02/03/04/06/07 (Plot/Crop/
+Task/Expense/Harvest offline queueing, reusing D81-01's shared
+`PendingWriteQueue` - D81-05/D81-09 deliberately NOT built, both blocked
+on an entirely new Observation/Notes entity, a real new-domain decision
+this batch does not make unilaterally), D83-02 (exponential backoff
+gating automatic sync retries), D89-04 (region scoping of a rule, sharing
+D89-05's mechanism), D20-13 (soil test reminder sweep - all 4 of its own
+cited dependencies were already VERIFIED), and D78-10 (soil notification -
+closed as a zero-new-code bonus once its own cited blocker, the entire
+Soil Testing domain, turned out to already be VERIFIED). Verified
+456→465 (+9), Missing 176→167 (-9). Total unchanged at 798 - every change
+this pass was an internal status move, zero new/removed rows. A real bug
+found and fixed while implementing D83-02: `sync_coordinator.dart`'s
+backoff check used strict `isAfter`, which failed on a clock tie (two
+`DateTime.now()` calls returning an identical timestamp under fast
+execution) - fixed to an inclusive comparison, caught by a pre-existing
+test that started failing intermittently once backoff was added. Full
+backend suite: 956 passed, 0 failed (up from 950 - +6 new tests, this
+batch's own). Full Flutter suite: 312 passed, 0 failed (up from 304 - +8
+new tests). Alembic migration chain re-verified single-headed and applies
+cleanly. See docs/audit/FINAL_CANONICAL_group_A.md's and
+docs/audit/FINAL_CANONICAL_group_D.md's own batch notes for the full
+per-scenario breakdown.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
 BACKLOG" prioritization plan's Batch 3. This session began after an

@@ -94,6 +94,29 @@ table. Treat `FINAL_GAP_REPORT.md`'s FROZEN CANONICAL COUNTS as the one current 
 category totals, and the two full-suite numbers directly above as the current test-pass
 counts, not the older per-section figures below.)
 
+**Updated this later continuation session** (Missing Backlog Batch 4 - assembled directly
+from the remaining backlog's own dependency graph, since no persisted priority-plan doc
+names Batch 4's approved scenario count either, same as Batch 3) — `docs/FINAL_GAP_REPORT.md`'s
+"FROZEN CANONICAL COUNTS" now read 798 total: 465 Verified, 73 Implemented, 21 Partial, 167
+Missing, 0 Broken, 38 Future, 26 Out of Scope, 8 Environment Dependent; 188 current-scope
+items remain (down from 197 after Batch 3). 9 rows moved Missing→VERIFIED: D81-02/03/04/06/07
+(Plot/Crop/Task/Expense/Harvest offline queueing, reusing D81-01's shared `PendingWriteQueue` -
+D81-05/D81-09 deliberately NOT built, both blocked on an entirely new Observation/Notes
+entity, a real new-domain decision this batch does not make unilaterally), D83-02
+(exponential backoff gating both automatic sync retry loops), D89-04 (region scoping of a
+rule, sharing D89-05's mechanism, no real per-region values shipped), D20-13 (soil test
+reminder sweep - all 4 of its own cited dependencies were already VERIFIED), and D78-10
+(soil notification - closed as a zero-new-code bonus once its own cited blocker, the entire
+Soil Testing domain, turned out to already be VERIFIED). A real bug found and fixed while
+implementing D83-02: the backoff check used strict `isAfter`, which failed on a clock tie
+(two `DateTime.now()` calls returning an identical timestamp under fast execution) - fixed to
+an inclusive comparison, caught by a pre-existing test that started failing intermittently
+once backoff was added. Full backend suite: **956 passed, 0 failed** (up from 950 - +6 new
+tests, this batch's own). Full Flutter suite: **312 passed, 0 failed** (up from 304 - +8 new
+tests). Alembic migration chain re-verified single-headed and applies cleanly. See
+`docs/audit/FINAL_CANONICAL_group_A.md`'s and `docs/audit/FINAL_CANONICAL_group_D.md`'s
+per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
+
 ## Functional
 
 - 100 domains audited (13 cluster passes, `docs/audit/`), 798 individually-classified

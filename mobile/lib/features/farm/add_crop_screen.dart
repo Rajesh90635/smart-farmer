@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/offline/pending_write_queue.dart';
 import '../../l10n/app_localizations.dart';
+import '../crop_photo/network_status_checker.dart';
 import 'crop_repository.dart';
 import 'farm_models.dart';
 
@@ -136,6 +138,9 @@ class _AddCropScreenState extends State<AddCropScreen> {
     if (!_canSave) return;
     setState(() => _saving = true);
     try {
+      // D81-03 (docs/audit/FINAL_CANONICAL_group_D.md): passing both
+      // params opts this call into offline queueing when the device is
+      // offline, mirroring add_edit_farm_screen.dart (D81-01) exactly.
       await context.read<CropRepository>().createCropCycle(
             widget.plotId,
             cropId: _selectedCrop!.id,
@@ -144,9 +149,18 @@ class _AddCropScreenState extends State<AddCropScreen> {
             expectedHarvestDate: _expectedHarvestDate != null ? _isoDate(_expectedHarvestDate!) : null,
             varietyId: _selectedVariety?.id,
             resownFromCropCycleId: _confirmedResowFromCycleId,
+            networkChecker: context.read<NetworkStatusChecker>(),
+            writeQueue: context.read<PendingWriteQueue>(),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.addCropAddedMessage)));
+      Navigator.of(context).pop(true);
+    } on QueuedForSyncException catch (e) {
+      // Not a failure - the crop cycle was saved locally and will be
+      // created automatically once back online; still worth returning to
+      // the list (there is no crop cycle id yet to stay on this screen for).
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(FriendlyError.from(e, AppLocalizations.of(context)!))));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;

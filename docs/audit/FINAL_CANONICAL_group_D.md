@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 125 |
+| VERIFIED | 133 |
 | IMPLEMENTED | 30 |
 | PARTIAL | 7 |
-| MISSING | 46 |
+| MISSING | 38 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 3 |
@@ -254,6 +254,31 @@ tests, this batch's own). Full flutter suite: 304 passed, 0 failed (up
 from 301). Alembic migration chain re-verified single-headed and applies
 cleanly. See docs/FINAL_GAP_REPORT.md and docs/FINAL_RELEASE_READINESS.md
 for the cross-group reconciliation.)*
+
+*(Later continuation session — Missing Backlog Batch 4, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 4's approved scenario count the way Batch 1/2's own
+commit messages do. 8 rows in this group MISSING→VERIFIED (-8 Missing, +8
+Verified): D81-02/03/04/06/07 (Plot/Crop/Task/Expense/Harvest offline -
+each repository now routes its real farmer-entered write through the
+shared `PendingWriteQueue` built for D81-01 in Batch 1, exactly as that
+row's own "build once, reuse" recommendation asked for; D81-05/D81-09
+deliberately NOT built this batch - both are blocked on an entirely new
+Observation/Notes entity that doesn't exist yet, a real new-domain
+decision on the scale of Batch 3's input-inventory feature, not a
+same-day wiring fix); D83-02 (exponential backoff gating both automatic
+retry loops in `sync_coordinator.dart`, with an injectable clock/backoff
+config so existing retry-cap tests keep their exact prior semantics); D89-04
+(region scoping of a rule, sharing D89-05's crop-scoping mechanism, no
+real per-region values shipped); D78-10 (soil notification - closed as a
+zero-new-code bonus once its own cited blocker, the entire Soil Testing
+domain, turned out to already be VERIFIED - see
+`docs/audit/FINAL_CANONICAL_group_A.md`'s D20-13 entry for the actual
+implementation, built once and shared). Total unchanged at 223 - every
+change here is an internal status move, zero new/removed rows. Full
+backend suite and full Flutter suite both re-run green after this batch -
+see docs/FINAL_GAP_REPORT.md for exact counts.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -1846,7 +1871,7 @@ for the cross-group reconciliation.)*
 
 ### D78-10 — Soil notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - this row's own cited blocker ("Soil Testing domain doesn't exist") is now false - the entire domain (D20-01..12) was already VERIFIED before this batch. Closed by the new `soil_test_reminder_sweep` scheduler job built for D20-13 (docs/audit/FINAL_CANONICAL_group_A.md) - see that row for full evidence; shares its implementation, no separate code needed here.
 - Existing relevant files/classes/functions: none — no soil-data feature exists anywhere in the repo
 - Missing component: an entire soil-data domain to notify about (structurally blocked, same as D20-14's FUTURE reclassification in the wider gap report)
 - Required implementation: N/A until Soil Testing (a domain outside this group) is built
@@ -1968,7 +1993,7 @@ for the cross-group reconciliation.)*
 
 ### D81-02 — Plot offline
 - Domain: 81. Offline
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `PlotRepository.createPlot` routes through the shared `PendingWriteQueue` (D81-01) exactly as that row's own "build once, reuse for D81-02..07/09" recommendation asked for; `add_edit_plot_screen.dart` wired the same way as `add_edit_farm_screen.dart`. Test: `test/features/farm/plot_repository_test.dart`.
 - Existing relevant files/classes/functions: `plot_repository.dart`, same direct-`ApiClient` pattern as D81-01
 - Missing component: same generic offline queue gap
 - Required implementation: same generic `PendingWriteQueue<T>` (shared build with D81-01), specialized for plot payloads
@@ -1985,7 +2010,7 @@ for the cross-group reconciliation.)*
 
 ### D81-03 — Crop offline
 - Domain: 81. Offline
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `CropRepository.createCropCycle` routes through the shared `PendingWriteQueue` (D81-01), same shape as D81-02; `add_crop_screen.dart` wired the same way as `add_edit_farm_screen.dart`. Test: `test/features/farm/crop_repository_test.dart`.
 - Existing relevant files/classes/functions: crop-cycle repository, same direct-`ApiClient` pattern
 - Missing component: same generic offline queue gap
 - Required implementation: same shared `PendingWriteQueue<T>`, specialized for crop-cycle payloads
@@ -2002,7 +2027,7 @@ for the cross-group reconciliation.)*
 
 ### D81-04 — Task offline
 - Domain: 81. Offline
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `TaskRepository.createTask` routes through the shared `PendingWriteQueue` (D81-01), same shape as D81-02; `task_list_screen.dart`'s create-task sheet passes both params - its existing generic catch already rendered `QueuedForSyncException` correctly (no new catch branch needed). Test: `test/features/task/task_repository_test.dart`.
 - Existing relevant files/classes/functions: `task_repository.dart` calls `ApiClient` directly
 - Missing component: same generic offline queue gap
 - Required implementation: same shared `PendingWriteQueue<T>`, specialized for task-create/complete payloads
@@ -2036,7 +2061,7 @@ for the cross-group reconciliation.)*
 
 ### D81-06 — Expense offline
 - Domain: 81. Offline
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `LedgerRepository.createEntry` routes through the shared `PendingWriteQueue` (D81-01), same shape as D81-02; `ledger_screen.dart`'s add-entry sheet wired the same way as D81-04. Test: `test/features/ledger/ledger_repository_test.dart`.
 - Existing relevant files/classes/functions: ledger/expense screens call `ApiClient` directly, no queue
 - Missing component: same generic offline queue gap
 - Required implementation: same shared `PendingWriteQueue<T>`, specialized for ledger/expense payloads
@@ -2053,7 +2078,7 @@ for the cross-group reconciliation.)*
 
 ### D81-07 — Harvest offline
 - Domain: 81. Offline
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `HarvestRepository.confirmReady` (the real farmer-entered harvest-record write, not the get-or-create calls which return a server-assigned id the screen needs synchronously and so cannot usefully be queued) routes through the shared `PendingWriteQueue` (D81-01); `harvest_list_screen.dart` wired the same way as D81-04/06. Test: `test/features/harvest/harvest_repository_test.dart`.
 - Existing relevant files/classes/functions: harvest recording screens call `ApiClient` directly, no queue
 - Missing component: same generic offline queue gap
 - Required implementation: same shared `PendingWriteQueue<T>`, specialized for harvest-record payloads
@@ -2087,7 +2112,7 @@ for the cross-group reconciliation.)*
 
 ### D83-02 — Exponential/backoff strategy
 - Domain: 83. Retry
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `sync_coordinator.dart._isEligibleForRetry` gates both the photo-upload and generic-write automatic retry loops with `min(baseSeconds * 2^(retryCount-1), maxSeconds)` (5s/300s reasonable defaults - no product-specified value exists for either); a never-attempted item (retryCount 0) is always immediately eligible, so a fresh upload/write is never delayed. Base/max and the clock are constructor-overridable so existing retry-cap tests (which call `syncNow()` back-to-back with no real time passing) keep their exact prior semantics via `backoffBaseSeconds: 0`. A real bug found and fixed while writing this: strict `isAfter` failed on a clock tie (two `DateTime.now()` calls returning an identical timestamp under fast execution) - fixed to an inclusive `>=` comparison. Tests: `test/features/crop_photo/sync_coordinator_backoff_test.dart` (3 new).
 - Existing relevant files/classes/functions: `sync_coordinator.dart:38-64`, read in full — no `Duration`, `Timer`, or backoff math anywhere; `syncNow()` retries immediately on every connectivity event with zero throttling
 - Missing component: exponential/backoff delay between automatic retry attempts
 - Required implementation: add a backoff calculation (e.g. `min(2^retryCount * baseDelay, maxDelay)`) gating `syncNow()`'s automatic retries, so connectivity flapping doesn't trigger rapid repeated attempts
@@ -2174,7 +2199,7 @@ for the cross-group reconciliation.)*
 
 ### D89-04 — Region scoping of a rule
 - Domain: 89. Rule Versioning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - `evaluate_crop_weather_alert` gained an optional `region`/`region_thresholds: dict[str, float] | None` overriding the global heavy-rain threshold per region name (intended to be keyed by the already-seeded Mandal/Village master data), falling back to the global default when absent - same "no real values shipped, caller-supplied only" discipline as D89-05's crop dimension, which this shares its implementation with. When both a crop- and region-specific override apply to the same alert, the crop-specific one wins (crop is more specific information than location) - verified directly by test. Production call site (`weather_alert_orchestration_service.py`) passes neither, reproducing the exact prior global-only behavior, same as D89-05. Tests: `tests/test_weather_alert_rules.py::TestCropWeatherAlert::test_region_specific_threshold_overrides_the_global_default_when_present` / `::test_region_specific_threshold_leaves_other_regions_on_the_global_default` / `::test_crop_specific_threshold_takes_precedence_over_region_specific_when_both_present`.
 - Existing relevant files/classes/functions: no rule function takes a region argument; thresholds are global
 - Missing component: region-conditional threshold branching
 - Required implementation: extend the same per-crop threshold-lookup mechanism proposed for D89-05 with a region dimension, using the already-seeded Mandal/Village master data

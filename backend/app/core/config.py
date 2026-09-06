@@ -175,6 +175,11 @@ class Settings(BaseSettings):
     # this project's other threshold settings. ---
     soil_test_max_age_days: int = 730
 
+    # --- Soil test reminder sweep (D20-13/D78-10) - same scheduler; daily
+    # cadence is enough since staleness is measured in days, not minutes,
+    # unlike the higher-frequency sweeps above. ---
+    soil_test_reminder_sweep_interval_seconds: int = 86400
+
     # --- Data provenance staleness (D88-10) - mirrors weather's own
     # is_stale/soil_test_max_age_days convention for the two other data
     # types that had no freshness signal at all: an AI photo diagnosis

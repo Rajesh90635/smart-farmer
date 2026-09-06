@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/friendly_error.dart';
+import '../../core/offline/pending_write_queue.dart';
 import '../../l10n/app_localizations.dart';
+import '../crop_photo/network_status_checker.dart';
 import 'harvest_models.dart';
 import 'harvest_repository.dart';
 
@@ -116,10 +118,17 @@ class _HarvestListScreenState extends State<HarvestListScreen> {
                   Navigator.of(sheetContext).pop();
                   final quantity = quantityController.text.trim();
                   try {
+                    // D81-07 (docs/audit/FINAL_CANONICAL_group_D.md):
+                    // passing both params opts this call into offline
+                    // queueing when the device is offline - the
+                    // existing generic catch below already renders
+                    // QueuedForSyncException's friendly message.
                     await context.read<HarvestRepository>().confirmReady(
                           harvestId: harvest.id,
                           actualHarvestDate: selectedDate?.toIso8601String().split('T').first,
                           estimatedQuantity: quantity.isEmpty ? null : quantity,
+                          networkChecker: context.read<NetworkStatusChecker>(),
+                          writeQueue: context.read<PendingWriteQueue>(),
                         );
                     await _load();
                   } catch (e) {

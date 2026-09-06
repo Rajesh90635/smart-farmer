@@ -153,6 +153,50 @@ class TestCropWeatherAlert:
         )
         assert candidate is None
 
+    def test_region_specific_threshold_overrides_the_global_default_when_present(self):
+        """D89-04 (docs/audit/FINAL_CANONICAL_group_D.md): same mechanism
+        as D89-05, keyed by region instead of crop - test-only synthetic
+        values, never fabricated real agronomic/regional data."""
+        reading = WeatherReading(rain_probability_percent=settings.weather_heavy_rain_probability_threshold - 10)
+        assert evaluate_crop_weather_alert(crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings) is None
+
+        lower_threshold = settings.weather_heavy_rain_probability_threshold - 10
+        candidate = evaluate_crop_weather_alert(
+            crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings,
+            region="Some Mandal", region_thresholds={"Some Mandal": lower_threshold},
+        )
+        assert candidate is not None
+
+    def test_region_specific_threshold_leaves_other_regions_on_the_global_default(self):
+        """D89-04: an override entry for one region must never leak to a
+        different region not present in the map."""
+        reading = WeatherReading(rain_probability_percent=settings.weather_heavy_rain_probability_threshold - 10)
+        candidate = evaluate_crop_weather_alert(
+            crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings,
+            region="Other Mandal", region_thresholds={"Some Mandal": settings.weather_heavy_rain_probability_threshold - 10},
+        )
+        assert candidate is None
+
+    def test_crop_specific_threshold_takes_precedence_over_region_specific_when_both_present(self):
+        """D89-04: crop_name is more specific information than region - a
+        crop-specific override wins when both maps have an entry for this
+        exact alert, even if the two override values disagree."""
+        reading = WeatherReading(rain_probability_percent=settings.weather_heavy_rain_probability_threshold - 5)
+        # Region override alone would NOT fire at this rain level (still above the region's own higher threshold).
+        candidate_region_only = evaluate_crop_weather_alert(
+            crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings,
+            region="Some Mandal", region_thresholds={"Some Mandal": settings.weather_heavy_rain_probability_threshold + 5},
+        )
+        assert candidate_region_only is None
+
+        # The crop-specific override (lower threshold) wins and fires, even with the same conflicting region map present.
+        candidate_both = evaluate_crop_weather_alert(
+            crop_name="Tomato", cultivation_status="flowering", forecast_today=reading, settings=settings,
+            crop_thresholds={"Tomato": settings.weather_heavy_rain_probability_threshold - 10},
+            region="Some Mandal", region_thresholds={"Some Mandal": settings.weather_heavy_rain_probability_threshold + 5},
+        )
+        assert candidate_both is not None
+
 
 class TestFrostRisk:
     """D15-04: dew point at RH=100% equals the air temperature exactly

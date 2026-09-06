@@ -36,6 +36,7 @@ class NotificationCategory(str, enum.Enum):
     DISPUTE_ALERT = "dispute_alert"  # D78-08 (docs/audit/FINAL_CANONICAL_group_D.md): dispute resolution
     SECURITY_ALERT = "security_alert"  # D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): password change, new-device login
     SEVERE_WEATHER_ALERT = "severe_weather_alert"  # D14-09 (docs/audit/FINAL_CANONICAL_group_A.md): 2+ conditions co-occur
+    SOIL_TEST_REMINDER = "soil_test_reminder"  # D20-13/D78-10 (docs/audit/FINAL_CANONICAL_group_D.md): stale soil test
     # ORDER_ALERT, MARKET_ALERT deliberately NOT included - future phases only.
 
 

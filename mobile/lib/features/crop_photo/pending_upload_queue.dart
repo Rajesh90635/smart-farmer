@@ -38,6 +38,14 @@ class PendingUpload {
   PendingUploadStatus status;
   String? lastErrorMessage;
   int retryCount; // caps automatic retries so a permanently-failing upload doesn't hammer forever
+  // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): the moment of the
+  // most recent automatic attempt - sync_coordinator.dart's backoff
+  // calculation reads this so connectivity flapping doesn't trigger
+  // rapid repeated attempts against an item that just failed. Nullable/
+  // defaulted for forward-compatibility with a manifest written by a
+  // version of this app before this field existed - a never-attempted
+  // item (null) is always immediately eligible for its first attempt.
+  DateTime? lastAttemptAt;
 
   PendingUpload({
     required this.clientUploadId,
@@ -51,6 +59,7 @@ class PendingUpload {
     this.status = PendingUploadStatus.waitingForNetwork,
     this.lastErrorMessage,
     this.retryCount = 0,
+    this.lastAttemptAt,
   });
 
   /// Bytes are only ever read from disk at the moment of an actual upload
@@ -70,6 +79,7 @@ class PendingUpload {
         'status': status.name,
         'lastErrorMessage': lastErrorMessage,
         'retryCount': retryCount,
+        'lastAttemptAt': lastAttemptAt?.toUtc().toIso8601String(),
       };
 
   factory PendingUpload.fromJson(Map<String, dynamic> json) => PendingUpload(
@@ -90,6 +100,9 @@ class PendingUpload {
         // Defaulted for forward-compatibility with a manifest written by
         // a version of this app before retryCount existed.
         retryCount: json['retryCount'] as int? ?? 0,
+        // Defaulted for forward-compatibility with a manifest written by
+        // a version of this app before lastAttemptAt existed.
+        lastAttemptAt: json['lastAttemptAt'] != null ? DateTime.parse(json['lastAttemptAt'] as String) : null,
       );
 }
 

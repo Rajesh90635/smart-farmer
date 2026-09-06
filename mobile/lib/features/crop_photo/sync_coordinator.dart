@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +8,17 @@ import '../../core/offline/pending_write_queue.dart';
 import 'crop_photo_repository.dart';
 import 'network_status_checker.dart';
 import 'pending_upload_queue.dart';
+
+/// D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): exponential backoff
+/// gating automatic retries below, so connectivity flapping (repeated
+/// brief online/offline transitions) doesn't hammer the backend with
+/// rapid repeated attempts for an item that just failed. Base/max are
+/// reasonable defaults chosen here - no product-specified value exists
+/// for either. A never-attempted item (retryCount 0, lastAttemptAt null)
+/// is always immediately eligible, so a fresh upload/write is never
+/// delayed by this gate - only a repeat automatic attempt is.
+const int kBackoffBaseSeconds = 5;
+const int kBackoffMaxSeconds = 300;
 
 /// The other genuinely missing piece of offline-first sync (alongside
 /// persistence, see pending_upload_queue.dart): a farmer should not have
@@ -32,6 +45,14 @@ class SyncCoordinator {
   // exact prior photo-only behavior for any existing caller/test.
   final PendingWriteQueue? _writeQueue;
   final ApiClient? _apiClient;
+  // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): overridable only for
+  // tests that need to exercise rapid repeated attempts (e.g. the
+  // retry-cap tests below, which call syncNow() back-to-back with no
+  // real time passing) or that need to advance a fake clock - every real
+  // caller (app.dart) uses the class defaults above.
+  final int _backoffBaseSeconds;
+  final int _backoffMaxSeconds;
+  final DateTime Function() _now;
   bool _syncing = false;
 
   SyncCoordinator({
@@ -40,11 +61,30 @@ class SyncCoordinator {
     required CropPhotoRepository repository,
     PendingWriteQueue? writeQueue,
     ApiClient? apiClient,
+    int backoffBaseSeconds = kBackoffBaseSeconds,
+    int backoffMaxSeconds = kBackoffMaxSeconds,
+    DateTime Function() now = DateTime.now,
   })  : _queue = queue,
         _networkChecker = networkChecker,
         _repository = repository,
         _writeQueue = writeQueue,
-        _apiClient = apiClient;
+        _apiClient = apiClient,
+        _backoffBaseSeconds = backoffBaseSeconds,
+        _backoffMaxSeconds = backoffMaxSeconds,
+        _now = now;
+
+  /// D83-02: a never-attempted item (retryCount 0, lastAttemptAt null) is
+  /// always immediately eligible, so a fresh upload/write is never
+  /// delayed by this gate - only a repeat AUTOMATIC attempt is.
+  bool _isEligibleForRetry(int retryCount, DateTime? lastAttemptAt) {
+    if (lastAttemptAt == null || retryCount <= 0) return true;
+    final delaySeconds = math.min(_backoffBaseSeconds * math.pow(2, retryCount - 1).toInt(), _backoffMaxSeconds);
+    // Inclusive (>=, not strict >): two back-to-back _now() calls can tie
+    // exactly (fast execution, or a low-resolution platform clock) -
+    // especially with backoffBaseSeconds: 0 in tests - and a tie must
+    // still count as "the delay has elapsed", not gate a retry forever.
+    return !_now().isBefore(lastAttemptAt.add(Duration(seconds: delaySeconds)));
+  }
 
   /// Call once at app startup, after PendingUploadQueue.loadFromDisk().
   void start() {
@@ -66,7 +106,9 @@ class SyncCoordinator {
       final online = await _networkChecker.isOnline();
       if (!online) return;
 
-      final toRetry = List.of(_queue.retryable);
+      // D83-02: skip an item still within its own backoff window - it
+      // stays queued and is picked up on a later sync tick once eligible.
+      final toRetry = List.of(_queue.retryable.where((u) => _isEligibleForRetry(u.retryCount, u.lastAttemptAt)));
       for (final pending in toRetry) {
         await _attemptUpload(pending);
       }
@@ -74,7 +116,7 @@ class SyncCoordinator {
       final writeQueue = _writeQueue;
       final apiClient = _apiClient;
       if (writeQueue != null && apiClient != null) {
-        final toRetryWrites = List.of(writeQueue.retryable);
+        final toRetryWrites = List.of(writeQueue.retryable.where((w) => _isEligibleForRetry(w.retryCount, w.lastAttemptAt)));
         for (final write in toRetryWrites) {
           await _attemptWrite(writeQueue, apiClient, write);
         }
@@ -88,6 +130,7 @@ class SyncCoordinator {
   /// (clientRequestId), 401-terminal-state, and retry-exhaustion
   /// semantics as _attemptUpload below, generalized past photo uploads.
   Future<void> _attemptWrite(PendingWriteQueue writeQueue, ApiClient apiClient, PendingWrite write) async {
+    write.lastAttemptAt = _now(); // D83-02: read by _isEligibleForRetry on the NEXT sync tick
     await writeQueue.updateStatus(write.clientRequestId, PendingWriteStatus.sending);
     try {
       if (write.method == 'PUT') {
@@ -126,6 +169,7 @@ class SyncCoordinator {
   }
 
   Future<void> _attemptUpload(PendingUpload pending) async {
+    pending.lastAttemptAt = _now(); // D83-02: read by _isEligibleForRetry on the NEXT sync tick
     await _queue.updateStatus(pending.clientUploadId, PendingUploadStatus.uploading);
     try {
       final bytes = await pending.readBytes();

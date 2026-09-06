@@ -5,16 +5,17 @@ for soil_sample/soil_test across app/ and tests/ before this session).
 """
 import io
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.config import Settings
 from app.core.errors import AppError
+from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.soil_sample import SoilSample
 from app.models.soil_test_result import SoilTestResult
-from app.repositories import plot_repository, soil_testing_repository
+from app.repositories import plot_repository, soil_testing_repository, user_repository
 from app.schemas.soil_testing import (
     SoilSampleCreateRequest,
     SoilSampleListResponse,
@@ -23,8 +24,10 @@ from app.schemas.soil_testing import (
     SoilTestResultListResponse,
     SoilTestResultResponse,
 )
+from app.services import notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.storage.base import FileStorage
+from app.services.weather_alert_rules import AlertCandidate
 
 
 def create_soil_sample(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: SoilSampleCreateRequest) -> SoilSampleResponse:
@@ -114,6 +117,45 @@ def upload_soil_report(
     db.commit()
     db.refresh(result)
     return _to_result_response(result, settings)
+
+
+def run_soil_test_reminder_sweep(db: Session, settings: Settings) -> int:
+    """D20-13/D78-10 (docs/audit/FINAL_CANONICAL_group_D.md): proactive
+    reminder that a plot's most recent soil test has gone stale, run by
+    the background scheduler (app/services/scheduler.py) - not
+    farmer-screen-triggered, so it fires even if the farmer never opens
+    Soil Testing. Mirrors input_inventory_service.run_expiry_check_sweep's
+    exact shape."""
+    cutoff = date.today() - timedelta(days=settings.soil_test_max_age_days)
+    results = soil_testing_repository.list_stale_unalerted_soil_test_results(db, cutoff_date=cutoff)
+
+    alerted = 0
+    for result in results:
+        candidate = AlertCandidate(
+            category=NotificationCategory.SOIL_TEST_REMINDER,
+            priority=NotificationPriority.LOW,
+            message_key="SOIL_TEST_REMINDER",
+            message_params={"max_age_days": settings.soil_test_max_age_days, "test_date": result.test_date.isoformat()},
+            dedup_suffix=f"soil_test_reminder:{result.id}",
+        )
+        language_code = _language_for(db, str(result.farmer_id))
+        created = notification_service.create_alert_notification(
+            db, str(result.farmer_id), candidate, dedup_scope=f"soil_test_result:{result.id}", language_code=language_code,
+            related_entity_type="soil_test_result", related_entity_id=str(result.id),
+        )
+        result.reminder_alerted_at = datetime.now(timezone.utc)
+        db.commit()
+        if created is not None:
+            alerted += 1
+
+    return alerted
+
+
+def _language_for(db: Session, farmer_id: str) -> str:
+    user = user_repository.get_by_id(db, uuid.UUID(farmer_id))
+    if user and getattr(user, "farmer_profile", None):
+        return user.farmer_profile.preferred_language_code
+    return "en"
 
 
 def _to_sample_response(sample: SoilSample) -> SoilSampleResponse:

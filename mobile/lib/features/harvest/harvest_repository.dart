@@ -1,4 +1,6 @@
 import '../../core/api_client.dart';
+import '../../core/offline/pending_write_queue.dart';
+import '../crop_photo/network_status_checker.dart';
 import 'harvest_models.dart';
 
 class HarvestRepository {
@@ -39,15 +41,32 @@ class HarvestRepository {
     return HarvestRecord.fromJson(response);
   }
 
+  /// D81-07 (docs/audit/FINAL_CANONICAL_group_D.md): same optional-param
+  /// offline-queueing shape as FarmRepository.createFarm (D81-01) -
+  /// applied to `confirmReady` specifically (the real farmer-entered
+  /// harvest-record write), not the get-or-create calls above, which
+  /// return a server-assigned id the rest of this screen needs
+  /// synchronously and so cannot usefully be queued for later.
   Future<HarvestRecord> confirmReady({
     required String harvestId,
     String? actualHarvestDate,
     String? estimatedQuantity,
+    NetworkStatusChecker? networkChecker,
+    PendingWriteQueue? writeQueue,
   }) async {
-    final response = await _apiClient.post('/harvests/$harvestId/confirm-ready', body: {
+    final body = {
       if (actualHarvestDate != null) 'actual_harvest_date': actualHarvestDate,
       if (estimatedQuantity != null) 'estimated_quantity': estimatedQuantity,
-    });
+    };
+
+    if (networkChecker != null && writeQueue != null && !(await networkChecker.isOnline())) {
+      await writeQueue.enqueue(
+        PendingWrite(clientRequestId: generateClientRequestId(), method: 'POST', path: '/harvests/$harvestId/confirm-ready', body: body),
+      );
+      throw const QueuedForSyncException();
+    }
+
+    final response = await _apiClient.post('/harvests/$harvestId/confirm-ready', body: body);
     return HarvestRecord.fromJson(response);
   }
 

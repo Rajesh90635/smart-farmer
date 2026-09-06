@@ -1,4 +1,6 @@
 import '../../core/api_client.dart';
+import '../../core/offline/pending_write_queue.dart';
+import '../crop_photo/network_status_checker.dart';
 import 'farm_models.dart';
 
 class CropRepository {
@@ -38,6 +40,8 @@ class CropRepository {
     return response.cast<Map<String, dynamic>>().map(CropVariety.fromJson).toList();
   }
 
+  /// D81-03 (docs/audit/FINAL_CANONICAL_group_D.md): same optional-param
+  /// offline-queueing shape as FarmRepository.createFarm (D81-01).
   Future<CropCycle> createCropCycle(
     String plotId, {
     required String cropId,
@@ -47,8 +51,10 @@ class CropRepository {
     String? seedVariety,
     String? varietyId,
     String? resownFromCropCycleId,
+    NetworkStatusChecker? networkChecker,
+    PendingWriteQueue? writeQueue,
   }) async {
-    final response = await _apiClient.post('/plots/$plotId/crops', body: {
+    final body = {
       'crop_id': cropId,
       if (season != null) 'season': season,
       'sowing_date': sowingDate,
@@ -59,7 +65,14 @@ class CropRepository {
       // when the farmer explicitly confirms the re-sow prompt below -
       // never inferred or auto-set.
       if (resownFromCropCycleId != null) 'resown_from_crop_cycle_id': resownFromCropCycleId,
-    });
+    };
+
+    if (networkChecker != null && writeQueue != null && !(await networkChecker.isOnline())) {
+      await writeQueue.enqueue(PendingWrite(clientRequestId: generateClientRequestId(), method: 'POST', path: '/plots/$plotId/crops', body: body));
+      throw const QueuedForSyncException();
+    }
+
+    final response = await _apiClient.post('/plots/$plotId/crops', body: body);
     return CropCycle.fromJson(response);
   }
 

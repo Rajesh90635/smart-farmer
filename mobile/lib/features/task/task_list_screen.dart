@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/offline/pending_write_queue.dart';
 import '../../core/voice_language_controller.dart';
 import '../../core/voice_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../crop_photo/network_status_checker.dart';
 import 'task_models.dart';
 import 'task_repository.dart';
 
@@ -144,6 +146,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   final repeatIntervalDays = int.tryParse(repeatIntervalController.text.trim());
                   Navigator.of(sheetContext).pop();
                   try {
+                    // D81-04 (docs/audit/FINAL_CANONICAL_group_D.md):
+                    // passing both params opts this call into offline
+                    // queueing when the device is offline - the
+                    // existing generic catch below already renders
+                    // QueuedForSyncException's friendly message.
                     await context.read<TaskRepository>().createTask(
                           cropCycleId: widget.cropCycleId,
                           taskType: selectedType,
@@ -151,6 +158,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           dueDate: selectedDate?.toIso8601String().split('T').first,
                           dependsOnTaskId: selectedDependencyId,
                           repeatIntervalDays: repeatIntervalDays,
+                          networkChecker: context.read<NetworkStatusChecker>(),
+                          writeQueue: context.read<PendingWriteQueue>(),
                         );
                     await _load();
                   } catch (e) {

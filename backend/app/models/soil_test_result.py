@@ -45,5 +45,15 @@ class SoilTestResult(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # D20-13 (docs/audit/FINAL_CANONICAL_group_A.md): fires-once-per-episode
+    # gate for the background reminder sweep, mirroring
+    # InputInventoryItem.expiry_alerted_at exactly - only ever set on
+    # whichever result is currently the LATEST for its plot (see
+    # soil_testing_repository.list_stale_unalerted_soil_test_results); a
+    # fresh test result on that plot is a new row with this column unset,
+    # so a new test always re-arms the reminder without needing to reset
+    # anything on the old, now-superseded row.
+    reminder_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     def is_stale(self, today: date, max_age_days: int) -> bool:
         return (today - self.test_date).days > max_age_days

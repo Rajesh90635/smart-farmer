@@ -239,6 +239,8 @@ def evaluate_crop_weather_alert(
     forecast_today: WeatherReading | None,
     settings: Settings,
     crop_thresholds: dict[str, float] | None = None,
+    region: str | None = None,
+    region_thresholds: dict[str, float] | None = None,
 ) -> "AlertCandidate | None":
     """Combines crop + stage + weather into one contextual alert. Only
     fires for a heavy-rain scenario currently - the simplest, clearest
@@ -252,10 +254,23 @@ def evaluate_crop_weather_alert(
     crop has no entry - genuine crop-conditional branching, but with NO
     values pre-populated here, since no authoritative per-crop threshold
     dataset exists in this project. Passing None/empty (today's only
-    production call) reproduces the exact prior global-only behavior."""
+    production call) reproduces the exact prior global-only behavior.
+
+    D89-04 (docs/audit/FINAL_CANONICAL_group_D.md): `region`/`region_thresholds`
+    is the same mechanism, keyed by the farm's Mandal/Village master-data
+    name instead of crop_name - same "no real values shipped, caller-
+    supplied only" discipline. `region` is a coarser signal than
+    `crop_name`, so a crop-specific override wins when both are present
+    for the same alert (a farmer's actual crop is more specific
+    information than their location) - falls back to the region override,
+    then the global default, in that order."""
     if forecast_today is None or forecast_today.rain_probability_percent is None:
         return None
-    threshold = (crop_thresholds or {}).get(crop_name, settings.weather_heavy_rain_probability_threshold)
+    threshold = settings.weather_heavy_rain_probability_threshold
+    if region is not None and region_thresholds and region in region_thresholds:
+        threshold = region_thresholds[region]
+    if crop_thresholds and crop_name in crop_thresholds:
+        threshold = crop_thresholds[crop_name]
     if forecast_today.rain_probability_percent < threshold:
         return None
 

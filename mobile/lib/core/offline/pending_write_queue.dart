@@ -42,6 +42,10 @@ class PendingWrite {
   PendingWriteStatus status;
   String? lastErrorMessage;
   int retryCount;
+  // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): see
+  // PendingUpload.lastAttemptAt's own docstring - same backoff-gating
+  // purpose, generalized past photo uploads.
+  DateTime? lastAttemptAt;
 
   PendingWrite({
     required this.clientRequestId,
@@ -51,6 +55,7 @@ class PendingWrite {
     this.status = PendingWriteStatus.waitingForNetwork,
     this.lastErrorMessage,
     this.retryCount = 0,
+    this.lastAttemptAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -61,6 +66,7 @@ class PendingWrite {
         'status': status.name,
         'lastErrorMessage': lastErrorMessage,
         'retryCount': retryCount,
+        'lastAttemptAt': lastAttemptAt?.toUtc().toIso8601String(),
       };
 
   factory PendingWrite.fromJson(Map<String, dynamic> json) => PendingWrite(
@@ -71,6 +77,9 @@ class PendingWrite {
         status: PendingWriteStatus.values.byName(json['status'] as String),
         lastErrorMessage: json['lastErrorMessage'] as String?,
         retryCount: json['retryCount'] as int? ?? 0,
+        // Defaulted for forward-compatibility with a manifest written by
+        // a version of this app before lastAttemptAt existed.
+        lastAttemptAt: json['lastAttemptAt'] != null ? DateTime.parse(json['lastAttemptAt'] as String) : null,
       );
 }
 

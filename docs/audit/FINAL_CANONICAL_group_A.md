@@ -51,10 +51,10 @@ groups and are out of scope here).
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 170 |
+| VERIFIED | 171 |
 | IMPLEMENTED | 25 |
 | PARTIAL | 6 |
-| MISSING | 27 |
+| MISSING | 26 |
 | BROKEN | 0 |
 | FUTURE | 15 |
 | OUT_OF_SCOPE | 3 |
@@ -72,6 +72,25 @@ built, per this row's own recommendation despite its blocker (D20) now being res
 VERIFIED, validated irrigation/soil enums on Plot); D18-06/D18-08 MISSING→VERIFIED (-2
 MISSING, +2 VERIFIED, new IrrigationRecord model); D24-04 PARTIAL→VERIFIED (-1 PARTIAL, +1
 VERIFIED, InputInventoryItem.acquired_at).)*
+
+*(Later continuation session — Missing Backlog Batch 4, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. This session began after
+an unexpected shutdown mid-Batch-3 (see that batch's own recovery note in
+this repo's history); no persisted priority-plan doc names Batch 4's
+approved scenario count the way Batch 1/2's own commit messages do, so
+this batch was assembled directly from the remaining backlog's own
+dependency graph. 1 row in this group MISSING→VERIFIED (-1 MISSING, +1
+VERIFIED): D20-13 (soil test reminder) - new `soil_test_reminder_sweep`
+scheduler job mirroring `run_expiry_check_sweep`'s exact shape, alerting
+on the LATEST `SoilTestResult` per plot once stale; all 4 of this row's
+own cited dependencies (D20-01/02/11/12) were already VERIFIED. Also
+closes D78-10 (docs/audit/FINAL_CANONICAL_group_D.md), a different
+group's row whose own cited blocker ("Soil Testing domain doesn't exist")
+no longer held. Total unchanged at 252 - an internal status move, zero
+new/removed rows. See `docs/audit/FINAL_CANONICAL_group_D.md`'s own Batch
+4 note for the rest of this batch's scenarios (D81-02/03/04/06/07, D83-02,
+D89-04, D78-10). Full backend suite and full Flutter suite both re-run
+green after this batch - see `docs/FINAL_GAP_REPORT.md` for exact counts.)*
 
 *(Later continuation session — Missing Backlog Batch 2, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. 4 approved Batch 2 items in
@@ -1612,7 +1631,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests added and passing: `test_soil_testing.py::test_soil_test_result_is_stale_after_max_age`
 - Verification method: automated test, confirmed passing
 ### D20-13 - Domain 20 (Soil Testing) - Test reminder
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 4)** - new `NotificationCategory.SOIL_TEST_REMINDER` + `SoilTestResult.reminder_alerted_at` fires-once-per-episode gate (migrations `f3a8c9d1e5b2`/`a6b7c8d9e0f1`); new scheduler job `soil_test_reminder_sweep` (daily by default) mirrors `run_expiry_check_sweep`'s exact shape, alerting on the LATEST `SoilTestResult` per plot once it exceeds `soil_test_max_age_days` (D20-12) - an older, superseded stale result for a plot that has since been retested is correctly never alerted on. All 4 cited dependencies (D20-01/02/11/12) were already VERIFIED before this batch. This closes D78-10 (docs/audit/FINAL_CANONICAL_group_D.md) too - same mechanism, that row's own premise ("Soil Testing domain doesn't exist") no longer holds. Tests: `tests/test_soil_test_reminder_sweep.py` (3 new).
 - Existing relevant files/classes/functions: no reminder/notification category exists for soil testing (notification.py:26-32 has no such category)
 - Missing component: reminder mechanism
 - Required implementation: add NotificationCategory.SOIL_TEST_REMINDER, and a scheduler job (mirroring run_expiry_check_sweep's exact shape in scheduler.py) that fires when a plot's most recent SoilTestResult.test_date (D20-11) exceeds the staleness threshold (D20-12)

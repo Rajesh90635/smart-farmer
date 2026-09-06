@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/friendly_error.dart';
+import '../../core/offline/pending_write_queue.dart';
 import '../../l10n/app_localizations.dart';
+import '../crop_photo/network_status_checker.dart';
 import '../invoice/invoice_list_screen.dart';
 import 'ledger_models.dart';
 import 'ledger_repository.dart';
@@ -150,6 +152,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   if (amountText.isEmpty || double.tryParse(amountText) == null) return;
                   Navigator.of(sheetContext).pop();
                   try {
+                    // D81-06 (docs/audit/FINAL_CANONICAL_group_D.md):
+                    // passing both params opts this call into offline
+                    // queueing when the device is offline - the
+                    // existing generic catch below already renders
+                    // QueuedForSyncException's friendly message.
                     await context.read<LedgerRepository>().createEntry(
                           cropCycleId: widget.cropCycleId,
                           entryType: selectedEntryType,
@@ -157,6 +164,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
                           amount: amountText,
                           entryDate: selectedDate.toIso8601String().split('T').first,
                           description: descriptionController.text.trim().isEmpty ? null : descriptionController.text.trim(),
+                          networkChecker: context.read<NetworkStatusChecker>(),
+                          writeQueue: context.read<PendingWriteQueue>(),
                         );
                     await _load();
                   } catch (e) {

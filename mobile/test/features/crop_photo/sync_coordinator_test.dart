@@ -68,8 +68,13 @@ void main() {
   test('each failed sync attempt increments retryCount and stays "failed" below the cap', () async {
     final queue = PendingUploadQueue();
     await queue.enqueue(await _makeUpload('a'));
+    // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): backoffBaseSeconds: 0
+    // disables the new backoff gate for these pre-existing tests, which
+    // deliberately call syncNow() back-to-back with no real time passing
+    // to exercise the retry-CAP logic - not the backoff gate itself
+    // (see sync_coordinator_backoff_test.dart for that).
     final coordinator = SyncCoordinator(
-      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(),
+      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(), backoffBaseSeconds: 0,
     );
 
     for (var attempt = 1; attempt < kMaxAutomaticRetries; attempt++) {
@@ -83,8 +88,13 @@ void main() {
   test('the attempt that reaches kMaxAutomaticRetries transitions to retriesExhausted, not failed', () async {
     final queue = PendingUploadQueue();
     await queue.enqueue(await _makeUpload('a'));
+    // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): backoffBaseSeconds: 0
+    // disables the new backoff gate for these pre-existing tests, which
+    // deliberately call syncNow() back-to-back with no real time passing
+    // to exercise the retry-CAP logic - not the backoff gate itself
+    // (see sync_coordinator_backoff_test.dart for that).
     final coordinator = SyncCoordinator(
-      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(),
+      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(), backoffBaseSeconds: 0,
     );
 
     for (var attempt = 1; attempt <= kMaxAutomaticRetries; attempt++) {
@@ -99,8 +109,13 @@ void main() {
   test('once retriesExhausted, further syncNow() calls never attempt this upload again (excluded from retryable)', () async {
     final queue = PendingUploadQueue();
     await queue.enqueue(await _makeUpload('a'));
+    // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): backoffBaseSeconds: 0
+    // disables the new backoff gate for these pre-existing tests, which
+    // deliberately call syncNow() back-to-back with no real time passing
+    // to exercise the retry-CAP logic - not the backoff gate itself
+    // (see sync_coordinator_backoff_test.dart for that).
     final coordinator = SyncCoordinator(
-      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(),
+      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(), backoffBaseSeconds: 0,
     );
 
     for (var attempt = 1; attempt <= kMaxAutomaticRetries; attempt++) {
@@ -118,8 +133,13 @@ void main() {
   test('the error message from the failing attempt is recorded alongside the transition', () async {
     final queue = PendingUploadQueue();
     await queue.enqueue(await _makeUpload('a'));
+    // D83-02 (docs/audit/FINAL_CANONICAL_group_D.md): backoffBaseSeconds: 0
+    // disables the new backoff gate for these pre-existing tests, which
+    // deliberately call syncNow() back-to-back with no real time passing
+    // to exercise the retry-CAP logic - not the backoff gate itself
+    // (see sync_coordinator_backoff_test.dart for that).
     final coordinator = SyncCoordinator(
-      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(),
+      queue: queue, networkChecker: NetworkStatusChecker(), repository: AlwaysFailingCropPhotoRepository(), backoffBaseSeconds: 0,
     );
 
     await coordinator.syncNow();
