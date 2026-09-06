@@ -27,6 +27,10 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "high_wind_alert": {"en": "Strong winds are expected in your area."},
     "extreme_heat_alert": {"en": "Very high temperatures are expected today."},
     "extreme_cold_alert": {"en": "Unusually cold temperatures are expected today."},
+    "frost_risk_alert": {"en": "Frost conditions are likely overnight. Consider protecting sensitive crops."},
+    "flood_risk_alert": {"en": "Heavy cumulative rainfall ({total_rainfall_mm} mm recently) may cause flooding in your area."},
+    "waterlogging_risk_alert": {"en": "Recent rainfall ({total_rainfall_mm} mm) may cause waterlogging in your fields."},
+    "drought_risk_alert": {"en": "No significant rain for {dry_days} days - drought risk in your area. Consider checking irrigation availability."},
     # D16-11 (docs/FINAL_GAP_REPORT.md): the inspection prompt reuses the
     # existing crop-photo capture flow (never a new "damage log" entity,
     # never an auto-created task) - just an added sentence pointing the
@@ -59,6 +63,7 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     "PAYMENT_FAILED": {"en": "A payment of {amount} did not go through. You can retry it from your order."},
     "SALE_PAYMENT_FAILED": {"en": "The buyer's payment of {amount} for your sale did not go through."},
     "HARVEST_READY": {"en": "Your harvest is confirmed ready. You can now create a marketplace listing."},
+    "TASK_OVERDUE": {"en": "Your task '{title}' is overdue."},
     "assistant_no_data_crop": {"en": "I don't have a current active crop record for you yet. Add a crop cycle to get started."},
     "assistant_crop_status": {"en": "Your {crop_name} on {farm_name} is currently at the {stage} stage."},
     "assistant_no_data_treatment": {"en": "No treatment has been recorded for this crop yet."},

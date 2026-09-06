@@ -87,6 +87,19 @@ class Settings(BaseSettings):
     weather_high_wind_kmh_threshold: float = 40.0
     weather_extreme_heat_celsius_threshold: float = 40.0
     weather_extreme_cold_celsius_threshold: float = 5.0
+    # D15-04 (docs/audit/FINAL_CANONICAL_group_A.md): frost risk from a
+    # Magnus-formula dew-point approximation over already-fetched
+    # temperature_c/humidity_percent - no new external data.
+    weather_frost_dewpoint_celsius_threshold: float = 2.0
+    # D15-08/D17-04/D15-09/D17-05/D75-01/D75-02 (docs/audit/FINAL_CANONICAL_group_{A,D}.md):
+    # the buildable cumulative-rainfall/consecutive-dry-days increment,
+    # derived from existing weather_snapshots history - not a real
+    # hydrological/soil-moisture model.
+    weather_cumulative_rainfall_window_days: int = 3
+    weather_flood_risk_cumulative_rainfall_mm_threshold: float = 100.0
+    weather_waterlogging_risk_cumulative_rainfall_mm_threshold: float = 50.0
+    weather_dry_day_rainfall_mm_threshold: float = 1.0
+    weather_drought_risk_consecutive_dry_days_threshold: int = 14
 
     # --- Payment gateway (D90-10: provider abstraction) - "sandbox" is
     # the only implemented adapter (moves no real money, matches this
@@ -145,6 +158,17 @@ class Settings(BaseSettings):
     # (30 min) so the sweep never forces a provider call more often than
     # a farmer's own pull-based check already would. ---
     proactive_weather_alert_sweep_interval_seconds: int = 1800
+
+    # --- Task overdue alert sweep (D9-16/D9-03/D78-01/D37-04) - same
+    # scheduler; a farmer who never opens the app is otherwise never told
+    # a task became overdue (display_status is computed only on read). ---
+    task_overdue_alert_sweep_interval_seconds: int = 3600
+
+    # --- Soil testing (D20-12) - a real agronomic convention (soil
+    # nutrient levels are typically re-tested every 2-3 years), not
+    # invented for this project; same disclosed-placeholder treatment as
+    # this project's other threshold settings. ---
+    soil_test_max_age_days: int = 730
 
     def is_production(self) -> bool:
         return self.environment == "production"
