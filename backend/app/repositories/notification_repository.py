@@ -44,6 +44,21 @@ def mark_all_read(db: Session, farmer_id: uuid.UUID) -> int:
     return len(result)
 
 
+def list_for_related_entity(db: Session, related_entity_type: str, related_entity_id: str) -> list[Notification]:
+    """D97-09 (docs/audit/FINAL_CANONICAL_group_D.md): weather (and other)
+    notifications already tie back to their crop cycle via
+    related_entity_type/related_entity_id - this reuses that existing
+    link rather than inventing a new weather-history concept."""
+    return list(
+        db.execute(
+            select(Notification).where(
+                Notification.related_entity_type == related_entity_type,
+                Notification.related_entity_id == related_entity_id,
+            )
+        ).scalars().all()
+    )
+
+
 def get_preferences(db: Session, farmer_id: uuid.UUID) -> NotificationPreference | None:
     return db.execute(select(NotificationPreference).where(NotificationPreference.farmer_id == farmer_id)).scalar_one_or_none()
 

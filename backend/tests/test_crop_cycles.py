@@ -325,6 +325,93 @@ def test_close_crop_cycle_records_lessons_learned(client, registered_farmer, sam
     assert response.json()["lessons_learned"] == "Should have staked the plants earlier."
 
 
+def test_closing_a_crop_cycle_with_no_harvest_or_finances_creates_an_honest_empty_snapshot(client, registered_farmer, sample_crop_id):
+    """D97-02..09 (docs/audit/FINAL_CANONICAL_group_D.md): harvest/quality
+    fields must be None (never fabricated) when no harvest was ever
+    recorded; cost/revenue/profit are 0, matching get_financial_summary's
+    own non-nullable-defaults-to-zero contract."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+
+    response = client.post(
+        f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    snapshot = response.json()["closure_snapshot"]
+    assert snapshot is not None
+    assert snapshot["harvest_quantity"] is None
+    assert snapshot["harvest_status"] is None
+    assert snapshot["actual_cost"] == "0.00"
+    assert snapshot["actual_revenue"] == "0.00"
+    assert snapshot["actual_profit_loss"] == "0.00"
+    assert snapshot["disease_summary"] == {"total_photos_analyzed": 0, "disease_detected_count": 0, "diseases_observed": []}
+    assert snapshot["weather_impact_summary"] == {"weather_alert_count": 0, "categories": []}
+
+
+def test_closing_a_crop_cycle_snapshots_the_linked_harvest_and_ledger(client, registered_farmer, sample_crop_id):
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{cycle['id']}", headers=auth_headers(tokens)).json()
+    client.post(f"/api/v1/harvests/{harvest['id']}/confirm-ready", json={"estimated_quantity": "800.00"}, headers=auth_headers(tokens))
+    client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/ledger/entries",
+        json={"entry_type": "expense", "category": "seed", "amount": "500.00", "entry_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    )
+
+    response = client.post(
+        f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=auth_headers(tokens)
+    )
+    assert response.status_code == 200
+    snapshot = response.json()["closure_snapshot"]
+    assert snapshot["harvest_quantity"] == "800.00"
+    assert snapshot["harvest_status"] == "ready"
+    assert snapshot["actual_cost"] == "500.00"
+
+
+def test_closure_snapshot_stays_frozen_after_a_later_ledger_entry(client, registered_farmer, sample_crop_id):
+    """The whole point of a snapshot table over a live aggregate - editing
+    the ledger after closure must never change what was already frozen."""
+    _, tokens = registered_farmer
+    plot = _create_plot(client, tokens)
+    cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=auth_headers(tokens)
+    ).json()
+    for target_status in ["sown", "growing", "flowering", "fruiting", "ready_for_harvest"]:
+        client.put(f"/api/v1/crops/{cycle['id']}", json={"cultivation_status": target_status}, headers=auth_headers(tokens))
+    client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/ledger/entries",
+        json={"entry_type": "expense", "category": "seed", "amount": "500.00", "entry_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    )
+
+    close_response = client.post(
+        f"/api/v1/crops/{cycle['id']}/close", json={"actual_harvest_date": "2026-09-05"}, headers=auth_headers(tokens)
+    )
+    assert close_response.json()["closure_snapshot"]["actual_cost"] == "500.00"
+
+    # A later edit to the ledger (allowed - cultivation_status doesn't gate ledger writes).
+    client.post(
+        f"/api/v1/crop-cycles/{cycle['id']}/ledger/entries",
+        json={"entry_type": "expense", "category": "fertilizer", "amount": "1000.00", "entry_date": "2026-09-10"},
+        headers=auth_headers(tokens),
+    )
+
+    reread = client.get(f"/api/v1/crops/{cycle['id']}", headers=auth_headers(tokens))
+    assert reread.json()["closure_snapshot"]["actual_cost"] == "500.00"
+
+
 def test_close_crop_cycle_without_lessons_learned_leaves_it_none(client, registered_farmer, sample_crop_id):
     _, tokens = registered_farmer
     plot = _create_plot(client, tokens)

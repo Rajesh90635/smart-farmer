@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -66,6 +67,24 @@ class CropCycleUpdateRequest(BaseModel):
     cultivation_status: CultivationStatus | None = None
 
 
+class CropCycleClosureSnapshotResponse(BaseModel):
+    """D97-02..09 (docs/audit/FINAL_CANONICAL_group_D.md): a frozen-at-close
+    view - every field here is None only when the underlying real data
+    genuinely didn't exist at closure time, never a fabricated placeholder."""
+    harvest_quantity: Decimal | None
+    harvest_quantity_unit: str | None
+    quality_grade: str | None
+    harvest_status: str | None
+    actual_cost: Decimal | None
+    actual_revenue: Decimal | None
+    actual_profit_loss: Decimal | None
+    disease_summary: dict | None
+    weather_impact_summary: dict | None
+    closed_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class CropCycleCloseRequest(BaseModel):
     actual_harvest_date: date
     # D97-10 (docs/FINAL_GAP_REPORT.md): free-text farmer reflection,
@@ -96,6 +115,8 @@ class CropCycleResponse(BaseModel):
     recommended_next_action: str | None = None
     # Only ever set by close_my_crop_cycle() - never editable afterward.
     lessons_learned: str | None = None
+    # Only ever set by close_my_crop_cycle() - None before closure, frozen after.
+    closure_snapshot: CropCycleClosureSnapshotResponse | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

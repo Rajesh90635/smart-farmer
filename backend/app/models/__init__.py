@@ -19,6 +19,7 @@ from app.models.case_consent import CaseConsent  # noqa: F401
 from app.models.case_review import CaseReview  # noqa: F401
 from app.models.consent_record import ConsentRecord  # noqa: F401
 from app.models.crop_cycle import CropCycle  # noqa: F401
+from app.models.crop_cycle_closure_snapshot import CropCycleClosureSnapshot  # noqa: F401
 from app.models.crop_cycle_stage_history import CropCycleStageHistory  # noqa: F401
 from app.models.crop_health_case import CropHealthCase  # noqa: F401
 from app.models.crop_master import CropMaster  # noqa: F401

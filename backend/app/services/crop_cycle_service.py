@@ -5,9 +5,21 @@ from sqlalchemy.orm import Session
 
 from app.core import error_codes
 from app.core.errors import AppError
+from app.models.ai_analysis import ResultStatus
 from app.models.crop_cycle import ALLOWED_TRANSITIONS, CropCycle, CultivationStatus, FailureReason
+from app.models.crop_cycle_closure_snapshot import CropCycleClosureSnapshot
 from app.models.crop_cycle_stage_history import CropCycleStageHistory
-from app.repositories import crop_cycle_repository, crop_cycle_stage_history_repository, crop_master_repository, crop_variety_repository, plot_repository
+from app.repositories import (
+    ai_analysis_repository,
+    crop_cycle_closure_snapshot_repository,
+    crop_cycle_repository,
+    crop_cycle_stage_history_repository,
+    crop_master_repository,
+    crop_variety_repository,
+    harvest_repository,
+    notification_repository,
+    plot_repository,
+)
 from app.schemas.crop import (
     CropCycleCloseRequest,
     CropCycleCreateRequest,
@@ -17,8 +29,10 @@ from app.schemas.crop import (
     CropFailureReportRequest,
 )
 from app.schemas.crop_stage_history import CropCycleStageHistoryListResponse, CropCycleStageHistoryResponse
-from app.services import task_service
+from app.services import crop_financial_service, task_service
 from app.services.audit_logger import AuditLogger
+
+_WEATHER_NOTIFICATION_CATEGORIES = {"weather_alert", "rain_alert", "heavy_rain_alert"}
 
 _DEFAULT_PAGE_SIZE = 50
 
@@ -230,10 +244,54 @@ def close_my_crop_cycle(
         entity_id=str(crop_cycle.id),
     )
     task_service.cancel_all_pending_for_crop_cycle(db, farmer_id, crop_cycle.id)
+    _create_closure_snapshot(db, farmer_id, crop_cycle)
 
     db.commit()
     db.refresh(crop_cycle)
     return CropCycleResponse.model_validate(crop_cycle)
+
+
+def _create_closure_snapshot(db: Session, farmer_id: str, crop_cycle: CropCycle) -> None:
+    """D97-02..09 (docs/audit/FINAL_CANONICAL_group_D.md): freezes the
+    cycle's outcome at the exact moment of closure - every other view of
+    this data is a live aggregate that could drift after closure if
+    underlying rows are later edited. Consolidates what the source audit
+    doc separately proposed as CropCycle columns (D97-02/03) and a shared
+    table (D97-04..09) into one table - see the model's own docstring."""
+    harvest = harvest_repository.get_most_recent_harvest_by_crop_cycle(db, crop_cycle.id)
+
+    financials = crop_financial_service.get_financial_summary(db, farmer_id, crop_cycle.id)
+
+    analyses = ai_analysis_repository.list_for_crop_cycle(db, crop_cycle.id, uuid.UUID(farmer_id))
+    disease_detected = [a for a in analyses if a.result_status == ResultStatus.DISEASE_DETECTED]
+    disease_summary = {
+        "total_photos_analyzed": len(analyses),
+        "disease_detected_count": len(disease_detected),
+        "diseases_observed": sorted({a.predicted_class for a in disease_detected if a.predicted_class}),
+    }
+
+    weather_notifications = [
+        n for n in notification_repository.list_for_related_entity(db, "crop_cycle", str(crop_cycle.id))
+        if n.category.value in _WEATHER_NOTIFICATION_CATEGORIES
+    ]
+    weather_impact_summary = {
+        "weather_alert_count": len(weather_notifications),
+        "categories": sorted({n.category.value for n in weather_notifications}),
+    }
+
+    snapshot = CropCycleClosureSnapshot(
+        crop_cycle_id=crop_cycle.id,
+        harvest_quantity=harvest.actual_quantity if harvest and harvest.actual_quantity is not None else (harvest.estimated_quantity if harvest else None),
+        harvest_quantity_unit=harvest.unit if harvest else None,
+        quality_grade=harvest.quality_grade if harvest else None,
+        harvest_status=harvest.status.value if harvest else None,
+        actual_cost=financials.actual_cost,
+        actual_revenue=financials.actual_revenue,
+        actual_profit_loss=financials.actual_profit_loss,
+        disease_summary=disease_summary,
+        weather_impact_summary=weather_impact_summary,
+    )
+    crop_cycle_closure_snapshot_repository.create(db, snapshot)
 
 
 def report_crop_failure(

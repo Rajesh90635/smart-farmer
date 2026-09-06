@@ -171,6 +171,8 @@ class CropCycle(Base):
     plot: Mapped["Plot"] = relationship(back_populates="crop_cycles")
     crop: Mapped["CropMaster"] = relationship(back_populates="crop_cycles")
     variety: Mapped["CropVariety | None"] = relationship()
+    # D97-02..09: None until close_my_crop_cycle() creates it; frozen forever after.
+    closure_snapshot: Mapped["CropCycleClosureSnapshot | None"] = relationship(uselist=False, viewonly=True)
 
     # D19-05 (docs/audit/FINAL_CANONICAL_group_A.md): pure surfacing, no
     # new logic - a crop-specific soil-suitability recommendation would
