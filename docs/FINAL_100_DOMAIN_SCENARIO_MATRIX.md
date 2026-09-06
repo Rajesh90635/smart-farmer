@@ -139,6 +139,19 @@ Full backend suite after this batch: 775 passed, 2 failed (`tests/test_case_sla_
 — pre-existing shared-test-DB pollution flake, confirmed unrelated to this batch: neither
 file was touched this session, and both tests pass cleanly when run in isolation).
 
+### G. Season-closure batch (this continuation session)
+
+| Scenario ID(s) | Was | Now | Evidence |
+|---|---|---|---|
+| D97-02, D97-03 | PARTIAL | VERIFIED | New `CropCycleClosureSnapshot.harvest_quantity`/`quality_grade`/`harvest_status`, populated from the linked `HarvestRecord` at close time |
+| D97-04, D97-05, D97-06, D97-07 | PARTIAL | VERIFIED | `CropCycleClosureSnapshot.actual_cost`/`actual_revenue`/`actual_profit_loss`, populated from `crop_financial_service.get_financial_summary()` once at close time; verified frozen against a later ledger edit |
+| D97-08 | MISSING | VERIFIED | `CropCycleClosureSnapshot.disease_summary` (JSONB), derived from this cycle's `AIAnalysis` rows |
+| D97-09 | MISSING | VERIFIED | `CropCycleClosureSnapshot.weather_impact_summary` (JSONB), derived from `Notification` rows tied to this crop cycle |
+
+Full backend suite after this batch: 778 passed, 0 failed (the prior batch's
+`test_case_sla_service.py` flake did not reproduce, consistent with non-deterministic
+shared-DB pollution rather than a real regression).
+
 ### C. This session's test-infrastructure fixes (no scenario-status change — these fixed test *reliability*, not product gaps)
 
 Three tests were flaky due to assertions against unscoped, shared-test-database-wide

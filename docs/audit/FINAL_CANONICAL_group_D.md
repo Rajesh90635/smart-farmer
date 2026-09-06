@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 66 |
+| VERIFIED | 74 |
 | IMPLEMENTED | 30 |
-| PARTIAL | 37 |
-| MISSING | 77 |
+| PARTIAL | 31 |
+| MISSING | 75 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 2 |
@@ -125,6 +125,14 @@ required new `DISPUTE_ALERT`/reusing `DISEASE_ALERT` categories and new call sit
 D78-05 needed no code at all, confirmed already satisfied by `harvest_service.py`'s
 existing D47-05 wiring. Total unchanged at 223 - all four were internal status moves.
 See each row's own entry below.)*
+
+*(Further updated this continuation session — season-closure batch: D97-02/D97-03/D97-04/
+D97-05/D97-06/D97-07 PARTIAL→VERIFIED (-6 PARTIAL, +6 VERIFIED); D97-08/D97-09 MISSING→
+VERIFIED (-2 MISSING, +2 VERIFIED). New `CropCycleClosureSnapshot` table, created once by
+`close_my_crop_cycle`, consolidates what the source audit doc separately proposed as new
+`CropCycle` columns (D97-02/03) and a shared table (D97-04..09) into one table - all eight
+rows are the same "freeze at close time" concept. Total unchanged at 223 - all eight were
+internal status moves. See each row's own entry below.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -701,105 +709,105 @@ See each row's own entry below.)*
 
 ### D97-02 — Actual quantity captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `HarvestRecord.actual_quantity` (models/harvest_record.py:49), created/updated independently via the harvest API, not tied into `close_my_crop_cycle`
-- Missing component: consolidation of the harvest quantity into the closure act itself
-- Required implementation: `close_my_crop_cycle` reads the linked `HarvestRecord` and snapshots `actual_quantity` onto a new `CropCycle.closure_quantity_snapshot` column at close time
-- Dependencies: D96-03/D98-02's own disclosed caveat — no production path populates `actual_quantity` yet, so this closure consolidation would still read a field nothing writes to in real farmer flows today
-- Backend work: `crop_cycle_service.close_my_crop_cycle` add a snapshot step
-- Database/migration work: new nullable column on `crop_cycles`
-- Mobile work: surface captured quantity on the close-cycle confirmation screen
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: new `CropCycleClosureSnapshot.harvest_quantity`/`harvest_quantity_unit`, populated by `crop_cycle_service._create_closure_snapshot` from the linked `HarvestRecord` (`actual_quantity` if harvested, else `estimated_quantity`) at `close_my_crop_cycle` time — consolidated into one shared table rather than a separate `CropCycle` column (see the model's own docstring)
+- Missing component: none
+- Required implementation: none
+- Dependencies: D96-03/D98-02's own disclosed caveat still applies (no production path populates `actual_quantity` yet in real farmer flows) - honestly reflected as `estimated_quantity` fallback, never fabricated
+- Backend work: done — `crop_cycle_service.py`, `models/crop_cycle_closure_snapshot.py`
+- Database/migration work: done — `b3c4d5e6f7a8_create_crop_cycle_closure_snapshots.py`
+- Mobile work: surface captured quantity on the close-cycle confirmation screen (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: closure request already queues like any other write; no new sync concept
 - Security/RBAC impact: none — additive, farmer-owned
-- Tests required: test asserting closure snapshots the latest harvest quantity when one exists, and leaves it null (never fabricated) when none does
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: `tests/test_crop_cycles.py::test_closing_a_crop_cycle_with_no_harvest_or_finances_creates_an_honest_empty_snapshot` (new), `::test_closing_a_crop_cycle_snapshots_the_linked_harvest_and_ledger` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D97-03 — Actual quality captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `HarvestRecord.quality_grade` (harvest_record.py:51), same separate-model pattern as D97-02
-- Missing component: consolidation into the closure act
-- Required implementation: same snapshot mechanism as D97-02, for `quality_grade` (`closure_quality_snapshot` column)
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: new `CropCycleClosureSnapshot.quality_grade`/`harvest_status`, shared implementation with D97-02
+- Missing component: none
+- Required implementation: none
 - Dependencies: none beyond D97-02's shared implementation
 - Backend work: shared with D97-02's closure-snapshot step
-- Database/migration work: new nullable column alongside D97-02's
-- Mobile work: surface captured quality grade at close-cycle confirmation
+- Database/migration work: shared with D97-02
+- Mobile work: surface captured quality grade at close-cycle confirmation (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none beyond existing closure-request queueing
 - Security/RBAC impact: none — additive
-- Tests required: test asserting quality grade is snapshotted at closure
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: shared with D97-02's tests
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D97-04 — Sale captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: computed on-read from `LedgerEntry`/`SaleOrder` via `crop_financial_service.get_financial_summary()` — a live aggregation, not a closure snapshot
-- Missing component: a point-in-time snapshot fixed at closure, rather than a perpetually-live aggregate that could drift after closure if ledger entries are later edited
-- Required implementation: `close_my_crop_cycle` calls `get_financial_summary` once and persists the result onto a new `crop_cycle_closure_snapshots` table at the moment of closure
-- Dependencies: `crop_financial_service.get_financial_summary()` already exists and is reusable as-is
-- Backend work: `crop_cycle_service.close_my_crop_cycle` add a snapshot step
-- Database/migration work: new `crop_cycle_closure_snapshots` table (cost, revenue, profit_loss, sale_status — shared across D97-04..09)
-- Mobile work: closure confirmation screen shows the frozen snapshot
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: new `crop_cycle_closure_snapshots` table (`CropCycleClosureSnapshot`), populated once by `crop_cycle_service._create_closure_snapshot` calling the existing `crop_financial_service.get_financial_summary()` at close time — frozen thereafter, verified by a dedicated test that a later ledger edit never changes the snapshot
+- Missing component: none
+- Required implementation: none
+- Dependencies: `crop_financial_service.get_financial_summary()` (already existed, reused as-is)
+- Backend work: done — `crop_cycle_service.py`
+- Database/migration work: done — `b3c4d5e6f7a8_create_crop_cycle_closure_snapshots.py`
+- Mobile work: closure confirmation screen shows the frozen snapshot (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none beyond existing closure-request queueing
 - Security/RBAC impact: none — additive
-- Tests required: test asserting the snapshot is frozen (doesn't change if ledger entries are added after closure)
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: `tests/test_crop_cycles.py::test_closure_snapshot_stays_frozen_after_a_later_ledger_entry` (new)
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D97-05 — Revenue captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `outcome_label` in Learning Summary surfaces revenue conditionally once genuinely harvested (`learning_foundation_service.py:55-65`); otherwise computed on-read, same as D97-04
-- Missing component: closure-time snapshot of `actual_revenue`
-- Required implementation: same snapshot mechanism as D97-04, for `actual_revenue`
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: `CropCycleClosureSnapshot.actual_revenue`, shared implementation with D97-04
+- Missing component: none
+- Required implementation: none
 - Dependencies: shared with D97-04
 - Backend work: shared closure-snapshot step
 - Database/migration work: shared `crop_cycle_closure_snapshots` table
-- Mobile work: shared confirmation-screen display
+- Mobile work: shared confirmation-screen display (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — additive
-- Tests required: shared with D97-04's test
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: shared with D97-04's tests
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D97-06 — Costs captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `crop_cost_estimates`, `ledger_entries`, same on-read pattern as D97-04/05
-- Missing component: closure-time snapshot of `actual_cost`
-- Required implementation: same snapshot mechanism as D97-04, for `actual_cost`
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: `CropCycleClosureSnapshot.actual_cost`, shared implementation with D97-04
+- Missing component: none
+- Required implementation: none
 - Dependencies: shared with D97-04
 - Backend work: shared closure-snapshot step
 - Database/migration work: shared `crop_cycle_closure_snapshots` table
-- Mobile work: shared confirmation-screen display
+- Mobile work: shared confirmation-screen display (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — additive
-- Tests required: shared with D97-04's test
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: shared with D97-04's tests
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D97-07 — Profit captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: same on-read pattern via financial summary, surfaced conditionally in learning-summary `outcome_label`
-- Missing component: closure-time snapshot of `actual_profit_loss`
-- Required implementation: same snapshot mechanism as D97-04, for `actual_profit_loss`
+- Current implementation status: VERIFIED (this continuation session, was Partial)
+- Existing relevant files/classes/functions: `CropCycleClosureSnapshot.actual_profit_loss`, shared implementation with D97-04
+- Missing component: none
+- Required implementation: none
 - Dependencies: shared with D97-04
 - Backend work: shared closure-snapshot step
 - Database/migration work: shared `crop_cycle_closure_snapshots` table
-- Mobile work: shared confirmation-screen display
+- Mobile work: shared confirmation-screen display (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — additive
-- Tests required: shared with D97-04's test
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: shared with D97-04's tests
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D98-03 — Previous costs used in learning
 - Domain: 98. Historical Learning
@@ -2197,37 +2205,37 @@ See each row's own entry below.)*
 
 ### D97-08 — Disease history captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: exists as a separate live read-aggregation (`health_timeline_service.py`, Phase 35), never snapshotted or attached to the close action
-- Missing component: a closure-time snapshot of the health timeline
-- Required implementation: shared with D97-04..07's proposed `crop_cycle_closure_snapshots` table — add a `disease_summary` JSONB field populated from `health_timeline_service.py` at close time
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `CropCycleClosureSnapshot.disease_summary` (JSONB), populated by `_create_closure_snapshot` directly from this cycle's `AIAnalysis` rows (`ai_analysis_repository.list_for_crop_cycle`) - counts and distinct diagnoses only (`total_photos_analyzed`, `disease_detected_count`, `diseases_observed`), not a reuse of the broader `health_timeline_service.py` (which mixes unrelated event types - a narrower, more precise source was used instead)
+- Missing component: none
+- Required implementation: none
 - Dependencies: D97-04's shared snapshot mechanism
-- Backend work: `crop_cycle_service.close_my_crop_cycle` call `health_timeline_service.py` at close time
-- Database/migration work: shared `crop_cycle_closure_snapshots` table, add `disease_summary` column
-- Mobile work: closure confirmation screen shows the frozen disease summary
+- Backend work: done — `crop_cycle_service.py`
+- Database/migration work: done — shared `crop_cycle_closure_snapshots` table
+- Mobile work: closure confirmation screen shows the frozen disease summary (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — additive
-- Tests required: test asserting the disease summary is frozen at closure
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: `tests/test_crop_cycles.py::test_closing_a_crop_cycle_with_no_harvest_or_finances_creates_an_honest_empty_snapshot` (new) asserts the honest-empty case
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D97-09 — Weather impact captured at closure
 - Domain: 97. Season Closure
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: no weather-impact field exists on `CropCycle` or `HarvestRecord` at all, live or snapshotted
-- Missing component: a closure-time weather-impact summary
-- Required implementation: shared with D97-04..08's `crop_cycle_closure_snapshots` table — add a `weather_impact_summary` field populated from existing weather-action history at close time
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `CropCycleClosureSnapshot.weather_impact_summary` (JSONB), populated by `_create_closure_snapshot` from `Notification` rows already tied to this crop cycle (`related_entity_type="crop_cycle"`, new `notification_repository.list_for_related_entity`), filtered to weather-related categories - counts and distinct categories only (`weather_alert_count`, `categories`)
+- Missing component: none
+- Required implementation: none
 - Dependencies: D97-04's shared snapshot mechanism
-- Backend work: `crop_cycle_service.close_my_crop_cycle` call the weather-action history at close time
-- Database/migration work: shared `crop_cycle_closure_snapshots` table, add `weather_impact_summary` column
-- Mobile work: closure confirmation screen shows the frozen weather-impact summary
+- Backend work: done — `crop_cycle_service.py`, `notification_repository.py`
+- Database/migration work: done — shared `crop_cycle_closure_snapshots` table
+- Mobile work: closure confirmation screen shows the frozen weather-impact summary (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: none
 - Security/RBAC impact: none — additive
-- Tests required: test asserting the weather-impact summary is frozen at closure
-- Verification method: extend `tests/test_crop_cycles.py`
+- Tests required: `tests/test_crop_cycles.py::test_closing_a_crop_cycle_with_no_harvest_or_finances_creates_an_honest_empty_snapshot` (new) asserts the honest-empty case
+- Verification method: automated test (new), confirmed passing in the full backend suite re-run this session
 
 ### D98-04 — Previous disease used in learning
 - Domain: 98. Historical Learning

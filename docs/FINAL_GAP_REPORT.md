@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 339 |
+| Verified | 347 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **412** |
-| Partial | 106 |
-| Missing | 219 |
+| **Attended (Verified + Implemented)** | **420** |
+| Partial | 100 |
+| Missing | 217 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **325** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **317** |
 | Future | 30 |
 | Out of Scope | 25 |
 | Environment Dependent | 6 |
@@ -69,6 +69,17 @@ pollution flake, confirmed unrelated: neither file touched this session, and bot
 pass cleanly in isolation; not fixed in this batch, out of scope). See
 `docs/audit/FINAL_CANONICAL_group_C.md`'s D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05
 entries.)
+
+(Further, same continuation session: season-closure batch — D97-02/D97-03/D97-04/D97-05/
+D97-06/D97-07 PARTIAL→VERIFIED (+6 Verified, -6 Partial); D97-08/D97-09 MISSING→VERIFIED
+(+2 Verified, -2 Missing). New `CropCycleClosureSnapshot` table, created once by
+`close_my_crop_cycle`, freezes harvest quantity/quality/status, actual cost/revenue/profit,
+a disease summary, and a weather-impact summary at the moment of closure - verified frozen
+against a later ledger edit. Verified 339→347, Partial 106→100, Missing 219→217,
+current-scope remaining 325→317. Full backend suite: 778 passed, 0 failed (the
+test_case_sla_service.py flake from the previous batch did not reproduce this run,
+consistent with it being non-deterministic shared-DB pollution, not a real regression). See
+`docs/audit/FINAL_CANONICAL_group_D.md`'s D97-02..09 entries.)
 
 Reconciliation applied this session (see each canonical group file's own "Reconciliation
 deltas applied" table for full citations):

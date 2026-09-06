@@ -5,9 +5,9 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 release-readiness view.
 
 **Updated this continuation session** — see `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL
-COUNTS" for the current authoritative status totals (798 total: 339 Verified, 73
-Implemented, 106 Partial, 219 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
-Dependent; 325 current-scope items remain, down from 391 at the start of the prior session
+COUNTS" for the current authoritative status totals (798 total: 347 Verified, 73
+Implemented, 100 Partial, 217 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
+Dependent; 317 current-scope items remain, down from 391 at the start of the prior session
 and 341 at the start of this continuation). Prior session's work spans: all of P0 (D97-12
 closed-season task guard, D6-07/D11-05 crop-cycle concurrency guard, D68-02 refund bounds
 check, D100-14 re-verified); the P1 task-management cluster
@@ -27,14 +27,18 @@ the marketplace/harvest completeness batch (D47-01 approaching audit log/409, D6
 payment date, D66-03 pending-payment timeout sweep — all VERIFIED, were Partial; D50-03
 yield/acre, D51-02 moisture, D51-04 defects, D67-05 farmer dispute response — all
 VERIFIED, were Missing; D51-02/D51-04 deliberately scoped to `HarvestRecord` only, not
-`HarvestListing`, disclosed).
-Backend suite: **775 passed, 2 failed** (was 702 at the start of the prior session, 761 at
-the start of the notification-wiring batch, 765 before this last batch — +73 new tests
-total from the prior session's start, 0 regressions from this session's own changes. The 2
-failures are in `tests/test_case_sla_service.py`, a pre-existing shared-test-DB pollution
-flake confirmed unrelated to this session's work — that file was never touched, and both
-tests pass cleanly when run in isolation; not fixed in this batch, disclosed as a known
-test-reliability issue rather than hidden).
+`HarvestListing`, disclosed); and the season-closure batch (new `CropCycleClosureSnapshot`
+table, created once by `close_my_crop_cycle` — D97-02 through D97-09, all 8 rows, now
+VERIFIED, consolidating what the source audit doc separately proposed as new `CropCycle`
+columns and a shared table into one table; verified frozen against a later ledger edit).
+Backend suite: **778 passed, 0 failed** (was 702 at the start of the prior session, 761 at
+the start of the notification-wiring batch, 765 before the marketplace/harvest batch, 775
+before this last batch — +76 new tests total from the prior session's start, 0 regressions
+from this session's own changes. The prior batch's 2 failures in
+`tests/test_case_sla_service.py` — a shared-test-DB pollution flake confirmed unrelated to
+this session's work, that file was never touched — did not reproduce this run, consistent
+with non-deterministic pollution rather than a real regression; not fixed in this batch,
+disclosed as a known test-reliability issue rather than hidden).
 
 ## Functional
 
@@ -59,13 +63,15 @@ test-reliability issue rather than hidden).
 
 ## Backend
 
-- **Test result: 775 passed, 2 failed** (full suite; up from 702 at the start of the prior
-  session — +73 new tests spanning the P0 fixes, D78-07's notification assertion, the
-  irrigation/soil-testing domain batch, and this continuation's notification-wiring and
-  marketplace/harvest completeness batches — confirmed by a full clean re-run, not merely
-  the new tests in isolation). The 2 failures are `tests/test_case_sla_service.py`'s own
-  pre-existing shared-test-DB pollution flake (see the session summary above) — 0
-  regressions caused by this session's actual changes.
+- **Test result: 778 passed, 0 failed** (full suite; up from 702 at the start of the prior
+  session — +76 new tests spanning the P0 fixes, D78-07's notification assertion, the
+  irrigation/soil-testing domain batch, and this continuation's notification-wiring,
+  marketplace/harvest completeness, and season-closure batches — confirmed by a full clean
+  re-run, not merely the new tests in isolation). An earlier run in this same continuation
+  saw 2 failures in `tests/test_case_sla_service.py`'s own pre-existing shared-test-DB
+  pollution flake (see the session summary above); this run's clean 0-failure result is
+  consistent with that being non-deterministic, not a regression caused by this session's
+  actual changes.
 - **Zero BROKEN scenarios** — all 12 originally-disclosed bugs previously re-verified
   fixed, plus D97-12 (a new finding from a later pass: `task_service.py::create_task` never
   checked `cultivation_status` before creating a task, unlike its sibling guards) fixed and

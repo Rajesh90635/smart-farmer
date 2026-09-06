@@ -2,11 +2,12 @@
 
 Source: `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md`, frozen this session per
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" — see that section for the full
-reconciliation. Authoritative current-scope work remaining: **325** (219 Missing + 106
+reconciliation. Authoritative current-scope work remaining: **317** (217 Missing + 100
 Partial + 0 Broken) — see "Summary counts" at the bottom of this document for the current
 number; the 388 figure below is historical (predates this document's own P0-P4 batch, and
-predates the P1 fixes, cluster #7 re-verification, notification-wiring batch, and
-marketplace/harvest completeness batch all already applied since).
+predates the P1 fixes, cluster #7 re-verification, notification-wiring batch,
+marketplace/harvest completeness batch, and season-closure batch all already applied
+since).
 
 **Status update this session (P0 batch, before the rest of this plan's own work began):**
 - **D97-12 (BROKEN) — FIXED.** `task_service.py::create_task` now guards against
@@ -288,16 +289,16 @@ VERIFIED (were Missing). D51-02/D51-04 deliberately scoped to `HarvestRecord` on
 | D59-04 | 59 Buyer Matching | Quality (matching) | Cluster #23 | cluster #23 | S |
 
 ### Season closure (cluster: closure-snapshot table)
-| Scenario ID | Domain | Name | Why P1 | Depends on | Size |
-|---|---|---|---|---|---|
-| D97-02 | 97 Season Closure | Actual quantity at closure | Core season-close workflow; effectively blocked on actual_quantity (cluster #18) for real farmer value | cluster #18 | S |
-| D97-03 | 97 Season Closure | Actual quality at closure | Shares D97-02's snapshot table | D97-04 (shared) | S |
-| D97-04 | 97 Season Closure | Sale captured at closure | Root of the closure-snapshot table | none | M |
-| D97-05 | 97 Season Closure | Revenue captured at closure | Shares D97-04's table | D97-04 | S |
-| D97-06 | 97 Season Closure | Costs captured at closure | Shares D97-04's table | D97-04 | S |
-| D97-07 | 97 Season Closure | Profit captured at closure | Shares D97-04's table | D97-04 | S |
-| D97-08 | 97 Season Closure | Disease history at closure | Shares D97-04's table | D97-04 | S |
-| D97-09 | 97 Season Closure | Weather impact at closure | Shares D97-04's table | D97-04 | S |
+
+**DONE this continuation session** — D97-02 through D97-09 (all 8) VERIFIED. New
+`CropCycleClosureSnapshot` table, created once by `close_my_crop_cycle`, consolidating the
+originally-proposed split (new `CropCycle` columns for D97-02/03 vs. a shared table for
+D97-04..09) into one table. Notably, D97-02's "effectively blocked on actual_quantity
+(cluster #18)" caveat was resolved by honest design, not by cluster #18 landing: the
+snapshot uses `HarvestRecord.estimated_quantity` as a disclosed fallback when
+`actual_quantity` is unset, exactly like `profit_forecast_service.py`'s existing pattern -
+real farmer value arrives incrementally as cluster #18 lands, not blocked on it entirely.
+See `docs/audit/FINAL_CANONICAL_group_D.md`'s per-row entries. Removed from this table.
 
 ### Offline reliability (cluster #19) & notification delivery (cluster #20)
 | Scenario ID | Domain | Name | Why P1 | Depends on | Size |
@@ -720,19 +721,19 @@ top of this document. Removed from this table.)*
 | Priority | Count of Missing | Count of Partial | Count of Broken | Total |
 |---|---:|---:|---:|---:|
 | P0 | 0 | 1 | 0 | 1 |
-| P1 | 13 | 18 | 0 | 31 |
+| P1 | 11 | 12 | 0 | 23 |
 | P2 | 93 | 56 | 0 | 149 |
 | P3 | 73 | 24 | 0 | 97 |
 | P4 | 40 | 7 | 0 | 47 |
-| **Total (current-scope work remaining)** | **219** | **106** | **0** | **325** |
+| **Total (current-scope work remaining)** | **217** | **100** | **0** | **317** |
 
 This reconciles against the four canonical group files' own current totals (A:
-31M+28P=59; B: 63M+20P=83; C: 48M+21P+0=69; D: 77M+37P+0B=114; sum=325), after cluster #7's
+31M+28P=59; B: 63M+20P=83; C: 48M+21P+0=69; D: 75M+31P+0B=106; sum=317), after cluster #7's
 -6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, re-verified with no new code), the
 notification-wiring batch's -3 Missing/+1 Missing→Partial (D78-03/05/08 VERIFIED, D78-13
-PARTIAL), and the marketplace/harvest completeness batch's -4 Missing/-3 Partial
-(D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05 all VERIFIED — see
-`docs/FINAL_GAP_REPORT.md`).
+PARTIAL), the marketplace/harvest completeness batch's -4 Missing/-3 Partial
+(D47-01/D50-03/D51-02/D51-04/D64-05/D66-03/D67-05 all VERIFIED), and the season-closure
+batch's -2 Missing/-6 Partial (D97-02..09 all VERIFIED — see `docs/FINAL_GAP_REPORT.md`).
 
 *(Latest batches — irrigation/soil data quality cluster: D3-08/D3-09/D17-01/D24-04
 PARTIAL→VERIFIED (-4 Partial, P1); D18-06 MISSING→VERIFIED (-1 Missing, P1); D18-08
