@@ -65,6 +65,35 @@ season-closure batch) was found by the same `alembic check` and is disclosed, no
 here. Also independently re-verified this session: `flutter analyze` (41 issues, 0 errors,
 unchanged) and `flutter test` (263 passed, 0 failed, unchanged).
 
+**Updated this later continuation session** (Missing Backlog Batch 3 - reconstructed after
+an unexpected shutdown mid-batch; no persisted priority-plan doc names Batch 3's approved
+scenario count the way Batch 1/2's own commit messages do, so this reconciliation is scoped
+strictly to what the working tree evidenced: 8 already-written, already-tested scenarios plus
+1 zero-code bonus, all confirmed by re-running their tests fresh, not carried forward on
+faith) — `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" now read 798 total: 456
+Verified, 73 Implemented, 21 Partial, 176 Missing, 0 Broken, 38 Future, 26 Out of Scope, 8
+Environment Dependent; 197 current-scope items remain (down from 206 after Batch 2). 9 rows
+moved Missing→VERIFIED: D74-02 (crop damage records), D79-04 (notification `expires_at`
+expiry, category-specific default, excluded-not-deleted), D89-07 (`AuditLogger`
+"RULE_EVALUATED" entries from the crop-risk and proactive-weather-sweep rule engines),
+D92-09 (daily-brief lines re-ranked by real urgency), D78-12 (mobile one-time terminal-sync
+SnackBar, device-local only), D76-06/D77-06/D90-03 (Satellite/IoT/Maps provider
+abstractions - ABC + honest `NotConfigured*` stub each, no real backing implementation
+configured, mirroring `WeatherProvider`/`MarketProvider` exactly), and D90-08 (identical gap
+to D76-06, zero new code, closed as a bonus). D78-06 (market notification) was
+re-investigated and correctly left Missing - building it would contradict a decision
+(`MARKET_ALERT`'s deliberate exclusion) this project already made twice. Full backend suite:
+**950 passed, 0 failed** (up from 931 at the end of Batch 2 - +19 new tests, this batch's
+own). Full Flutter suite: **304 passed, 0 failed** (up from 301). Alembic migration chain
+re-verified single-headed and applies cleanly. See `docs/audit/FINAL_CANONICAL_group_D.md`'s
+per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations. (Note:
+the section-level counts further down this document - Backend/Mobile "791 passed"/"263
+passed" etc. - predate Batch 2 and Batch 3 and are known-stale; they were not rewritten by
+either batch, which only updated this summary block and `FINAL_GAP_REPORT.md`'s authoritative
+table. Treat `FINAL_GAP_REPORT.md`'s FROZEN CANONICAL COUNTS as the one current source for
+category totals, and the two full-suite numbers directly above as the current test-pass
+counts, not the older per-section figures below.)
+
 ## Functional
 
 - 100 domains audited (13 cluster passes, `docs/audit/`), 798 individually-classified

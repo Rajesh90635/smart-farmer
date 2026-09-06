@@ -29,6 +29,7 @@ from app.models.sale_order import SaleOrderStatus
 from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, harvest_repository, sale_order_repository, task_repository
 from app.schemas.crop_risk import CropRiskScoreResponse, RiskFactor
 from app.services import crop_financial_service, task_service
+from app.services.audit_logger import AuditLogger
 
 # D88-07: bump whenever _aggregate/_build_recommendation's actual logic
 # changes, so a historical score stays explainable/reproducible even
@@ -63,6 +64,13 @@ def get_risk_score(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, *, wea
 
     overall = _aggregate(factors)
     recommendation = _build_recommendation(factors, overall)
+
+    # D89-07 (docs/audit/FINAL_CANONICAL_group_D.md): an audit trail of
+    # which rule+version produced a risk score, mirroring payment_service.py's
+    # existing AuditLogger usage - reuses the existing audit_logs table,
+    # no new schema.
+    AuditLogger(db).log("RULE_EVALUATED", actor_id=farmer_id, actor_role="farmer", entity="rule", entity_id=f"{RULE_ID}:{RULE_VERSION}")
+    db.commit()
 
     return CropRiskScoreResponse(
         crop_cycle_id=crop_cycle_id, overall_risk=overall, factors=factors, recommendation=recommendation,

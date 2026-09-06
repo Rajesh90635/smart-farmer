@@ -38,6 +38,7 @@ from app.models.farm import Farm  # noqa: F401
 from app.models.farmer_profile import FarmerProfile  # noqa: F401
 from app.models.harvest_listing import HarvestListing  # noqa: F401
 from app.models.crop_cost_estimate import CropCostEstimate  # noqa: F401
+from app.models.crop_damage_record import CropDamageRecord  # noqa: F401
 from app.models.harvest_record import HarvestRecord  # noqa: F401
 from app.models.input_inventory import InputInventoryItem  # noqa: F401
 from app.models.insurance_policy import InsurancePolicy  # noqa: F401

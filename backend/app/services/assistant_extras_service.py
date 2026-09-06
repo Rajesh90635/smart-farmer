@@ -21,6 +21,35 @@ from app.services import crop_financial_service, crop_risk_service
 from app.services.assistant import tools
 from app.services.weather.weather_provider import WeatherProvider
 
+# D92-09 (docs/audit/FINAL_CANONICAL_group_D.md): a genuine urgency
+# ranking, not the fixed hardcoded composition order below - a CRITICAL
+# disease alert must always outrank a routine harvest-approaching note
+# even though "harvest" is composed earlier today. Higher number = higher
+# urgency = appears first. Ties keep this function's own composition
+# order (Python's sort is stable), so nothing shuffles unless a genuine
+# severity difference calls for it.
+_LINE_PRIORITY = {
+    "disease": 100,
+    "risk_high": 90,
+    "tasks_overdue": 65,
+    "risk_medium": 60,
+    "harvest": 55,
+    "expert_review": 50,
+    "irrigation": 45,
+    "weather_action": 40,
+    "marketplace": 35,
+    "delivery": 35,
+    "finance": 30,
+    "weather": 15,
+    "crop": 15,
+    "no_updates": 15,
+    # Supplementary "what changed since last visit" detail lines - always
+    # lower priority than the primary state lines above, since they're
+    # elaborating on a change already summarized by the (separately
+    # handled) changed-since-last-visit banner.
+    "changed_detail": 10,
+}
+
 
 def submit_feedback(db: Session, farmer_id: str, message_id: uuid.UUID, payload: FeedbackCreateRequest) -> None:
     message = assistant_repository.get_message_owned(db, message_id, uuid.UUID(farmer_id))
@@ -73,26 +102,35 @@ def get_daily_summary(
     # unrecognized code rather than silently accepting an invalid one.
     language_code = language_code_override if language_code_override and is_supported_language(language_code_override) else profile_language_code
 
-    lines: list[str] = []
+    # D92-09 (docs/audit/FINAL_CANONICAL_group_D.md): lines carry a
+    # priority score at the point they're composed (see _LINE_PRIORITY)
+    # and are reordered by it just before being returned - a CRITICAL
+    # disease alert now always outranks a routine harvest-approaching
+    # note, even though "harvest" is appended earlier in this function's
+    # own fixed composition order. `scored_lines` never leaves this
+    # function; `lines` (the final, reordered list of plain strings) is
+    # what every existing caller/test still sees.
+    scored_lines: list[tuple[int, str]] = []
     risk = None
     finance = None
 
     weather = tools.get_weather_status(db, farmer_id, weather_provider, settings)
     if weather.get("available"):
-        lines.append(
+        scored_lines.append((
+            _LINE_PRIORITY["weather"],
             get_message(
                 "daily_summary_weather",
                 language_code,
                 temp=weather.get("current_temperature_c", "?"),
                 rain=weather.get("rain_probability_today_percent", "?"),
-            )
-        )
+            ),
+        ))
         # D93-03 (docs/audit/FINAL_CANONICAL_group_D.md): the spray-advisory
         # crop_action field already existed on FarmWeatherResponse - it was
         # simply never surfaced in the daily brief. Only ever fires for
         # the one implemented action (avoid_spraying), same as the schema.
         if weather.get("crop_action"):
-            lines.append(get_message("daily_summary_weather_action", language_code))
+            scored_lines.append((_LINE_PRIORITY["weather_action"], get_message("daily_summary_weather_action", language_code)))
 
     # D92-04 (docs/audit/FINAL_CANONICAL_group_D.md): lists every one of
     # the farmer's active crop cycles (a multi-crop farm previously only
@@ -105,10 +143,10 @@ def get_daily_summary(
         crops = crop_all["crops"]
         crop = {"available": True, "crop_cycle_id": crops[0]["crop_cycle_id"], "stage": crops[0]["stage"]}
         if len(crops) == 1:
-            lines.append(get_message("daily_summary_crop", language_code, crop_name=crops[0]["crop_name"], stage=crops[0]["stage"]))
+            scored_lines.append((_LINE_PRIORITY["crop"], get_message("daily_summary_crop", language_code, crop_name=crops[0]["crop_name"], stage=crops[0]["stage"])))
         else:
             crop_summary = "; ".join(f"{c['crop_name']} ({c['stage']})" for c in crops)
-            lines.append(get_message("daily_summary_crop_multi", language_code, crop_summary=crop_summary))
+            scored_lines.append((_LINE_PRIORITY["crop"], get_message("daily_summary_crop_multi", language_code, crop_summary=crop_summary)))
 
     # D92-06/D93-04 (docs/audit/c13_governance_farmbrain_security.md):
     # get_disease_status already existed and was already used by the
@@ -120,7 +158,7 @@ def get_daily_summary(
     # and low-confidence must never be presented as a finding).
     disease = tools.get_disease_status(db, farmer_id, settings)
     if disease.get("available") and disease["result_status"] == "disease_detected":
-        lines.append(get_message("daily_summary_disease", language_code, predicted_class=disease["predicted_class"]))
+        scored_lines.append((_LINE_PRIORITY["disease"], get_message("daily_summary_disease", language_code, predicted_class=disease["predicted_class"])))
 
     # D92-02/D93-01: crop_risk_service already aggregates disease/weather/
     # task/financial signals into one score for this exact crop cycle
@@ -131,7 +169,8 @@ def get_daily_summary(
             db, farmer_id, uuid.UUID(crop["crop_cycle_id"]), weather_provider=weather_provider, settings=settings
         )
         if risk.overall_risk in ("medium", "high"):
-            lines.append(get_message("daily_summary_risk", language_code, level=risk.overall_risk))
+            priority = _LINE_PRIORITY["risk_high"] if risk.overall_risk == "high" else _LINE_PRIORITY["risk_medium"]
+            scored_lines.append((priority, get_message("daily_summary_risk", language_code, level=risk.overall_risk)))
 
     # D92-08/D93-09: crop_financial_service already computes actual spend
     # for this crop cycle (Phase 31) - only surfaced once something has
@@ -140,7 +179,7 @@ def get_daily_summary(
     if crop.get("available"):
         finance = crop_financial_service.get_financial_summary(db, farmer_id, uuid.UUID(crop["crop_cycle_id"]))
         if finance.actual_cost and finance.actual_cost > 0:
-            lines.append(get_message("daily_summary_finance", language_code, actual_cost=finance.actual_cost))
+            scored_lines.append((_LINE_PRIORITY["finance"], get_message("daily_summary_finance", language_code, actual_cost=finance.actual_cost)))
 
     # D93-05 (docs/audit/FINAL_CANONICAL_group_D.md): irrigation_intelligence_service.py
     # already existed (Phase 38.4) and was never wired into the daily
@@ -149,19 +188,19 @@ def get_daily_summary(
     if crop.get("available"):
         irrigation = tools.get_irrigation_status(db, farmer_id, weather_provider, settings)
         if irrigation.get("available") and irrigation["recommendation"] not in ("no_action", "unknown"):
-            lines.append(get_message("daily_summary_irrigation", language_code, reason=irrigation["reason"]))
+            scored_lines.append((_LINE_PRIORITY["irrigation"], get_message("daily_summary_irrigation", language_code, reason=irrigation["reason"])))
 
     harvest = tools.get_harvest_status(db, farmer_id)
     if harvest.get("available") and harvest["status"] in ("approaching", "ready", "listed"):
-        lines.append(get_message("daily_summary_harvest", language_code, status=harvest["status"]))
+        scored_lines.append((_LINE_PRIORITY["harvest"], get_message("daily_summary_harvest", language_code, status=harvest["status"])))
 
     offers = tools.get_buyer_offers(db, farmer_id)
     if offers.get("available") and offers["offer_count"] > 0:
-        lines.append(get_message("daily_summary_marketplace", language_code, offer_count=offers["offer_count"]))
+        scored_lines.append((_LINE_PRIORITY["marketplace"], get_message("daily_summary_marketplace", language_code, offer_count=offers["offer_count"])))
 
     delivery = tools.get_delivery_status(db, farmer_id)
     if delivery.get("available") and delivery["status"] not in ("delivered",):
-        lines.append(get_message("daily_summary_delivery", language_code, status=delivery["status"]))
+        scored_lines.append((_LINE_PRIORITY["delivery"], get_message("daily_summary_delivery", language_code, status=delivery["status"])))
 
     # Added Step 14: the tool already existed (Prompt 11/Step 13's
     # get_expert_case_status) but was never included in the daily
@@ -169,7 +208,7 @@ def get_daily_summary(
     # exactly like every other line above, not by building anything new.
     case = tools.get_expert_case_status(db, farmer_id)
     if case.get("available") and case["status"] not in ("closed", "cancelled"):
-        lines.append(get_message("daily_summary_expert_review", language_code, status=case["status"]))
+        scored_lines.append((_LINE_PRIORITY["expert_review"], get_message("daily_summary_expert_review", language_code, status=case["status"])))
 
     # Added Step 16: reuses task_repository.list_overdue_for_farmer
     # directly (a simple count, not a farmer-question-answering tool, so
@@ -181,10 +220,13 @@ def get_daily_summary(
     overdue_tasks = task_repository.list_overdue_for_farmer(db, uuid.UUID(farmer_id), today=datetime.now(timezone.utc).date())
     overdue_count = len(overdue_tasks)
     if overdue_tasks:
-        lines.append(get_message("daily_summary_tasks_overdue", language_code, count=overdue_count, plural="s" if overdue_count != 1 else ""))
+        scored_lines.append((
+            _LINE_PRIORITY["tasks_overdue"],
+            get_message("daily_summary_tasks_overdue", language_code, count=overdue_count, plural="s" if overdue_count != 1 else ""),
+        ))
 
-    if not lines:
-        lines.append(get_message("daily_summary_no_updates", language_code))
+    if not scored_lines:
+        scored_lines.append((_LINE_PRIORITY["no_updates"], get_message("daily_summary_no_updates", language_code)))
 
     # D94-07 (docs/audit/FINAL_CANONICAL_group_D.md): order/payment status
     # was never pulled into the daily summary at all - reused here only
@@ -204,10 +246,11 @@ def get_daily_summary(
         )
         previous_snapshot = profile.last_daily_summary_snapshot
         previous_at = profile.last_daily_summary_at
+        changed_since_banner: str | None = None
         if previous_snapshot is not None:
             changed_count = _count_changed_facts(previous_snapshot, current_snapshot)
             if changed_count > 0:
-                lines.insert(0, get_message("daily_summary_changed_since_last_visit", language_code, count=changed_count))
+                changed_since_banner = get_message("daily_summary_changed_since_last_visit", language_code, count=changed_count)
 
             # D94-01/02/03/06/07: each is a distinct, named line on top of
             # the aggregate count above - only ever fires on a REAL
@@ -219,22 +262,22 @@ def get_daily_summary(
                 and (weather.get("current_temperature_c") != previous_snapshot.get("weather_temp")
                      or weather.get("rain_probability_today_percent") != previous_snapshot.get("weather_rain"))
             ):
-                lines.append(get_message(
+                scored_lines.append((_LINE_PRIORITY["changed_detail"], get_message(
                     "daily_summary_weather_changed", language_code,
                     temp=weather.get("current_temperature_c", "?"), rain=weather.get("rain_probability_today_percent", "?"),
-                ))
+                )))
 
             new_stage = current_snapshot.get("crop_stage")
             if new_stage is not None and previous_snapshot.get("crop_stage") is not None and new_stage != previous_snapshot.get("crop_stage"):
-                lines.append(get_message("daily_summary_stage_changed", language_code, stage=new_stage))
+                scored_lines.append((_LINE_PRIORITY["changed_detail"], get_message("daily_summary_stage_changed", language_code, stage=new_stage)))
 
             new_risk_level = current_snapshot.get("risk_level")
             if new_risk_level is not None and previous_snapshot.get("risk_level") is not None and new_risk_level != previous_snapshot.get("risk_level"):
-                lines.append(get_message("daily_summary_risk_changed", language_code, level=new_risk_level))
+                scored_lines.append((_LINE_PRIORITY["changed_detail"], get_message("daily_summary_risk_changed", language_code, level=new_risk_level)))
 
             new_review_outcome = current_snapshot.get("case_review_outcome")
             if new_review_outcome is not None and new_review_outcome != previous_snapshot.get("case_review_outcome"):
-                lines.append(get_message("daily_summary_expert_responded", language_code))
+                scored_lines.append((_LINE_PRIORITY["changed_detail"], get_message("daily_summary_expert_responded", language_code)))
 
             # Unlike weather/stage/risk above, a None "previous" order status
             # here means "had no confirmed order yet" (list_orders_for_farmer
@@ -243,7 +286,7 @@ def get_daily_summary(
             # not an unknown-data case to suppress.
             new_order_status = current_snapshot.get("order_status")
             if new_order_status is not None and new_order_status != previous_snapshot.get("order_status"):
-                lines.append(get_message("daily_summary_payment_changed", language_code, status=new_order_status))
+                scored_lines.append((_LINE_PRIORITY["changed_detail"], get_message("daily_summary_payment_changed", language_code, status=new_order_status)))
 
             # D94-04: a since-timestamp count, not a snapshot-diff (a
             # single stored "stage" string can't represent "how many
@@ -252,11 +295,29 @@ def get_daily_summary(
                 completed_since = task_repository.count_completed_since(db, uuid.UUID(farmer_id), previous_at)
                 created_since = task_repository.count_created_since(db, uuid.UUID(farmer_id), previous_at)
                 if completed_since > 0 or created_since > 0:
-                    lines.append(get_message("daily_summary_tasks_changed", language_code, completed=completed_since, created=created_since))
+                    scored_lines.append((
+                        _LINE_PRIORITY["changed_detail"],
+                        get_message("daily_summary_tasks_changed", language_code, completed=completed_since, created=created_since),
+                    ))
 
         profile.last_daily_summary_snapshot = current_snapshot
         profile.last_daily_summary_at = datetime.now(timezone.utc)
         db.commit()
+
+        # D92-09: stable sort (Python's own guarantee) - lines of equal
+        # priority keep this function's own fixed composition order as a
+        # tiebreak, so nothing reorders unless a genuine severity
+        # difference calls for it. The "changed since last visit" banner
+        # is a meta-summary of the count below it, not itself a single-
+        # topic severity item - kept unconditionally first, exactly as
+        # before this change.
+        scored_lines.sort(key=lambda item: item[0], reverse=True)
+        lines = [text for _, text in scored_lines]
+        if changed_since_banner is not None:
+            lines.insert(0, changed_since_banner)
+    else:
+        scored_lines.sort(key=lambda item: item[0], reverse=True)
+        lines = [text for _, text in scored_lines]
 
     return DailySummaryResponse(language_code=language_code, lines=lines, generated_at=datetime.now(timezone.utc))
 

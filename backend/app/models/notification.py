@@ -89,3 +89,12 @@ class Notification(Base):
 
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+
+    # D79-04 (docs/audit/FINAL_CANONICAL_group_D.md): a category-specific
+    # default set at creation time (notification_service.py) so
+    # notifications don't accumulate forever in the farmer's default
+    # list. Soft only - an expired row is excluded from the default list
+    # (notification_repository.list_for_farmer) but never physically
+    # deleted, and stays fully visible to the historical-signal queries
+    # (D97-09/D98-05) that intentionally read every row ever created.
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

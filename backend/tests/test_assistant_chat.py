@@ -195,6 +195,38 @@ def test_daily_summary_includes_disease_and_risk_lines_when_disease_detected(cli
     assert any(line.startswith("Risk:") and "high" in line for line in lines), f"Expected a high-risk line, got: {lines}"
 
 
+def test_daily_summary_ranks_a_critical_disease_alert_ahead_of_the_routine_crop_line(client, farmer_with_crop_cycle):
+    """D92-09 (docs/audit/FINAL_CANONICAL_group_D.md): the crop-status
+    line is composed FIRST in this function's fixed order, but a CRITICAL
+    disease alert must still outrank it in the final response - a real
+    priority ranking, not just the hardcoded composition sequence."""
+    import io
+
+    from tests.photo_factories import make_test_jpeg, valid_photo_session_payload
+    from tests.conftest import override_model_provider
+    from tests.fake_model_provider import FakeModelProvider
+    from app.services.ai.model_provider import TopKPrediction
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    session = client.post("/api/v1/crop-photo-sessions", json=valid_photo_session_payload(crop_cycle_id), headers=auth_headers(tokens)).json()
+    files = {"file": ("leaf.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    data = {"client_upload_id": f"upload-{uuid.uuid4().hex[:8]}", "source": "camera"}
+    photo = client.post(f"/api/v1/crop-photo-sessions/{session['id']}/photos", files=files, data=data, headers=auth_headers(tokens)).json()
+    with override_model_provider(FakeModelProvider(top_predictions=[TopKPrediction("Early Blight", 0.92)])):
+        client.post(f"/api/v1/crop-photos/{photo['id']}/analyze", headers=auth_headers(tokens))
+
+    lines = client.get("/api/v1/assistant/daily-summary", headers=auth_headers(tokens)).json()["lines"]
+    disease_index = next(i for i, line in enumerate(lines) if "Early Blight" in line)
+    # The crop-status line is whichever remaining line was composed from
+    # daily_summary_crop/daily_summary_crop_multi - identify it by
+    # elimination (everything that isn't the disease or risk line).
+    crop_index = next(
+        i for i, line in enumerate(lines)
+        if "Early Blight" not in line and not (line.startswith("Risk:") and "high" in line)
+    )
+    assert disease_index < crop_index, f"Expected the disease line before the crop line, got: {lines}"
+
+
 def test_daily_summary_includes_finance_line_once_expenses_recorded(client, farmer_with_crop_cycle):
     """D92-08/D93-09: crop_financial_service already tracked actual spend
     but it was never surfaced in the daily summary."""

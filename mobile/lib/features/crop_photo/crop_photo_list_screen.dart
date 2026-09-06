@@ -26,11 +26,44 @@ class CropPhotoListScreen extends StatefulWidget {
 
 class _CropPhotoListScreenState extends State<CropPhotoListScreen> {
   late Future<List<CropPhoto>> _photosFuture;
+  late final PendingUploadQueue _queue;
+  int _lastSeenTerminalEventSequence = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _queue = context.read<PendingUploadQueue>();
+    _lastSeenTerminalEventSequence = _queue.terminalEventSequence;
+    _queue.addListener(_onQueueChanged);
+  }
+
+  @override
+  void dispose() {
+    // Reference captured in initState, not looked up here - Provider's
+    // ancestor lookup is unsafe once this widget is being torn down (a
+    // real crash, found by running the existing widget tests after
+    // adding this listener).
+    _queue.removeListener(_onQueueChanged);
+    super.dispose();
+  }
+
+  // D78-12 (docs/audit/FINAL_CANONICAL_group_D.md): a one-time "synced"/
+  // "failed to sync" SnackBar, distinct from the persistent per-photo
+  // status badge below (D82-06) - fires exactly once per terminal
+  // transition for THIS crop cycle's own queued photo, never re-shown on
+  // an unrelated rebuild.
+  void _onQueueChanged() {
+    if (_queue.terminalEventSequence == _lastSeenTerminalEventSequence) return;
+    _lastSeenTerminalEventSequence = _queue.terminalEventSequence;
+
+    final upload = _queue.lastTerminalUpload;
+    if (upload == null || upload.cropCycleId != widget.cropCycleId) return;
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final message = upload.status == PendingUploadStatus.uploaded ? l10n.uploadSuccess : (upload.lastErrorMessage ?? l10n.uploadFailed);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _load() {

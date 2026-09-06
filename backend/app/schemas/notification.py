@@ -25,6 +25,10 @@ class NotificationResponse(BaseModel):
     source_summary: str | None = None
     read_at: datetime | None
     created_at: datetime
+    # D79-04 (docs/audit/FINAL_CANONICAL_group_D.md): None for
+    # SECURITY_ALERT (never expires) - a real category-specific default
+    # otherwise, set once at creation.
+    expires_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

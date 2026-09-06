@@ -13,7 +13,7 @@ a background worker, out of scope per "do not introduce a complicated
 distributed architecture unnecessarily" - see docs/NOTIFICATION_ARCHITECTURE.md.
 """
 import uuid
-from datetime import time
+from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
@@ -78,6 +78,24 @@ _SOURCE_BY_CATEGORY = {
     NotificationCategory.DISPUTE_ALERT: "Dispute records",
     NotificationCategory.SECURITY_ALERT: "Account security",
 }
+
+# D79-04 (docs/audit/FINAL_CANONICAL_group_D.md): a category-specific
+# default TTL so notifications don't accumulate forever in the farmer's
+# default list. Weather-related alerts are inherently time-sensitive
+# (today's rain/heat/wind is stale information within a couple of days);
+# everything else gets a longer, generic "don't accumulate forever"
+# default. Never applied to SECURITY_ALERT - a farmer must always be able
+# to look back at their own account-security history, the same reasoning
+# that already exempts it from the preference-toggle map above.
+_WEATHER_ALERT_TTL_HOURS = 48
+_DEFAULT_TTL_HOURS = 24 * 30
+
+
+def _default_expires_at(category: NotificationCategory) -> datetime | None:
+    if category == NotificationCategory.SECURITY_ALERT:
+        return None
+    ttl_hours = _WEATHER_ALERT_TTL_HOURS if category in _SOURCE_BY_CATEGORY and _SOURCE_BY_CATEGORY[category] == "Weather service" else _DEFAULT_TTL_HOURS
+    return datetime.now(timezone.utc) + timedelta(hours=ttl_hours)
 
 
 def get_or_create_preferences(db: Session, farmer_id: str) -> NotificationPreference:
@@ -149,6 +167,7 @@ def create_alert_notification(
         related_entity_id=related_entity_id,
         rule_version=rule_version,
         source_summary=_SOURCE_BY_CATEGORY.get(candidate.category),
+        expires_at=_default_expires_at(candidate.category),
     )
     notification_repository.create(db, notification)
     db.commit()

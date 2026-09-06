@@ -20,7 +20,14 @@ def create(db: Session, notification: Notification) -> Notification:
 
 
 def list_for_farmer(db: Session, farmer_id: uuid.UUID, *, unread_only: bool, limit: int, offset: int) -> tuple[list[Notification], int]:
-    stmt = select(Notification).where(Notification.farmer_id == farmer_id)
+    now = datetime.now(timezone.utc)
+    # D79-04: an expired notification is excluded from this default list
+    # only - never physically deleted (see Notification.expires_at's own
+    # docstring for why the historical-signal queries elsewhere must
+    # still see every row).
+    stmt = select(Notification).where(
+        Notification.farmer_id == farmer_id, (Notification.expires_at.is_(None)) | (Notification.expires_at > now)
+    )
     if unread_only:
         stmt = stmt.where(Notification.read_at.is_(None))
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()

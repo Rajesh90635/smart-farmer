@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 447 |
+| Verified | 456 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **520** |
+| **Attended (Verified + Implemented)** | **529** |
 | Partial | 21 |
-| Missing | 185 |
+| Missing | 176 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **206** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **197** |
 | Future | 38 |
 | Out of Scope | 26 |
 | Environment Dependent | 8 |
@@ -45,6 +45,42 @@ unchanged at 798 - every change this pass was an internal status move,
 zero new/removed rows. Full backend suite and full flutter suite both
 re-run green after this batch. See docs/audit/FINAL_CANONICAL_group_D.md's
 own batch note for the full per-scenario breakdown.)*
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
+BACKLOG" prioritization plan's Batch 3. This session began after an
+unexpected shutdown mid-batch - reconstructed entirely from the working
+tree and `docs/audit/` evidence, not from any prior session's claims (no
+persisted priority-plan doc exists in the repo naming Batch 3's approved
+scenario count, unlike Batch 1/2's own commit messages; the approved list
+itself only existed in the prior, now-lost chat session). All code and
+tests for 9 scenarios were already written and passing at the point of
+reconstruction - only the doc-reconciliation pass below was still
+pending. 9 rows moved Missing→VERIFIED: D74-02 (crop damage records - new
+`CropDamageRecord`, farmer-entered, tied to an owned crop cycle + owned
+policy), D79-04 (notification `expires_at`, category-specific default,
+excluded-not-deleted), D89-07 (`AuditLogger` "RULE_EVALUATED" entries from
+`crop_risk_service`/`weather_alert_orchestration_service`), D92-09 (daily
+summary lines re-ranked by real urgency, stable sort), D78-12 (mobile
+one-time terminal-state SnackBar, device-local only), and three provider
+abstractions - D76-06 (`SatelliteProvider`), D77-06 (`IoTProvider`),
+D90-03 (`MapsProvider`), each ABC + honest `NotConfigured*` stub mirroring
+`WeatherProvider`/`MarketProvider`/`PaymentGatewayProvider` exactly, no
+real backing implementation configured. D90-08 (satellite/NDVI provider
+abstraction, audited from the Provider-Abstraction-domain angle) closes
+as a zero-new-code bonus - identical gap to D76-06, same implementation.
+D78-06 (market notification) was re-investigated and correctly left
+Missing, not force-built - building it would directly contradict a
+decision (`MARKET_ALERT`'s deliberate exclusion) this project's own prior
+session already made twice; see its own row in
+`docs/audit/FINAL_CANONICAL_group_D.md` for the full citation. Verified
+447→456 (+9), Missing 185→176 (-9). Total unchanged at 798 - every change
+this pass was an internal status move, zero new/removed rows. Full
+backend suite re-run fresh after reconstruction: 950 passed, 0 failed (up
+from Batch 2's 931 - the +19 are this batch's own new tests). Full
+Flutter suite: 304 passed, 0 failed (up from 301). Alembic migration
+chain verified single-headed (`42881a9226fb`) and applies cleanly. See
+`docs/audit/FINAL_CANONICAL_group_D.md`'s own per-scenario rows for full
+citations.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
 BACKLOG" prioritization plan's Batch 2 (the user's "go ahead next batch"

@@ -39,6 +39,24 @@ def test_sweep_creates_a_notification_without_any_farmer_request(client, farmer_
     assert heavy_rain["rule_version"] == "weather_alert_rules_v1"
 
 
+def test_sweep_that_creates_a_notification_audit_logs_which_rule_and_version_fired(client, farmer_with_located_farm, db_session):
+    """D89-07 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from sqlalchemy import select
+
+    from app.models.audit_log import AuditLog
+
+    tokens, farm_id = farmer_with_located_farm
+    settings = get_settings()
+    run_proactive_weather_alert_sweep(db_session, heavy_rain_provider(), settings, farm_ids=[uuid.UUID(farm_id)])
+
+    entries = db_session.execute(
+        select(AuditLog).where(
+            AuditLog.action == "RULE_EVALUATED", AuditLog.entity == "rule", AuditLog.entity_id == "weather_alert_rules:weather_alert_rules_v1"
+        )
+    ).scalars().all()
+    assert len(entries) >= 1
+
+
 def test_sweep_never_duplicates_across_repeated_ticks(client, farmer_with_located_farm, db_session):
     tokens, farm_id = farmer_with_located_farm
     settings = get_settings()

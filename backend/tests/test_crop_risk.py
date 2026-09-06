@@ -326,3 +326,19 @@ def test_risk_score_is_deterministic_for_the_same_data(client, farmer_with_crop_
         second = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens)).json()
     assert first["overall_risk"] == second["overall_risk"]
     assert first["factors"] == second["factors"]
+
+
+def test_computing_a_risk_score_audit_logs_which_rule_and_version_fired(client, farmer_with_crop_cycle, db_session):
+    """D89-07 (docs/audit/FINAL_CANONICAL_group_D.md)."""
+    from sqlalchemy import select
+
+    from app.models.audit_log import AuditLog
+
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    with override_weather_provider(FakeWeatherProvider(available=False)):
+        client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/risk-score", headers=auth_headers(tokens))
+
+    entries = db_session.execute(
+        select(AuditLog).where(AuditLog.action == "RULE_EVALUATED", AuditLog.entity == "rule", AuditLog.entity_id == "crop_risk_service:crop_risk_v1")
+    ).scalars().all()
+    assert len(entries) >= 1

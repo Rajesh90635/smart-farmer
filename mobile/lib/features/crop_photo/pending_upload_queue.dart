@@ -129,6 +129,21 @@ class PendingUploadQueue extends ChangeNotifier {
   final List<PendingUpload> _items = [];
   bool _loaded = false;
 
+  // D78-12 (docs/audit/FINAL_CANONICAL_group_D.md): a farmer-facing
+  // one-time "synced"/"failed to sync" signal, distinct from D82-06's
+  // persistent per-photo status badge (crop_photo_list_screen.dart) -
+  // that badge shows ONGOING state; this is a single transient event a
+  // listener (e.g. a SnackBar) fires exactly once per terminal
+  // transition. A device-local signal only - no backend Notification row,
+  // since a sync outcome is entirely device-local information.
+  int _terminalEventSequence = 0;
+  PendingUpload? _lastTerminalUpload;
+
+  int get terminalEventSequence => _terminalEventSequence;
+  PendingUpload? get lastTerminalUpload => _lastTerminalUpload;
+
+  static bool isTerminalStatus(PendingUploadStatus status) => status != PendingUploadStatus.waitingForNetwork && status != PendingUploadStatus.uploading;
+
   List<PendingUpload> get items => List.unmodifiable(_items);
 
   Future<Directory> _queueDirectory() async {
@@ -204,6 +219,10 @@ class PendingUploadQueue extends ChangeNotifier {
     if (upload == null) return;
     upload.status = status;
     upload.lastErrorMessage = errorMessage;
+    if (isTerminalStatus(status)) {
+      _terminalEventSequence++;
+      _lastTerminalUpload = upload;
+    }
     notifyListeners();
     await _persist();
   }

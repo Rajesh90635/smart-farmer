@@ -27,6 +27,7 @@ from app.models.plot import Plot
 from app.repositories import farm_repository, user_repository, weather_repository
 from app.schemas.weather import FarmWeatherResponse
 from app.services import notification_service, rule_version_service
+from app.services.audit_logger import AuditLogger
 from app.services.weather.weather_provider import WeatherProvider, WeatherReading
 from app.services.weather_alert_rules import (
     RULE_ID,
@@ -171,6 +172,15 @@ def generate_alerts_for_farm_weather(
             )
             if n:
                 created.append(n)
+
+    if created:
+        # D89-07 (docs/audit/FINAL_CANONICAL_group_D.md): an audit trail
+        # of which rule+version fired - one row per farm-level sweep that
+        # actually produced a notification (not per-candidate; a
+        # dedup-suppressed candidate never reaches `created` at all, so
+        # nothing is logged for it).
+        AuditLogger(db).log("RULE_EVALUATED", actor_id=farmer_id, actor_role="farmer", entity="rule", entity_id=f"{RULE_ID}:{RULE_VERSION}")
+        db.commit()
 
     return created
 

@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 116 |
+| VERIFIED | 125 |
 | IMPLEMENTED | 30 |
 | PARTIAL | 7 |
-| MISSING | 55 |
+| MISSING | 46 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 3 |
@@ -222,6 +222,38 @@ unchanged at 223 - every change here is an internal status move, zero
 new/removed rows. Full backend suite: 931 passed, 0 failed/errored. Full
 flutter suite: 301 passed, 0 failed. See docs/FINAL_GAP_REPORT.md and
 docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
+
+*(Later continuation session — Missing Backlog Batch 3, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. This session began after
+an unexpected shutdown mid-batch; reconstructed entirely from the working
+tree (code + tests for every scenario below were already written and
+passing at the point of reconstruction, only this doc-reconciliation pass
+was still pending) - no persisted priority-plan doc in this repo names
+Batch 3's approved scenario count the way Batch 1/2's own commit messages
+do, so this note is scoped strictly to what the working tree evidenced.
+9 rows MISSING→VERIFIED (-9 Missing, +9 Verified): D74-02 (crop damage
+records - new `CropDamageRecord`, farmer-entered, tied to an owned crop
+cycle + owned insurance policy); D79-04 (`Notification.expires_at`,
+category-specific default, excluded-not-deleted from the default list);
+D89-07 (`AuditLogger` "RULE_EVALUATED" entries from the crop-risk and
+proactive-weather-sweep rule engines); D92-09 (daily-brief lines
+re-ranked by real urgency via `_LINE_PRIORITY`, stable sort); D78-12
+(mobile one-time terminal-sync SnackBar, device-local only, no backend
+Notification row); D76-06/D77-06/D90-03 (Satellite/IoT/Maps provider
+abstractions - ABC + honest `NotConfigured*` stub each, mirroring
+`WeatherProvider`/`MarketProvider` exactly, no real backing
+implementation configured); D90-08 (identical gap to D76-06, zero new
+code, closed as a bonus - see that row). D78-06 (market notification) was
+re-investigated and correctly left Missing, not force-built - it would
+directly contradict a decision (`MARKET_ALERT`'s deliberate exclusion)
+this project's own prior session already made twice (see its own row);
+no count change, since it was already Missing. Total unchanged at 223 -
+every change here is an internal status move, zero new/removed rows.
+Full backend suite: 950 passed, 0 failed/errored (up from 931 - +19 new
+tests, this batch's own). Full flutter suite: 304 passed, 0 failed (up
+from 301). Alembic migration chain re-verified single-headed and applies
+cleanly. See docs/FINAL_GAP_REPORT.md and docs/FINAL_RELEASE_READINESS.md
+for the cross-group reconciliation.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -1286,7 +1318,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D74-02 — Crop damage record for insurance purposes (loss type, extent, date)
 - Domain: 74. Crop Insurance
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - new `CropDamageRecord` model (migration `42881a9226fb`), farmer-entered only, like `InsurancePolicy` - never verified against a real insurer/disaster-authority assessment. Tied to both a specific owned crop cycle AND a specific owned insurance policy (a nonexistent or another-farmer's `policy_id` correctly 404s). Full CRUD: `POST/GET /crop-cycles/{id}/damage-records`, `GET/DELETE /damage-records/{id}`. Tests: `tests/test_insurance.py` (5 new).
 - Existing relevant files/classes/functions: none
 - Missing component: a damage record linked to a crop cycle + policy
 - Required implementation: `CropDamageRecord` (crop_cycle_id, policy_id, loss_type, extent_percent, occurred_on)
@@ -1565,7 +1597,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D76-06 — Provider abstraction (a SatelliteProvider interface analogous to WeatherProvider)
 - Domain: 76. Satellite
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `SatelliteProvider(ABC)` + `NotConfiguredSatelliteProvider` (honestly reports `available=False`, never fabricates an NDVI value) + `FakeSatelliteProvider` test double, mirroring `WeatherProvider`/`MarketProvider`/`PaymentGatewayProvider` exactly. No real Sentinel-Hub-equivalent implementation - no satellite-imagery API account configured. Only the interface itself; D76-01..05/07 (the consuming NDVI/anomaly/inspection features) remain genuinely Missing, not closed by this row. Also closes D90-08 (the identical gap, audited from the Provider-Abstraction-domain angle - shared implementation, see that row). Tests: `tests/test_satellite_provider.py` (3 new).
 - Existing relevant files/classes/functions: `app/services/weather/weather_provider.py` (abstract base + `WeatherReading` dataclass) is the exact pattern to mirror; no equivalent exists for satellite
 - Missing component: `SatelliteProvider(ABC)` + a `NotConfiguredSatelliteProvider` honest stub + a real implementation (e.g. Sentinel Hub client)
 - Required implementation: `SatelliteProvider(ABC)` with abstract `provider_name`/`get_ndvi(polygon, date_range)`, following the exact `WeatherProvider`/`ModelProvider`/`OCRProvider`/`AIProvider` pattern already used four times in this codebase
@@ -1684,7 +1716,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D77-06 — Provider abstraction (an IoTProvider/device-integration interface analogous to WeatherProvider)
 - Domain: 77. IoT
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `IoTProvider(ABC)` + `NotConfiguredIoTProvider` (honestly reports `available=False`) + `FakeIoTProvider` test double, mirroring `WeatherProvider`/`SatelliteProvider` (D76-06). No real implementation - no IoT hardware/account configured. Only the interface itself; D77-01..05 (temperature/humidity/soil-moisture/weather-station/actuation) and D77-07 (consent gate) remain genuinely Missing, not closed by this row. Tests: `tests/test_iot_provider.py` (3 new).
 - Existing relevant files/classes/functions: no such module exists anywhere in `app/services/`
 - Missing component: `IoTProvider(ABC)` mirroring `WeatherProvider`/`ModelProvider`/`OCRProvider`/`AIProvider`/`SatelliteProvider` (D76-06)
 - Required implementation: `IoTProvider(ABC)` with abstract `provider_name`/`get_reading(sensor_id, metric)`, a `NotConfiguredIoTProvider` honest stub, feeding D77-01/02/03/04
@@ -1766,7 +1798,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D78-06 — Market notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
+- Current implementation status: **STAYS MISSING (re-investigated, Missing Backlog Batch 3)** - initially selected as a Batch 3 candidate, then correctly NOT built after re-reading `docs/NOTIFICATION_ARCHITECTURE.md` in full: it states explicitly and twice that `MARKET_ALERT`'s exclusion was "deliberately respected, not overridden, when a later audit pass considered adding automatic buyer-listing-match notifications" (citing "Third pass, Batch 6"). This is a repeated, deliberate architectural decision, not an oversight or a stale classification - building it now would directly contradict a decision this project's own prior session already made twice. Correctly left Missing rather than force-built; flagging this row's own "Required implementation" text as misleadingly neutral (it doesn't surface the deliberate-exclusion conflict a builder would only find by reading the architecture doc in full).
 - Existing relevant files/classes/functions: no `MARKET_ALERT` category exists at all; deliberately excluded per `docs/NOTIFICATION_ARCHITECTURE.md:48-51` ("deliberately excluded rather than added as unused placeholders") — though per Matrix §B batch 6, D59-07 (a related market scenario) was separately reclassified FUTURE, not built
 - Missing component: `MARKET_ALERT`/`ORDER_ALERT` categories and their trigger points
 - Required implementation: add `MARKET_ALERT` to `NotificationCategory`; wire it to reference-price changes or new buyer offers
@@ -1848,7 +1880,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D78-12 — Sync notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `PendingUploadQueue` now tracks a `terminalEventSequence`/`lastTerminalUpload` (device-local only - no backend `Notification` row, since a sync outcome is entirely device-local information); `CropPhotoListScreen` listens and shows a one-time SnackBar (the real error message on failure, not a generic one) exactly once per terminal transition, scoped to its own crop cycle only - never re-shown on an unrelated rebuild, never shown for a different crop cycle's upload. Distinct from D82-06's persistent per-photo status badge. Tests: 3 new widget tests in `crop_photo_list_screen_test.dart`.
 - Existing relevant files/classes/functions: `sync_coordinator.dart` never calls any notification API on sync success/failure (confirmed by grep)
 - Missing component: a farmer-facing "your queued photo synced" / "failed to sync" signal
 - Required implementation: `SyncCoordinator` calls a new lightweight local (in-app, not backend-notification-table) signal on terminal states (`uploaded`, `failed`, `needsManualAction`), reusing the same UI surface recommended for D82-06's sync-status badge rather than inventing a separate backend notification round-trip for a purely device-local event
@@ -1882,7 +1914,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D79-04 — Expiry
 - Domain: 79. Notification Dedup
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `Notification.expires_at` (nullable, migration `b6f2afd218b8`), a category-specific default set at creation time (`notification_service._default_expires_at`: 48h for weather-sourced alerts, 30 days generic default, `None`/never-expires for `SECURITY_ALERT` - a farmer must always be able to look back at their own account-security history). `notification_repository.list_for_farmer` excludes an expired row from the default list only - never physically deleted, so the historical-signal queries (D97-09/D98-05) that intentionally read every row ever created are unaffected. Scope note, disclosed not hidden: closed via read-time filtering, not the scheduled archival/soft-delete sweep job this row's own "Required implementation" originally proposed - simpler, and sufficient for the stated goal ("don't accumulate forever in the default list"). Tests: `tests/test_notifications.py` (3 new).
 - Existing relevant files/classes/functions: none — no TTL/expiry field on `Notification`, no archival job, no scheduler at all existed when this cluster was written (confirmed by grep of `notification.py`, `notification_service.py`, `notification_repository.py`)
 - Missing component: a TTL/expiry concept so notifications don't accumulate forever
 - Required implementation: add `expires_at` (nullable) to `Notification`; a scheduled archival/soft-delete job on `scheduler.py` (now that it exists, per the P0 batch) removing or hiding expired rows
@@ -2176,7 +2208,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D89-07 — Audit of which rule/version fired
 - Domain: 89. Rule Versioning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `crop_risk_service.get_risk_score` and `weather_alert_orchestration_service.generate_alerts_for_farm_weather` (the proactive-sweep path) both now call the existing `AuditLogger` pattern (mirroring `payment_service.py`), logging `RULE_EVALUATED` with `entity_id="{RULE_ID}:{RULE_VERSION}"` - once per risk-score computation, and once per farm-level sweep that actually produced a notification (a dedup-suppressed candidate never reaches `created`, so nothing is logged for it). Tests: `tests/test_crop_risk.py`, `tests/test_proactive_weather_sweep.py` (1 new each).
 - Existing relevant files/classes/functions: no `AuditLogger` call exists in `weather_action_rules.py`, `weather_alert_rules.py`, or `crop_risk_service.py`; contrast with `payment_service.py:40,62,66`, which does audit-log, showing the pattern exists elsewhere but isn't applied here
 - Missing component: an audit-log entry naming the rule+version that fired
 - Required implementation: add `AuditLogger(db).log("RULE_EVALUATED", ..., entity="rule", entity_id=rule_id_and_version)` at the point a rule produces a notification/risk-factor, reusing the exact `AuditLogger` pattern from `payment_service.py`
@@ -2210,7 +2242,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D90-03 — Maps/geocoding provider abstraction
 - Domain: 90. Provider Abstraction
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `MapsProvider(ABC)` (`geocode`/`reverse_geocode`) + `NotConfiguredMapsProvider` honest stub, mirroring `WeatherProvider`/`MarketProvider` exactly - never fabricates a coordinate or address. No real geocoding API configured; location handling remains the static Mandal/Village master data, not live geocoding. Only the interface itself - no service calls through it yet. Tests: `tests/test_maps_provider.py` (2 new).
 - Existing relevant files/classes/functions: none — grepped `maps_provider`/`geocod`/`MapsProvider`/`reverse_geocode`, zero real hits; location handling is static Mandal/Village master data, not live geocoding
 - Missing component: any geocoding capability at all
 - Required implementation: `MapsProvider(ABC)` with abstract `reverse_geocode(lat, lng)`/`geocode(address)`; a `NotConfiguredMapsProvider` honest stub until a real geocoding API (e.g. an OSM-based service) is configured
@@ -2227,7 +2259,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D90-08 — Satellite/NDVI provider abstraction
 - Domain: 90. Provider Abstraction
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - identical gap to D76-06, closed by the same implementation (`SatelliteProvider(ABC)` + `NotConfiguredSatelliteProvider` + `FakeSatelliteProvider`, see that row for full evidence). Tests: shared `tests/test_satellite_provider.py`.
 - Existing relevant files/classes/functions: none — grepped `satellite`/`ndvi`/`remote_sensing`, zero hits
 - Missing component: this is the same gap as D76-06, audited from the Provider-Abstraction-domain angle
 - Required implementation: identical to D76-06's recommendation — `SatelliteProvider(ABC)` + `NotConfiguredSatelliteProvider`
@@ -2244,7 +2276,7 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 ### D92-09 — Priority calculation across all of the above
 - Domain: 92. Farm Brain
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 3)** - `assistant_extras_service._LINE_PRIORITY` scores each daily-summary line by real urgency (disease=100 down to a changed-since-last-visit detail line=10); lines are composed exactly as before, then stable-sorted by that score just before being returned - a CRITICAL disease line now always outranks a routine harvest-approaching note even though "harvest" is composed earlier in the function's fixed order. The "changed since last visit" banner stays unconditionally first (a meta-summary of the count below it, not itself a single-topic severity item). Test: `tests/test_assistant_chat.py::test_daily_summary_ranks_a_critical_disease_alert_ahead_of_the_routine_crop_line`.
 - Existing relevant files/classes/functions: lines are appended in a fixed hardcoded order (weather→crop→harvest→offers→delivery→expert→overdue-tasks); no sort/scoring function exists (`assistant_extras_service.py:75-125`)
 - Missing component: a ranking/scoring function ordering the summary by actual urgency rather than a fixed hardcoded sequence
 - Required implementation: a `_priority_score(line_type, severity)` function reordering the composed lines — e.g. a CRITICAL disease alert should outrank a routine harvest-approaching note even though "harvest" is hardcoded earlier today

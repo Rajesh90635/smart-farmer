@@ -125,4 +125,46 @@ void main() {
 
     expect(find.text('Uploaded'), findsNothing);
   });
+
+  // --- D78-12: one-time sync-terminal-state signal ---
+
+  testWidgets('shows a one-time SnackBar when a queued photo for this crop cycle finishes uploading', (tester) async {
+    final queue = PendingUploadQueue();
+    await _enqueueWithTempPhoto(tester, queue, 'a', cropCycleId: 'cycle-1');
+
+    await tester.pumpWidget(_wrap(FakeCropPhotoRepository(), queue));
+    await tester.pumpAndSettle();
+    expect(find.text('Uploaded successfully.'), findsNothing);
+
+    await tester.runAsync(() => queue.updateStatus('a', PendingUploadStatus.uploaded));
+    await tester.pump();
+
+    expect(find.text('Uploaded successfully.'), findsOneWidget);
+  });
+
+  testWidgets('shows the real error message when a queued photo for this crop cycle fails to sync', (tester) async {
+    final queue = PendingUploadQueue();
+    await _enqueueWithTempPhoto(tester, queue, 'a', cropCycleId: 'cycle-1');
+
+    await tester.pumpWidget(_wrap(FakeCropPhotoRepository(), queue));
+    await tester.pumpAndSettle();
+
+    await tester.runAsync(() => queue.updateStatus('a', PendingUploadStatus.failed, errorMessage: 'Network error, please try again.'));
+    await tester.pump();
+
+    expect(find.text('Network error, please try again.'), findsOneWidget);
+  });
+
+  testWidgets("does not show a sync SnackBar for a different crop cycle's upload", (tester) async {
+    final queue = PendingUploadQueue();
+    await _enqueueWithTempPhoto(tester, queue, 'a', cropCycleId: 'a-different-cycle');
+
+    await tester.pumpWidget(_wrap(FakeCropPhotoRepository(), queue));
+    await tester.pumpAndSettle();
+
+    await tester.runAsync(() => queue.updateStatus('a', PendingUploadStatus.uploaded));
+    await tester.pump();
+
+    expect(find.text('Uploaded successfully.'), findsNothing);
+  });
 }

@@ -124,6 +124,55 @@ def test_farmer_a_cannot_see_farmer_bs_notifications_in_list(client, farmer_with
     assert response["total"] == 0
 
 
+# --- D79-04: notification expiry ---
+
+def test_weather_notification_carries_a_real_expires_at(client, farmer_with_located_farm):
+    tokens, farm_id = farmer_with_located_farm
+    with override_weather_provider(heavy_rain_provider()):
+        client.get(f"/api/v1/farms/{farm_id}/weather", headers=auth_headers(tokens))
+
+    body = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()
+    heavy_rain = next(n for n in body["items"] if n["category"] == "heavy_rain_alert")
+    assert heavy_rain["expires_at"] is not None
+
+
+def test_security_alert_never_expires(client, registered_farmer):
+    payload, tokens = registered_farmer
+    client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": payload["password"], "new_password": "NewStr0ngPass!"},
+        headers=auth_headers(tokens),
+    )
+
+    body = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()
+    security_alert = next(n for n in body["items"] if n["category"] == "security_alert")
+    assert security_alert["expires_at"] is None
+
+
+def test_an_expired_notification_is_excluded_from_the_default_list_but_not_deleted(client, farmer_with_located_farm, db_session):
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from app.models.notification import Notification
+
+    tokens, farm_id = farmer_with_located_farm
+    with override_weather_provider(heavy_rain_provider()):
+        client.get(f"/api/v1/farms/{farm_id}/weather", headers=auth_headers(tokens))
+
+    notification = db_session.execute(
+        select(Notification).where(Notification.category == "heavy_rain_alert").order_by(Notification.created_at.desc())
+    ).scalars().first()
+    notification.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    db_session.commit()
+
+    body = client.get("/api/v1/notifications", headers=auth_headers(tokens)).json()
+    assert not any(n["id"] == str(notification.id) for n in body["items"])
+
+    still_in_db = db_session.get(Notification, notification.id)
+    assert still_in_db is not None  # never physically deleted
+
+
 class TestQuietHours:
     def test_time_within_normal_range(self):
         from app.models.notification_preference import NotificationPreference
