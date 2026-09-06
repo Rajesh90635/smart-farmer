@@ -51,10 +51,10 @@ groups and are out of scope here).
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 141 |
+| VERIFIED | 147 |
 | IMPLEMENTED | 25 |
 | PARTIAL | 28 |
-| MISSING | 37 |
+| MISSING | 31 |
 | BROKEN | 0 |
 | FUTURE | 12 |
 | OUT_OF_SCOPE | 3 |
@@ -93,6 +93,13 @@ cluster — D9-03/D9-05/D9-06/D9-09/D9-10/D9-12 MISSING→VERIFIED (-6 MISSING, 
 D9-16 PARTIAL→VERIFIED (-1 PARTIAL, +1 VERIFIED). See "Reconciliation deltas applied" above
 and each row's own entry for citations. 253→252 total; all subsequent moves are internal
 status changes only.)*
+
+*(Further updated this continuation session: cluster #7 re-verification —
+D21-07/D22-05/D23-06/D24-03/D24-06/D24-07 MISSING→VERIFIED (-6 MISSING, +6 VERIFIED). Direct
+re-read of `input_inventory_service.py` confirmed the plan's own suspicion: the existing
+generic, category-agnostic `record_usage`/`InputInventoryItem.unit`/`InputInventoryItem.quantity`
+decrement already fully satisfied all six rows — no new code needed. See each row's own entry
+above and `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md` §D for citations.)*
 
 ## 1. Attended (Verified + Implemented) - condensed list
 
@@ -1538,20 +1545,20 @@ status changes only.)*
 - Tests required: test_soil_test_reminder_sweep_fires_once_past_staleness_threshold, mirroring the existing expiry-sweep dedup test pattern
 - Verification method: automated test, contingent on D20-01/02/11/12
 ### D21-07 - Domain 21 (Seeds) - Seed usage
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: no usage-logging model/endpoint exists for any input category prior to the Batch 3 InputInventoryItem work
-- Missing component: usage-recording capability
-- Required implementation: extend InputInventoryItem (now VERIFIED per D24-01/02/05/08/09 delta) with a usage-recording endpoint - the matrix's own Batch 3 summary explicitly lists usage among the actions built ("create, usage, restock, correction, low-stock alert, expiry sweep"), so D21-07/D22-05/D23-06/D24-06 may already be resolved and this row needs re-confirmation against the current input_inventory_service.py rather than being treated as still-open
-- Dependencies: D24-01/02/05/08/09 (VERIFIED, delta) - likely already covers this
-- Backend work: confirm input_inventory_service.py has a record_usage method (per the batch summary, it should)
-- Database/migration work: likely already done as part of the fb6859bdd48d migration
-- Mobile work: confirm the mobile inventory screen has a record-usage action
-- Automation work: none new
-- Notification work: none new
+- Current implementation status: VERIFIED (re-verified this continuation session)
+- Existing relevant files/classes/functions: `input_inventory_service.py::record_usage` (lines 77-90) is generic across every `InputInventoryItem.category` value, including `ProductCategory.SEED` - there is no seed-specific carve-out needed because the model/endpoint were never category-restricted
+- Missing component: none
+- Required implementation: none
+- Dependencies: D24-01/02/05/08/09 (VERIFIED) - confirmed to already cover this
+- Backend work: none - `record_usage` already exists and is category-agnostic
+- Database/migration work: none
+- Mobile work: confirm the mobile inventory screen has a record-usage action (unverified this pass, backend-only re-check)
+- Automation work: none
+- Notification work: `_check_low_stock` already fires on the resulting balance (D22-06/D24-08/D24-09)
 - Offline/sync impact: standard inventory-write sync
 - Security/RBAC impact: none
-- Tests required: confirm test_input_inventory.py already covers seed-category usage specifically
-- Verification method: automated test - recommend this row (and D22-05/D23-06/D24-06 below) be re-verified directly against current code before the next audit pass, since the Batch 3 delta's own summary strongly suggests they are already resolved but were not named individually in the reconciliation source documents' delta tables
+- Tests required: none new - `test_record_usage_decreases_quantity`/`test_record_usage_greater_than_remaining_is_rejected` already exercise this path (category-agnostic, so already covers seed items)
+- Verification method: automated test + direct code read this session, confirmed passing in the 761-test full suite run
 
 ### D22-01 - Domain 22 (Fertilizer) - Fertilizer requirement
 - Current implementation status: Missing
@@ -1569,10 +1576,10 @@ status changes only.)*
 - Tests required: none needed - a negative test (test_no_endpoint_computes_a_fertilizer_dosage) could make the boundary explicit
 - Verification method: n/a - recommend reclassifying (FUTURE or OUT_OF_SCOPE with the PRODUCT_SAFETY.md:1-14 citation) rather than Missing
 ### D22-05 - Domain 22 (Fertilizer) - Fertilizer usage
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: same re-verification note as D21-07 - likely already resolved by the Batch 3 InputInventoryItem usage-recording action
-- Missing component: same as D21-07
-- Required implementation: same as D21-07
+- Current implementation status: VERIFIED (re-verified this continuation session)
+- Existing relevant files/classes/functions: same as D21-07 - `record_usage` is category-agnostic, covers `ProductCategory.FERTILIZER` with no separate code path
+- Missing component: none
+- Required implementation: none
 - Dependencies: D24-01/02/05/08/09
 - Backend work: see D21-07
 - Database/migration work: see D21-07
@@ -1582,13 +1589,13 @@ status changes only.)*
 - Offline/sync impact: see D21-07
 - Security/RBAC impact: see D21-07
 - Tests required: see D21-07
-- Verification method: same re-verification recommendation as D21-07
+- Verification method: same as D21-07
 
 ### D23-06 - Domain 23 (Crop Protection) - Usage (crop protection)
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: same re-verification note as D21-07/D22-05 - likely already resolved by Batch 3
-- Missing component: same as D21-07
-- Required implementation: same as D21-07
+- Current implementation status: VERIFIED (re-verified this continuation session)
+- Existing relevant files/classes/functions: same as D21-07 - `record_usage` is category-agnostic, covers `ProductCategory.CROP_PROTECTION_PRODUCT` with no separate code path
+- Missing component: none
+- Required implementation: none
 - Dependencies: D24-01/02/05/08/09
 - Backend work: see D21-07
 - Database/migration work: see D21-07
@@ -1598,28 +1605,28 @@ status changes only.)*
 - Offline/sync impact: see D21-07
 - Security/RBAC impact: see D21-07
 - Tests required: see D21-07
-- Verification method: same re-verification recommendation as D21-07
+- Verification method: same as D21-07
 ### D24-03 - Domain 24 (Input Inventory) - Unit (of measure for a farmer-held input)
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: Product.pack_size_unit exists as the catalog's own unit; now that InputInventoryItem exists (D24-01/02 delta), it is unclear whether it carries its own unit field or only inherits Product.pack_size_unit via the optional product_id FK
-- Missing component: confirm whether InputInventoryItem has a farmer-settable unit field independent of product_id (needed for inputs not linked to a catalog Product, i.e. bought outside the app)
-- Required implementation: if absent, add a unit (str) column to InputInventoryItem, required, independent of product_id so non-catalog inputs are still trackable
-- Dependencies: D24-01/02 (VERIFIED, delta) - this is a refinement, not a new model
-- Backend work: input_inventory_service.py/input_inventory.py model - confirm/add unit field
-- Database/migration work: additive column if missing, part of the same migration family as fb6859bdd48d
-- Mobile work: Add to inventory form - unit field, required
+- Current implementation status: VERIFIED (re-verified this continuation session)
+- Existing relevant files/classes/functions: `InputInventoryItem.unit` (`input_inventory.py:47`) is `Mapped[str]`, `nullable=False` - a required field independent of the optional `product_id` FK, so non-catalog inputs are already trackable
+- Missing component: none
+- Required implementation: none
+- Dependencies: D24-01/02 (VERIFIED)
+- Backend work: none - the field already exists as required
+- Database/migration work: none
+- Mobile work: confirm the inventory form surfaces it (unverified this pass, backend-only re-check)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: standard sync
 - Security/RBAC impact: none
-- Tests required: test_input_inventory_item_requires_a_unit_independent_of_product_link
-- Verification method: automated test - recommend re-confirming this row's actual current status against input_inventory.py before the next audit pass
+- Tests required: none new - schema already enforces `nullable=False`, requests without it are rejected by Pydantic validation
+- Verification method: direct code read this session (`input_inventory.py:47`, `schemas/input_inventory.py:11`)
 
 ### D24-06 - Domain 24 (Input Inventory) - Usage (recording consumption)
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: same re-verification note as D21-07/D22-05/D23-06 - the Batch 3 summary explicitly names usage as a built action
-- Missing component: same as D21-07
-- Required implementation: same as D21-07
+- Current implementation status: VERIFIED (re-verified this continuation session)
+- Existing relevant files/classes/functions: `input_inventory_service.py::record_usage` (lines 77-90)
+- Missing component: none
+- Required implementation: none
 - Dependencies: D24-01/02/05/08/09
 - Backend work: see D21-07
 - Database/migration work: see D21-07
@@ -1629,22 +1636,22 @@ status changes only.)*
 - Offline/sync impact: see D21-07
 - Security/RBAC impact: see D21-07
 - Tests required: see D21-07
-- Verification method: same re-verification recommendation as D21-07
+- Verification method: same as D21-07
 ### D24-07 - Domain 24 (Input Inventory) - Remaining quantity (computed: purchased minus used)
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: originally cannot exist without D24-01/02/06 - all three are now VERIFIED/likely-resolved per the Batch 3 delta
-- Missing component: confirm whether InputInventoryItem.quantity is already maintained as a running remaining-quantity (decremented on each usage record) rather than a static purchased-amount - this is the crux of whether this row is actually closed
-- Required implementation: if not already so, ensure record_usage in input_inventory_service.py decrements InputInventoryItem.quantity (or maintains a separate computed remaining_quantity), consistent with how DealerProduct.stock_quantity is already decremented at checkout (an existing, proven pattern in the same codebase)
+- Current implementation status: VERIFIED (re-verified this continuation session)
+- Existing relevant files/classes/functions: `input_inventory_service.py:82` - `item.quantity -= payload.quantity_used` inside `record_usage`, confirming `quantity` is a running remaining-quantity, not a static purchased-amount, mirroring `DealerProduct.stock_quantity`'s existing decrement pattern
+- Missing component: none
+- Required implementation: none
 - Dependencies: D24-01/02/05/08/09
-- Backend work: input_inventory_service.py::record_usage - confirm/add decrement logic
-- Database/migration work: none new if quantity is reused as the running total
-- Mobile work: inventory screen - display remaining quantity
+- Backend work: none - decrement logic already exists
+- Database/migration work: none
+- Mobile work: inventory screen - confirm it displays `quantity` as the remaining balance (unverified this pass)
 - Automation work: none
 - Notification work: none
 - Offline/sync impact: standard sync
 - Security/RBAC impact: none
-- Tests required: test_recording_usage_decrements_remaining_quantity
-- Verification method: automated test - recommend re-confirming against current input_inventory_service.py code before the next audit pass, since this is very likely already resolved
+- Tests required: none new - `test_record_usage_decreases_quantity` already asserts this
+- Verification method: direct code read this session (`input_inventory_service.py:82`), confirmed passing in the 761-test full suite run
 
 ### D24-10 - Domain 24 (Input Inventory) - Inventory history
 - Current implementation status: Missing

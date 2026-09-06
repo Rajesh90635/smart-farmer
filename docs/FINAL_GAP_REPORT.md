@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 323 |
+| Verified | 329 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **396** |
+| **Attended (Verified + Implemented)** | **402** |
 | Partial | 108 |
-| Missing | 233 |
+| Missing | 227 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **341** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **335** |
 | Future | 30 |
 | Out of Scope | 25 |
 | Environment Dependent | 6 |
@@ -39,6 +39,14 @@ data-quality cluster (D3-08/D3-09/D17-01/D24-04 VERIFIED, D18-06/D18-08 new
 D20-12 VERIFIED — an entirely new domain built from zero code; D19-05 VERIFIED; D19-03
 reclassified FUTURE, hence Future 29→30). See `docs/FINAL_IMPLEMENTATION_PLAN.md`'s
 Summary counts section for the itemized before/after of each.)
+
+(This continuation session, after the above was committed: cluster #7 re-verification —
+D21-07/D22-05/D23-06/D24-03/D24-06/D24-07 MISSING→VERIFIED, +6/-6, no new code. Direct
+re-read of `input_inventory_service.py` confirmed the existing generic, category-agnostic
+`record_usage`/`InputInventoryItem.unit`/`.quantity` decrement already fully satisfied all
+six rows, exactly as the implementation plan's cluster #7 note suspected. Verified 323→329,
+Missing 233→227, current-scope remaining 341→335. See
+`docs/audit/FINAL_CANONICAL_group_A.md`'s D21-07/D22-05/D23-06/D24-03/D24-06/D24-07 entries.)
 
 Reconciliation applied this session (see each canonical group file's own "Reconciliation
 deltas applied" table for full citations):

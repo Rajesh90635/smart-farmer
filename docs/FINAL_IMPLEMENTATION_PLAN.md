@@ -2,8 +2,10 @@
 
 Source: `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md`, frozen this session per
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" — see that section for the full
-reconciliation. Authoritative current-scope work remaining: **388** (273 Missing + 115
-Partial + 0 Broken).
+reconciliation. Authoritative current-scope work remaining: **335** (227 Missing + 108
+Partial + 0 Broken) — see "Summary counts" at the bottom of this document for the current
+number; the 388 figure below is historical (predates this document's own P0-P4 batch, and
+predates the P1 fixes and cluster #7 re-verification both already applied since).
 
 **Status update this session (P0 batch, before the rest of this plan's own work began):**
 - **D97-12 (BROKEN) — FIXED.** `task_service.py::create_task` now guards against
@@ -257,15 +259,14 @@ non-build decision) also resolved alongside this cluster. See
 `docs/audit/FINAL_CANONICAL_group_A.md` for full evidence. Removed from this table (now
 empty except D20-13, still P2).
 
-### Input-inventory usage-tracking (cluster #7 — likely already resolved, verify-only)
-| Scenario ID | Domain | Name | Why P1 | Depends on | Size |
-|---|---|---|---|---|---|
-| D21-07 | 21 Seeds | Seed usage | Cluster #7 — re-confirm against current `input_inventory_service.py` before writing any code | D24-01/02/05/08/09 (done) | S |
-| D22-05 | 22 Fertilizer | Fertilizer usage | Cluster #7 | same | S |
-| D23-06 | 23 Crop Protection | Usage | Cluster #7 | same | S |
-| D24-03 | 24 Input Inventory | Unit (independent of product_id) | Cluster #7 | same | S |
-| D24-06 | 24 Input Inventory | Usage (recording consumption) | Cluster #7 | same | S |
-| D24-07 | 24 Input Inventory | Remaining quantity (computed) | Cluster #7 | same | S |
+### Input-inventory usage-tracking (cluster #7)
+
+**DONE this continuation session — re-verified, no new code needed.** Direct re-read of
+`input_inventory_service.py` confirmed the suspicion below was correct: D21-07, D22-05,
+D23-06, D24-03, D24-06, D24-07 all VERIFIED via the existing generic, category-agnostic
+`record_usage`/`InputInventoryItem.unit`/`.quantity` decrement. See
+`docs/audit/FINAL_CANONICAL_group_A.md`'s per-row entries. Removed from this table (now
+empty).
 
 ### Marketplace/harvest core-workflow completeness
 | Scenario ID | Domain | Name | Why P1 | Depends on | Size |
@@ -716,14 +717,16 @@ top of this document. Removed from this table.)*
 | Priority | Count of Missing | Count of Partial | Count of Broken | Total |
 |---|---:|---:|---:|---:|
 | P0 | 0 | 1 | 0 | 1 |
-| P1 | 27 | 20 | 0 | 47 |
+| P1 | 21 | 20 | 0 | 41 |
 | P2 | 93 | 56 | 0 | 149 |
 | P3 | 73 | 24 | 0 | 97 |
 | P4 | 40 | 7 | 0 | 47 |
-| **Total (current-scope work remaining)** | **233** | **108** | **0** | **341** |
+| **Total (current-scope work remaining)** | **227** | **108** | **0** | **335** |
 
 This reconciles against the four canonical group files' own current totals (A:
-37M+28P=65; B: 63M+20P=83; C: 52M+24P+0=76; D: 81M+36P+0B=117; sum=341).
+31M+28P=59; B: 63M+20P=83; C: 52M+24P+0=76; D: 81M+36P+0B=117; sum=335), after cluster #7's
+-6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, all P1, re-verified this
+continuation session with no new code — see `docs/FINAL_GAP_REPORT.md`).
 
 *(Latest batches — irrigation/soil data quality cluster: D3-08/D3-09/D17-01/D24-04
 PARTIAL→VERIFIED (-4 Partial, P1); D18-06 MISSING→VERIFIED (-1 Missing, P1); D18-08

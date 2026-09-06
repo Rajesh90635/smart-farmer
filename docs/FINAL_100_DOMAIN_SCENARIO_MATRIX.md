@@ -101,6 +101,20 @@ Also reconciled during this pass (found via batch 6's own note, not a separate f
 | 10 (GDPR/DPDP) | D100-09 | MISSING | VERIFIED | `GET /farmers/me/data-export`, `POST /farmers/me/delete-account`; 8 new tests; explicitly a good-faith MVP, not a certified compliance review |
 | 11 (Payment provider abstraction) | D90-10 | PARTIAL | VERIFIED | Real `PaymentGatewayProvider` ABC + `is_sandbox_completable` guard refusing sandbox behavior in a misconfigured "production" deployment |
 
+### D. Cluster #7 re-verification (this continuation session) — input-inventory usage-tracking
+
+Direct re-read of `input_inventory_service.py` confirmed the plan's own suspicion: all six
+rows were already fully satisfied by the existing generic `InputInventoryItem`/`record_usage`
+implementation, which is category-agnostic (`ProductCategory.SEED`/`FERTILIZER`/
+`CROP_PROTECTION_PRODUCT` all reuse the same model). No new code was needed.
+
+| Scenario ID(s) | Was | Now | Evidence |
+|---|---|---|---|
+| D21-07, D22-05, D23-06 | MISSING | VERIFIED | `record_usage()` is generic across `InputInventoryItem.category`, not seed/fertilizer/crop-protection-specific; `test_record_usage_decreases_quantity`/`test_record_usage_greater_than_remaining_is_rejected` |
+| D24-03 | MISSING | VERIFIED | `InputInventoryItem.unit` (`input_inventory.py:47`) is `nullable=False`, independent of the optional `product_id` FK |
+| D24-06 | MISSING | VERIFIED | `record_usage()` (`input_inventory_service.py:77-90`) |
+| D24-07 | MISSING | VERIFIED | `item.quantity -= payload.quantity_used` (`input_inventory_service.py:82`) — `quantity` is a running remaining-quantity, not a static purchased-amount |
+
 ### C. This session's test-infrastructure fixes (no scenario-status change — these fixed test *reliability*, not product gaps)
 
 Three tests were flaky due to assertions against unscoped, shared-test-database-wide
