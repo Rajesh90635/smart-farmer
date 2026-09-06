@@ -2,10 +2,11 @@
 
 Source: `docs/audit/FINAL_CANONICAL_group_{A,B,C,D}.md`, frozen this session per
 `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" — see that section for the full
-reconciliation. Authoritative current-scope work remaining: **335** (227 Missing + 108
+reconciliation. Authoritative current-scope work remaining: **332** (223 Missing + 109
 Partial + 0 Broken) — see "Summary counts" at the bottom of this document for the current
 number; the 388 figure below is historical (predates this document's own P0-P4 batch, and
-predates the P1 fixes and cluster #7 re-verification both already applied since).
+predates the P1 fixes, cluster #7 re-verification, and notification-wiring batch all
+already applied since).
 
 **Status update this session (P0 batch, before the rest of this plan's own work began):**
 - **D97-12 (BROKEN) — FIXED.** `task_service.py::create_task` now guards against
@@ -313,12 +314,13 @@ empty).
 | D90-04 | 90 Provider Abstraction | Notification delivery provider | Cluster #20 — reach of every other notification in this plan depends on it; the ABC+honest-stub shell is buildable now without external credentials | none for the shell; real FCM/SMS needs an account | M |
 
 ### Notification wiring (small, core reliability)
-| Scenario ID | Domain | Name | Why P1 | Depends on | Size |
-|---|---|---|---|---|---|
-| D78-03 | 78 Notifications | Disease notification | Wire an existing category to an existing call site — core disease-alerting completeness | none | S |
-| D78-05 | 78 Notifications | Harvest notification | Likely already resolved by D47-05's batch — verify wording match only | D47-05 (done) | S |
-| D78-08 | 78 Notifications | Dispute notification | New category + wiring, small, core marketplace trust | none | S |
-| D78-13 | 78 Notifications | Security notification | Closes a real gap: farmer has no way to know of account access/changes | none | S |
+
+**DONE this continuation session** — D78-03 (disease), D78-08 (dispute), D78-05 (harvest,
+no code needed, already satisfied by D47-05) all VERIFIED. D78-13 (security) PARTIAL —
+password-change alerting built and tested, new-device-login alerting genuinely not built
+(no device/session fingerprinting exists in this codebase; disclosed as a remaining
+limitation rather than fabricated). See `docs/audit/FINAL_CANONICAL_group_D.md`'s
+D78-03/05/08/13 entries. Removed from this table (now empty).
 
 *(D78-07 and D78-09 are DONE — resolved this session, see the caveat resolutions at the
 top of this document. Removed from this table.)*
@@ -717,16 +719,17 @@ top of this document. Removed from this table.)*
 | Priority | Count of Missing | Count of Partial | Count of Broken | Total |
 |---|---:|---:|---:|---:|
 | P0 | 0 | 1 | 0 | 1 |
-| P1 | 21 | 20 | 0 | 41 |
+| P1 | 17 | 21 | 0 | 38 |
 | P2 | 93 | 56 | 0 | 149 |
 | P3 | 73 | 24 | 0 | 97 |
 | P4 | 40 | 7 | 0 | 47 |
-| **Total (current-scope work remaining)** | **227** | **108** | **0** | **335** |
+| **Total (current-scope work remaining)** | **223** | **109** | **0** | **332** |
 
 This reconciles against the four canonical group files' own current totals (A:
-31M+28P=59; B: 63M+20P=83; C: 52M+24P+0=76; D: 81M+36P+0B=117; sum=335), after cluster #7's
--6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, all P1, re-verified this
-continuation session with no new code — see `docs/FINAL_GAP_REPORT.md`).
+31M+28P=59; B: 63M+20P=83; C: 52M+24P+0=76; D: 77M+37P+0B=114; sum=332), after cluster #7's
+-6 Missing (D21-07/D22-05/D23-06/D24-03/D24-06/D24-07, re-verified with no new code) and
+the notification-wiring batch's -3 Missing/+1 Missing→Partial (D78-03/05/08 VERIFIED,
+D78-13 PARTIAL — see `docs/FINAL_GAP_REPORT.md`).
 
 *(Latest batches — irrigation/soil data quality cluster: D3-08/D3-09/D17-01/D24-04
 PARTIAL→VERIFIED (-4 Partial, P1); D18-06 MISSING→VERIFIED (-1 Missing, P1); D18-08

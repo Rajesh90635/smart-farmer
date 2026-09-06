@@ -4,12 +4,13 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 `docs/FINAL_CROSS_MODULE_WORKFLOW_REPORT.md`, and `docs/FINAL_GAP_REPORT.md` into a single
 release-readiness view.
 
-**Updated this session** — see `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" for
-the current authoritative status totals (798 total: 323 Verified, 73 Implemented, 108
-Partial, 233 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment Dependent; 341
-current-scope items remain, down from 391 at session start). This session's work spans:
-all of P0 (D97-12 closed-season task guard, D6-07/D11-05 crop-cycle concurrency guard,
-D68-02 refund bounds check, D100-14 re-verified); the P1 task-management cluster
+**Updated this continuation session** — see `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL
+COUNTS" for the current authoritative status totals (798 total: 332 Verified, 73
+Implemented, 109 Partial, 223 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
+Dependent; 332 current-scope items remain, down from 391 at the start of the prior session
+and 341 at the start of this continuation). Prior session's work spans: all of P0 (D97-12
+closed-season task guard, D6-07/D11-05 crop-cycle concurrency guard, D68-02 refund bounds
+check, D100-14 re-verified); the P1 task-management cluster
 (snooze/reschedule/skip/fail/priority/overdue-reminder sweep); D1-19 account
 deactivation; the crop-failure reason taxonomy; crop-stage additions
 (LAND_PREPARATION/GERMINATING); the weather-risk safety-detection cluster (frost,
@@ -17,9 +18,13 @@ cumulative-rainfall flood/waterlogging, consecutive-dry-days drought — this ba
 caught and fixed a genuine production timezone bug in date-bucketing, see
 `docs/audit/FINAL_CANONICAL_group_A.md`'s D15-09 entry); irrigation/soil data quality
 (validated enums on `Plot`, a new `IrrigationRecord` model); and the entire Soil Testing
-domain foundation (`SoilSample`/`SoilTestResult`, 12 scenarios, built from zero code).
-Backend suite: **761 passed, 0 failed** (was 702 at session start — +59 new tests, 0
-regressions across the full session).
+domain foundation (`SoilSample`/`SoilTestResult`, 12 scenarios, built from zero code). This
+continuation session added: cluster #7 re-verification (input-inventory usage-tracking,
+6 rows, no new code); and the notification-wiring batch (D78-03 disease, D78-08 dispute,
+D78-05 harvest — no code needed — all VERIFIED; D78-13 security PARTIAL, password-change
+alerting built and tested, new-device-login alerting disclosed as genuinely unbuilt).
+Backend suite: **765 passed, 0 failed** (was 702 at the start of the prior session, 761 at
+the start of this continuation — +63 new tests total, 0 regressions).
 
 ## Functional
 
@@ -44,9 +49,10 @@ regressions across the full session).
 
 ## Backend
 
-- **Test result: 761 passed, 0 failed** (full suite; up from 702 at session start — +59 new
-  tests spanning the P0 fixes, D78-07's notification assertion, and the irrigation/soil-testing
-  domain batch — confirmed by a full clean re-run, not merely the new tests in isolation).
+- **Test result: 765 passed, 0 failed** (full suite; up from 702 at the start of the prior
+  session — +63 new tests spanning the P0 fixes, D78-07's notification assertion, the
+  irrigation/soil-testing domain batch, and this continuation's notification-wiring batch —
+  confirmed by a full clean re-run, not merely the new tests in isolation).
 - **Zero BROKEN scenarios** — all 12 originally-disclosed bugs previously re-verified
   fixed, plus D97-12 (a new finding from a later pass: `task_service.py::create_task` never
   checked `cultivation_status` before creating a task, unlike its sibling guards) fixed and

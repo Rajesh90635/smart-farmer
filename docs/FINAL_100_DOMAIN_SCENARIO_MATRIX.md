@@ -115,6 +115,15 @@ implementation, which is category-agnostic (`ProductCategory.SEED`/`FERTILIZER`/
 | D24-06 | MISSING | VERIFIED | `record_usage()` (`input_inventory_service.py:77-90`) |
 | D24-07 | MISSING | VERIFIED | `item.quantity -= payload.quantity_used` (`input_inventory_service.py:82`) — `quantity` is a running remaining-quantity, not a static purchased-amount |
 
+### E. Notification-wiring batch (this continuation session)
+
+| Scenario ID(s) | Was | Now | Evidence |
+|---|---|---|---|
+| D78-03 | MISSING | VERIFIED | `ai_analysis_service.py::_notify_disease_detected`, called from `_run_analysis` on `ResultStatus.DISEASE_DETECTED`; `test_ai_analysis.py::test_disease_detected_result_notifies_the_farmer` (new) |
+| D78-05 | MISSING | VERIFIED | No new code — `harvest_service.py`'s existing D47-05 wiring already satisfied this row's exact wording |
+| D78-08 | MISSING | VERIFIED | New `NotificationCategory.DISPUTE_ALERT`; `dispute_service.py::_notify_dispute_resolved`; `test_orders.py::test_rejected_dispute_notifies_the_farmer` (new) |
+| D78-13 | MISSING | PARTIAL | New `NotificationCategory.SECURITY_ALERT`; `auth_service.py::_notify_password_changed` covers password change/reset (tested), but new-device-login alerting remains genuinely unbuilt — no device/session fingerprinting exists anywhere in this codebase |
+
 ### C. This session's test-infrastructure fixes (no scenario-status change — these fixed test *reliability*, not product gaps)
 
 Three tests were flaky due to assertions against unscoped, shared-test-database-wide

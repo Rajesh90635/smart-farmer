@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 329 |
+| Verified | 332 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **402** |
-| Partial | 108 |
-| Missing | 227 |
+| **Attended (Verified + Implemented)** | **405** |
+| Partial | 109 |
+| Missing | 223 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **335** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **332** |
 | Future | 30 |
 | Out of Scope | 25 |
 | Environment Dependent | 6 |
@@ -47,6 +47,15 @@ re-read of `input_inventory_service.py` confirmed the existing generic, category
 six rows, exactly as the implementation plan's cluster #7 note suspected. Verified 323→329,
 Missing 233→227, current-scope remaining 341→335. See
 `docs/audit/FINAL_CANONICAL_group_A.md`'s D21-07/D22-05/D23-06/D24-03/D24-06/D24-07 entries.)
+
+(Further, same continuation session: notification-wiring batch — D78-03 (disease),
+D78-08 (dispute), D78-05 (harvest, no code needed) MISSING→VERIFIED (+3 Verified, -3
+Missing); D78-13 (security/password-change) MISSING→PARTIAL (+1 Partial, -1 Missing) - the
+password-change half is built and tested, the new-device-login half is genuinely not built
+(no device/session fingerprinting exists anywhere in this codebase) and is disclosed, not
+fabricated. Verified 329→332, Partial 108→109, Missing 227→223, current-scope remaining
+335→332. Full backend suite: 765 passed, 0 failed (was 761). See
+`docs/audit/FINAL_CANONICAL_group_D.md`'s D78-03/05/08/13 entries.)
 
 Reconciliation applied this session (see each canonical group file's own "Reconciliation
 deltas applied" table for full citations):

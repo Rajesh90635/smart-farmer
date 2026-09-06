@@ -95,10 +95,10 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 63 |
+| VERIFIED | 66 |
 | IMPLEMENTED | 30 |
-| PARTIAL | 36 |
-| MISSING | 81 |
+| PARTIAL | 37 |
+| MISSING | 77 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 2 |
@@ -114,6 +114,17 @@ consecutive-dry-days functions as D15-08/D15-09. Total unchanged.)*
 D78-07 MISSING→VERIFIED, D78-09 MISSING→VERIFIED (-2 MISSING, +2 VERIFIED).
 Total unchanged at 223 — all three were internal status moves, not new/
 removed rows.)*
+
+*(Further updated this continuation session — notification-wiring batch: D78-03 (disease)
+MISSING→VERIFIED, D78-08 (dispute) MISSING→VERIFIED, D78-05 (harvest) MISSING→VERIFIED
+(-3 MISSING, +3 VERIFIED); D78-13 (security/password-change) MISSING→PARTIAL (-1 MISSING,
++1 PARTIAL, not VERIFIED - see its own entry: the password-change half is built and
+tested, but the new-device-login half is genuinely not built, no device/session
+fingerprinting exists in this codebase, disclosed rather than fabricated). D78-03/08
+required new `DISPUTE_ALERT`/reusing `DISEASE_ALERT` categories and new call sites;
+D78-05 needed no code at all, confirmed already satisfied by `harvest_service.py`'s
+existing D47-05 wiring. Total unchanged at 223 - all four were internal status moves.
+See each row's own entry below.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -1407,37 +1418,37 @@ removed rows.)*
 
 ### D78-03 — Disease notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: `DISEASE_ALERT` enum value + `disease_alerts_enabled` preference already scaffolded (notification.py:31); no service calls `create_alert_notification` with it
-- Missing component: the call site itself
-- Required implementation: `crop_photo_service.py` (or wherever AI analysis completes) calls `notification_service.create_alert_notification(category=DISEASE_ALERT, ...)` when `result_status == DISEASE_DETECTED`
-- Dependencies: none — enum and preference already exist
-- Backend work: wire the existing analysis-completion path to `notification_service.py`
-- Database/migration work: none — enum already exists
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `ai_analysis_service.py::_run_analysis` now calls the new `_notify_disease_detected` helper when `analysis.result_status == ResultStatus.DISEASE_DETECTED`, firing `NotificationCategory.DISEASE_ALERT` via `notification_service.create_alert_notification`, reusing the existing `ai_result_disease_detected` message template
+- Missing component: none
+- Required implementation: none
+- Dependencies: none
+- Backend work: done — `ai_analysis_service.py`
+- Database/migration work: none — enum already existed
 - Mobile work: none beyond existing notification rendering
 - Automation work: none — synchronous with the existing analysis call
 - Notification work: this scenario IS the notification itself
 - Offline/sync impact: none
 - Security/RBAC impact: none
-- Tests required: test asserting a `DISEASE_ALERT` notification is created when `result_status == DISEASE_DETECTED`
-- Verification method: extend `tests/test_notifications.py`
+- Tests required: `tests/test_ai_analysis.py::test_disease_detected_result_notifies_the_farmer` (new)
+- Verification method: automated test (new), confirmed passing in the full 765-test suite re-run this session
 
 ### D78-05 — Harvest notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: `HARVEST_ALERT` enum + `general_notifications_enabled` mapping scaffolded (notification.py:32, notification_service.py:32); zero call sites
-- Missing component: the call site itself
-- Required implementation: same pattern as D78-03 — wire harvest-readiness computation to `notification_service.create_alert_notification(category=HARVEST_ALERT, ...)`. Note: per Matrix §B batch 7 (D47-05), `HARVEST_APPROACHING`/`HARVEST_READY` notifications were already wired for domain 47 — this D78-05 row audits the same underlying category from the Notifications-domain checklist angle and should be re-confirmed against that batch 7 change rather than treated as fully independent
-- Dependencies: D47-05's existing fix (domain 47, out of this group) — likely already resolves this in practice; flagged here for cross-reference since the two reconciliation documents did not explicitly fold D78-05 itself
-- Backend work: confirm `harvest_service.py`'s existing HARVEST_ALERT call sites (per batch 7) satisfy this scenario's exact wording
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `harvest_service.py`'s existing D47-05 wiring (`_notify_harvest_status` calling `create_alert_notification(category=HARVEST_ALERT, ...)`) already satisfies this row's exact wording — no separate Notifications-domain call site was needed
+- Missing component: none
+- Required implementation: none - direct re-read confirmed the batch 7/D47-05 fix already fully resolves this row
+- Dependencies: D47-05 (VERIFIED)
+- Backend work: none - already done
 - Database/migration work: none — enum already exists
 - Mobile work: none
 - Automation work: none
 - Notification work: this scenario IS the notification itself
 - Offline/sync impact: none
 - Security/RBAC impact: none
-- Tests required: if not already covered by D47-05's own tests, add a Domain-78-scoped assertion
-- Verification method: cross-reference `tests/test_notifications.py` against whatever test batch 7 added for D47-05
+- Tests required: none new - `tests/test_harvest.py`/`tests/test_data_privacy.py` already assert `harvest_alert` notifications
+- Verification method: direct code read this session (`harvest_service.py:150-171`), confirmed passing in the full 765-test suite re-run
 
 ### D78-06 — Market notification
 - Domain: 78. Notifications
@@ -1465,20 +1476,20 @@ removed rows.)*
 
 ### D78-08 — Dispute notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: `dispute_service.py` never imports `notification_service`
-- Missing component: a call site wiring dispute-status changes to `notification_service`
-- Required implementation: extend `NotificationCategory` with `DISPUTE_ALERT`; wire `dispute_service.py`'s status-transition points to it
+- Current implementation status: VERIFIED (this continuation session, was Missing)
+- Existing relevant files/classes/functions: `dispute_service.py::resolve_dispute` now calls the new `_notify_dispute_resolved` helper on both RESOLVED (refunded or not) and REJECTED outcomes, firing the new `NotificationCategory.DISPUTE_ALERT`
+- Missing component: none
+- Required implementation: none
 - Dependencies: none
-- Backend work: `dispute_service.py` call `notification_service.create_alert_notification`
-- Database/migration work: enum migration adding `DISPUTE_ALERT`
+- Backend work: done — `dispute_service.py`
+- Database/migration work: done — `f1a2b3c4d5e6_add_dispute_alert_security_alert_categories.py`
 - Mobile work: none
 - Automation work: none — synchronous with existing dispute-resolution write path
 - Notification work: this scenario IS the notification itself
 - Offline/sync impact: none
 - Security/RBAC impact: none
-- Tests required: test asserting a notification fires on dispute status change
-- Verification method: new `tests/test_dispute_notifications.py`
+- Tests required: `tests/test_orders.py::test_dispute_and_admin_resolution_with_refund` (extended) and `::test_rejected_dispute_notifies_the_farmer` (new)
+- Verification method: automated test (new/extended), confirmed passing in the full 765-test suite re-run this session
 
 ### D78-09 — Stock notification
 - Domain: 78. Notifications
@@ -1540,20 +1551,20 @@ removed rows.)*
 
 ### D78-13 — Security notification
 - Domain: 78. Notifications
-- Current implementation status: Missing
-- Existing relevant files/classes/functions: no login-alert/new-device/password-change notification exists; `auth_service.py` only rate-limits login attempts, doesn't notify
-- Missing component: a security-event notification (new-device login, password change)
-- Required implementation: extend `NotificationCategory` with `SECURITY_ALERT`; `auth_service.py`'s existing `PASSWORD_CHANGED`/`LOGIN_SUCCESS` audit-log call sites (auth_service.py:215-241) also call `notification_service.create_alert_notification`
-- Dependencies: none — the audit-log call sites already exist and mark exactly the right trigger points
-- Backend work: `auth_service.py` add notification calls alongside its existing `AuditLogger` calls
-- Database/migration work: enum migration adding `SECURITY_ALERT`
+- Current implementation status: PARTIAL (this continuation session, was Missing) — password-change half VERIFIED, new-device-login half genuinely not built
+- Existing relevant files/classes/functions: `auth_service.py`'s `change_password` and `reset_password` now both call the new `_notify_password_changed` helper, firing the new `NotificationCategory.SECURITY_ALERT` (CRITICAL priority, not gated by any preference toggle), scoped to the farmer role only (matching `NotificationPreference`'s "one row per farmer" design)
+- Missing component: new-device/new-context login alerting - genuinely not built. Confirmed by grep: `RefreshToken` has no `user_agent`/`ip_address`/`device_id` column anywhere, so there is no device/session fingerprinting concept to alert on. Building it would mean adding an entire device-tracking feature, not wiring an existing trigger point - out of this row's original "small" sizing
+- Required implementation: (remaining) add device/session fingerprinting to `RefreshToken` (or a new `LoginSession` model) before a genuine "new device" signal can exist; deliberately not fabricated here
+- Dependencies: none for the password-change half (done); a new device-tracking model for the login half
+- Backend work: done for password-change; login-alert half remains
+- Database/migration work: done — `f1a2b3c4d5e6_add_dispute_alert_security_alert_categories.py` (adds `SECURITY_ALERT`); a further migration would be needed for device tracking
 - Mobile work: none beyond existing notification rendering
-- Automation work: none — synchronous with existing login/password-change flow
-- Notification work: this scenario IS the notification itself
+- Automation work: none — synchronous with existing password-change flow
+- Notification work: this scenario IS the notification itself (password-change half)
 - Offline/sync impact: none
-- Security/RBAC impact: directly security-relevant — closes a real gap (farmer currently has no way to know if their account was accessed/changed without opening the app and noticing)
-- Tests required: test asserting a `SECURITY_ALERT` notification fires on password change and on login from a new context
-- Verification method: new `tests/test_security_notifications.py`
+- Security/RBAC impact: directly security-relevant — closes the password-change half of the gap (farmer now knows if their own account's password changed); the new-device-login half remains open
+- Tests required: `tests/test_change_password.py::test_changing_password_notifies_the_farmer` (new), `tests/test_reset_password.py::test_reset_password_notifies_the_farmer` (new)
+- Verification method: automated test (new), confirmed passing in the full 765-test suite re-run this session
 
 ### D79-04 — Expiry
 - Domain: 79. Notification Dedup
