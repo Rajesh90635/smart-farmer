@@ -24,6 +24,15 @@ def test_jwt_round_trip():
 
 def test_jwt_rejects_tampered_token():
     token = create_access_token(subject="farmer-123", role="farmer")
-    tampered = token[:-2] + ("aa" if token[-2:] != "aa" else "bb")
+    header, payload, signature = token.split(".")
+    # Flip the middle signature character, not the last one or two: base64's final
+    # character carries unused padding bits that don't affect the decoded signature
+    # bytes, so tampering only the tail can (rarely, ~1/1600) leave the signature
+    # byte-for-byte unchanged and make this test spuriously pass. A middle character
+    # is always byte-significant.
+    mid = len(signature) // 2
+    replacement = "A" if signature[mid] != "A" else "B"
+    tampered_signature = signature[:mid] + replacement + signature[mid + 1 :]
+    tampered = f"{header}.{payload}.{tampered_signature}"
     with pytest.raises(TokenError):
         decode_access_token(tampered)
