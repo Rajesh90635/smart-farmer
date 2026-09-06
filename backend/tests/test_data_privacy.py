@@ -174,3 +174,60 @@ def test_cannot_delete_an_already_deactivated_account(client, registered_farmer)
 
     second = client.post("/api/v1/farmers/me/delete-account", headers=auth_headers(tokens))
     assert second.status_code == 409
+
+
+def test_farmer_can_deactivate_own_account(client, registered_farmer, db_session):
+    """D1-19 (docs/audit/FINAL_CANONICAL_group_A.md): unlike delete-account,
+    deactivation does NOT scrub PII - the account stays restorable."""
+    import uuid as uuid_mod
+
+    from app.core.jwt import decode_access_token
+    from app.models.user import AccountStatus, User
+
+    payload, tokens = registered_farmer
+    farmer_id = decode_access_token(tokens["access_token"])["sub"]
+
+    response = client.post("/api/v1/farmers/me/deactivate", headers=auth_headers(tokens))
+    assert response.status_code == 204
+
+    user = db_session.get(User, uuid_mod.UUID(farmer_id))
+    assert user.status == AccountStatus.INACTIVE
+    assert user.phone_number == f"+91{payload['phone_number']}"  # NOT scrubbed, unlike delete
+
+
+def test_deactivated_account_cannot_login(client, registered_farmer):
+    payload, tokens = registered_farmer
+    client.post("/api/v1/farmers/me/deactivate", headers=auth_headers(tokens))
+
+    response = client.post(
+        "/api/v1/auth/login", json={"phone_number": payload["phone_number"], "password": payload["password"]}
+    )
+    assert response.status_code == 403
+
+
+def test_deactivating_an_account_revokes_refresh_tokens(client, registered_farmer, db_session):
+    import uuid as uuid_mod
+
+    from app.core.jwt import decode_access_token
+    from app.models.refresh_token import RefreshToken
+    from sqlalchemy import select
+
+    _, tokens = registered_farmer
+    farmer_id = decode_access_token(tokens["access_token"])["sub"]
+
+    client.post("/api/v1/farmers/me/deactivate", headers=auth_headers(tokens))
+
+    refresh_tokens = db_session.execute(
+        select(RefreshToken).where(RefreshToken.user_id == uuid_mod.UUID(farmer_id))
+    ).scalars().all()
+    assert refresh_tokens
+    assert all(t.revoked_at is not None for t in refresh_tokens)
+
+
+def test_cannot_deactivate_an_already_deactivated_account(client, registered_farmer):
+    _, tokens = registered_farmer
+    first = client.post("/api/v1/farmers/me/deactivate", headers=auth_headers(tokens))
+    assert first.status_code == 204
+
+    second = client.post("/api/v1/farmers/me/deactivate", headers=auth_headers(tokens))
+    assert second.status_code == 409

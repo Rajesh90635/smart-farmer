@@ -84,3 +84,15 @@ def delete_my_account(
     see app/services/data_privacy_service.py's module docstring for the
     full retention rationale."""
     data_privacy_service.request_account_deletion(db, current_user.user_id)
+
+
+@router.post("/me/deactivate", status_code=204)
+def deactivate_me(
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> None:
+    """D1-19: a softer, reversible sibling of delete-account (D100-09) -
+    sets AccountStatus.INACTIVE without scrubbing PII, so the account can
+    later be restored (e.g. by support) rather than staying anonymized
+    forever."""
+    farmer_service.deactivate_own_account(db, current_user.user_id)
