@@ -1,3 +1,7 @@
+def _auth_headers(tokens):
+    return {"Authorization": f"Bearer {tokens['access_token']}"}
+
+
 def test_valid_login_returns_tokens(client, registered_farmer):
     payload, _ = registered_farmer
     response = client.post(
@@ -100,3 +104,61 @@ def test_login_role_resolution_is_deterministic_for_multi_role_accounts(client, 
     )
     assert response.status_code == 200
     assert decode_access_token(response.json()["access_token"])["role"] == "farmer"
+
+
+def test_login_from_a_new_device_notifies_the_farmer(client, registered_farmer):
+    """D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): the new-device-login
+    half of this scenario, previously disclosed as unbuilt (no device
+    identifier existed anywhere in this codebase)."""
+    payload, _ = registered_farmer
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"phone_number": payload["phone_number"], "password": payload["password"], "device_id": "device-alpha"},
+    )
+    assert response.status_code == 200
+    tokens = response.json()
+    notifications = client.get("/api/v1/notifications", headers=_auth_headers(tokens)).json()["items"]
+    security_alerts = [n for n in notifications if n["category"] == "security_alert"]
+    assert len(security_alerts) == 1
+
+
+def test_repeated_login_from_the_same_known_device_does_not_re_notify(client, registered_farmer):
+    payload, _ = registered_farmer
+    client.post(
+        "/api/v1/auth/login",
+        json={"phone_number": payload["phone_number"], "password": payload["password"], "device_id": "device-alpha"},
+    )
+    second = client.post(
+        "/api/v1/auth/login",
+        json={"phone_number": payload["phone_number"], "password": payload["password"], "device_id": "device-alpha"},
+    ).json()
+    notifications = client.get("/api/v1/notifications", headers=_auth_headers(second)).json()["items"]
+    security_alerts = [n for n in notifications if n["category"] == "security_alert"]
+    assert len(security_alerts) == 1  # only the first login's alert, never a duplicate for the same device
+
+
+def test_login_from_a_second_distinct_device_notifies_again(client, registered_farmer):
+    payload, _ = registered_farmer
+    client.post(
+        "/api/v1/auth/login",
+        json={"phone_number": payload["phone_number"], "password": payload["password"], "device_id": "device-alpha"},
+    )
+    second = client.post(
+        "/api/v1/auth/login",
+        json={"phone_number": payload["phone_number"], "password": payload["password"], "device_id": "device-beta"},
+    ).json()
+    notifications = client.get("/api/v1/notifications", headers=_auth_headers(second)).json()["items"]
+    security_alerts = [n for n in notifications if n["category"] == "security_alert"]
+    assert len(security_alerts) == 2  # one per distinct device this farmer has ever logged in from
+
+
+def test_login_without_a_device_id_does_not_trigger_new_device_detection(client, registered_farmer):
+    """No device_id sent (older client) means honestly "cannot determine" -
+    see auth_service.login() - never fabricated as new or as known."""
+    payload, _ = registered_farmer
+    response = client.post(
+        "/api/v1/auth/login", json={"phone_number": payload["phone_number"], "password": payload["password"]}
+    ).json()
+    notifications = client.get("/api/v1/notifications", headers=_auth_headers(response)).json()["items"]
+    security_alerts = [n for n in notifications if n["category"] == "security_alert"]
+    assert security_alerts == []

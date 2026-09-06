@@ -1,4 +1,5 @@
 import '../../core/api_client.dart';
+import '../../core/storage/device_identity.dart';
 import '../../core/storage/secure_token_storage.dart';
 
 class AuthTokens {
@@ -18,10 +19,12 @@ class ConsentInput {
 class AuthRepository {
   final ApiClient _apiClient;
   final SecureTokenStorage _tokenStorage;
+  final DeviceIdentity _deviceIdentity;
 
-  AuthRepository({required ApiClient apiClient, SecureTokenStorage? tokenStorage})
+  AuthRepository({required ApiClient apiClient, SecureTokenStorage? tokenStorage, DeviceIdentity? deviceIdentity})
       : _apiClient = apiClient,
-        _tokenStorage = tokenStorage ?? SecureTokenStorage();
+        _tokenStorage = tokenStorage ?? SecureTokenStorage(),
+        _deviceIdentity = deviceIdentity ?? DeviceIdentity();
 
   Future<AuthTokens> register({
     required String phoneNumber,
@@ -43,9 +46,11 @@ class AuthRepository {
   }
 
   Future<AuthTokens> login({required String phoneNumber, required String password}) async {
+    final deviceId = await _deviceIdentity.readOrCreate();
     final response = await _apiClient.post('/auth/login', body: {
       'phone_number': phoneNumber,
       'password': password,
+      'device_id': deviceId,
     });
     return _persistTokens(response);
   }

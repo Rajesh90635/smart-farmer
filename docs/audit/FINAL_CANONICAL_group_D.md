@@ -95,9 +95,9 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 74 |
+| VERIFIED | 75 |
 | IMPLEMENTED | 30 |
-| PARTIAL | 31 |
+| PARTIAL | 30 |
 | MISSING | 75 |
 | BROKEN | 0 |
 | FUTURE | 11 |
@@ -133,6 +133,21 @@ VERIFIED (-2 MISSING, +2 VERIFIED). New `CropCycleClosureSnapshot` table, create
 `CropCycle` columns (D97-02/03) and a shared table (D97-04..09) into one table - all eight
 rows are the same "freeze at close time" concept. Total unchanged at 223 - all eight were
 internal status moves. See each row's own entry below.)*
+
+*(Further updated this later continuation session — D78-13 (security notification)
+PARTIAL→VERIFIED (-1 PARTIAL, +1 VERIFIED): closed the previously-disclosed
+new-device-login half. New `RefreshToken.device_id` column (client-generated per-install
+identifier, not a hardware fingerprint - migration `21f2c9cef22d`) + `LoginRequest.device_id`
+(optional); `auth_service.login()` now checks
+`refresh_token_repository.has_login_history_for_device` before issuing the current
+login's own token, and fires a new `NEW_DEVICE_LOGIN_ALERT` (`SECURITY_ALERT` category,
+CRITICAL priority) the first time a given device_id is ever seen for that account, never
+again for the same device. No device_id sent (older client) → honestly skipped, never
+fabricated as new or known. Message body deliberately omits any device/IP detail. Mobile:
+new `DeviceIdentity` (per-install random id via `flutter_secure_storage`, same
+`Random.secure()` pattern already used for crop-photo `client_upload_id`, survives logout,
+resets only on reinstall), wired into `AuthRepository.login()`. Total unchanged at 223 -
+internal status move. 4 new tests in `tests/test_login.py`. See D78-13's own entry below.)*
 
 ## 1. Attended (Verified + Implemented) — condensed list
 
@@ -1559,20 +1574,20 @@ internal status moves. See each row's own entry below.)*
 
 ### D78-13 — Security notification
 - Domain: 78. Notifications
-- Current implementation status: PARTIAL (this continuation session, was Missing) — password-change half VERIFIED, new-device-login half genuinely not built
-- Existing relevant files/classes/functions: `auth_service.py`'s `change_password` and `reset_password` now both call the new `_notify_password_changed` helper, firing the new `NotificationCategory.SECURITY_ALERT` (CRITICAL priority, not gated by any preference toggle), scoped to the farmer role only (matching `NotificationPreference`'s "one row per farmer" design)
-- Missing component: new-device/new-context login alerting - genuinely not built. Confirmed by grep: `RefreshToken` has no `user_agent`/`ip_address`/`device_id` column anywhere, so there is no device/session fingerprinting concept to alert on. Building it would mean adding an entire device-tracking feature, not wiring an existing trigger point - out of this row's original "small" sizing
-- Required implementation: (remaining) add device/session fingerprinting to `RefreshToken` (or a new `LoginSession` model) before a genuine "new device" signal can exist; deliberately not fabricated here
-- Dependencies: none for the password-change half (done); a new device-tracking model for the login half
-- Backend work: done for password-change; login-alert half remains
-- Database/migration work: done — `f1a2b3c4d5e6_add_dispute_alert_security_alert_categories.py` (adds `SECURITY_ALERT`); a further migration would be needed for device tracking
-- Mobile work: none beyond existing notification rendering
-- Automation work: none — synchronous with existing password-change flow
-- Notification work: this scenario IS the notification itself (password-change half)
-- Offline/sync impact: none
-- Security/RBAC impact: directly security-relevant — closes the password-change half of the gap (farmer now knows if their own account's password changed); the new-device-login half remains open
-- Tests required: `tests/test_change_password.py::test_changing_password_notifies_the_farmer` (new), `tests/test_reset_password.py::test_reset_password_notifies_the_farmer` (new)
-- Verification method: automated test (new), confirmed passing in the full 765-test suite re-run this session
+- Current implementation status: VERIFIED (later continuation session, was Partial) — password-change half and new-device-login half both built and tested
+- Existing relevant files/classes/functions: `auth_service.py`'s `change_password` and `reset_password` call `_notify_password_changed`; `login()` now also computes `is_new_device` (via new `refresh_token_repository.has_login_history_for_device`, checked before this login's own `RefreshToken` row is created) and calls the new `_notify_new_device_login` the first time a given `device_id` is ever seen for that account - both fire `NotificationCategory.SECURITY_ALERT` (CRITICAL priority), scoped to the farmer role only
+- Missing component: none
+- Required implementation: none
+- Dependencies: none
+- Backend work: done — `RefreshToken.device_id` (new column), `refresh_token_repository.has_login_history_for_device`/`create(..., device_id=)`, `LoginRequest.device_id` (optional), `auth_service._notify_new_device_login`, new `NEW_DEVICE_LOGIN_ALERT` message key
+- Database/migration work: done — `f1a2b3c4d5e6_add_dispute_alert_security_alert_categories.py` (adds `SECURITY_ALERT`); `21f2c9cef22d_add_device_id_to_refresh_tokens.py` (adds `device_id` + `(user_id, device_id)` index) - both verified upgrade/downgrade/re-upgrade round-trip and empty `alembic check` diff for this change specifically (a pre-existing, unrelated `crop_cycle_closure_snapshots` drift from an earlier batch was found and disclosed, not fixed, by the same `alembic check`)
+- Mobile work: done — new `DeviceIdentity` (`mobile/lib/core/storage/device_identity.dart`), a per-install random id generated the same way as the existing crop-photo `client_upload_id` (`Random.secure()`, 16 bytes hex), persisted via `flutter_secure_storage` under its own key (survives `SecureTokenStorage.clear()` on logout - a later login from the same install must still read as the same device); wired into `AuthRepository.login()`
+- Automation work: none — synchronous with the login request itself
+- Notification work: this scenario IS the notification, both halves
+- Offline/sync impact: none — login is already online-only
+- Security/RBAC impact: directly security-relevant, both halves now closed. No device_id sent (older client) is honestly treated as "cannot determine" - never fabricated as new or known. The alert body deliberately omits any device/IP/fingerprint detail (the alert's job is "was this you?", not exposing identifying detail to a reader who could themselves be the attacker if the account is already compromised); `dedup_suffix` hashes device_id (SHA-256) rather than storing the raw client-generated identifier in the shared `notifications` table, and is device-scoped (not time-bucketed) so a given device only ever triggers this once, ever, per farmer - verified directly by test, not assumed
+- Tests required: `tests/test_change_password.py::test_changing_password_notifies_the_farmer`, `tests/test_reset_password.py::test_reset_password_notifies_the_farmer` (both pre-existing); new this session in `tests/test_login.py`: `test_login_from_a_new_device_notifies_the_farmer`, `test_repeated_login_from_the_same_known_device_does_not_re_notify`, `test_login_from_a_second_distinct_device_notifies_again`, `test_login_without_a_device_id_does_not_trigger_new_device_detection`
+- Verification method: automated test, confirmed passing in the full backend suite re-run this session (see FINAL_GAP_REPORT.md for the exact pass count); `flutter analyze` (41 issues, 0 errors, unchanged) and `flutter test` (263 passed, 0 failed, unchanged) both independently re-run this session
 
 ### D79-04 — Expiry
 - Domain: 79. Notification Dedup

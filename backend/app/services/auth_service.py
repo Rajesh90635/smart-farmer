@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -68,13 +69,13 @@ def _resolve_role(db: Session, user_id) -> str:
     raise AppError("ROLE_NOT_ASSIGNED", "This account has no assigned role.", 500)
 
 
-def _issue_tokens(db: Session, user: User, role: str) -> TokenResponse:
+def _issue_tokens(db: Session, user: User, role: str, *, device_id: str | None = None) -> TokenResponse:
     access_token = create_access_token(subject=str(user.id), role=role)
 
     raw_refresh = generate_refresh_token()
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.jwt_refresh_token_days)
     refresh_token_repository.create(
-        db, user_id=user.id, token_hash=hash_refresh_token(raw_refresh), expires_at=expires_at
+        db, user_id=user.id, token_hash=hash_refresh_token(raw_refresh), expires_at=expires_at, device_id=device_id
     )
 
     return TokenResponse(
@@ -168,14 +169,29 @@ def login(db: Session, payload: LoginRequest) -> TokenResponse:
 
     role = _resolve_role(db, user.id)
 
+    # D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): checked BEFORE this
+    # login's own refresh token is created below, otherwise the row we're
+    # about to insert would make every login look like "seen before". No
+    # device_id sent at all (older clients) means honestly "cannot
+    # determine" - never fabricated as new or as known.
+    is_new_device = payload.device_id is not None and not refresh_token_repository.has_login_history_for_device(
+        db, user.id, payload.device_id
+    )
+
     user.last_login_at = datetime.now(timezone.utc)
-    tokens = _issue_tokens(db, user, role)
+    tokens = _issue_tokens(db, user, role, device_id=payload.device_id)
 
     AuditLogger(db).log(
         "LOGIN_SUCCESS", actor_id=str(user.id), actor_role=role, entity="user", entity_id=str(user.id)
     )
+    if is_new_device:
+        AuditLogger(db).log(
+            "NEW_DEVICE_LOGIN_DETECTED", actor_id=str(user.id), actor_role=role, entity="user", entity_id=str(user.id)
+        )
 
     db.commit()
+    if is_new_device:
+        _notify_new_device_login(db, user, role, payload.device_id)
     return tokens
 
 
@@ -297,11 +313,9 @@ def _notify_password_changed(db: Session, user: User, role: str) -> None:
     themselves. Scoped to the farmer role only, matching
     NotificationPreference's "one row per farmer" design (see its own
     docstring) - dealer/expert/admin accounts don't have a notification
-    inbox in this phase. Deliberately does NOT attempt new-device-login
-    alerting (D78-13's other half): no device/session fingerprinting
-    exists anywhere in this codebase (confirmed by grep of RefreshToken -
-    no user_agent/ip_address/device_id column), so that half stays
-    honestly undone rather than fabricated - see FINAL_GAP_REPORT.md."""
+    inbox in this phase. New-device-login alerting (D78-13's other half) is
+    now handled separately by _notify_new_device_login below, triggered
+    from login() rather than here."""
     if role != RoleCode.FARMER.value:
         return
     language_code = user.farmer_profile.preferred_language_code if getattr(user, "farmer_profile", None) else "en"
@@ -311,6 +325,37 @@ def _notify_password_changed(db: Session, user: User, role: str) -> None:
         message_key="PASSWORD_CHANGED_ALERT",
         message_params={},
         dedup_suffix=f"password_changed:{datetime.now(timezone.utc).isoformat()}",
+    )
+    notification_service.create_alert_notification(
+        db, str(user.id), candidate, dedup_scope=f"farmer:{user.id}", language_code=language_code,
+        related_entity_type="user", related_entity_id=str(user.id),
+    )
+
+
+def _notify_new_device_login(db: Session, user: User, role: str, device_id: str) -> None:
+    """D78-13 (docs/audit/FINAL_CANONICAL_group_D.md), the other half of
+    this scenario, previously disclosed as unbuilt: alerts the farmer once
+    per genuinely new device_id (see
+    refresh_token_repository.has_login_history_for_device). Deliberately
+    omits any device/IP detail from the message body - the alert's job is
+    "was this you?", not exposing identifying detail to whoever reads the
+    notification, which could itself be an attacker if the account is
+    already compromised. dedup_suffix hashes device_id (never stores the
+    raw client-generated identifier in the shared notifications table) and
+    is device-scoped, not time-bucketed - a given device only ever
+    triggers this once, ever, for this farmer, matching the "fires once
+    then never again for a known device" semantics already established by
+    _notify_password_changed's sibling alert."""
+    if role != RoleCode.FARMER.value:
+        return
+    language_code = user.farmer_profile.preferred_language_code if getattr(user, "farmer_profile", None) else "en"
+    device_fingerprint = hashlib.sha256(device_id.encode()).hexdigest()
+    candidate = AlertCandidate(
+        category=NotificationCategory.SECURITY_ALERT,
+        priority=NotificationPriority.CRITICAL,
+        message_key="NEW_DEVICE_LOGIN_ALERT",
+        message_params={},
+        dedup_suffix=f"new_device:{device_fingerprint}",
     )
     notification_service.create_alert_notification(
         db, str(user.id), candidate, dedup_scope=f"farmer:{user.id}", language_code=language_code,

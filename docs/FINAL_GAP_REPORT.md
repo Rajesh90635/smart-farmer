@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 351 |
+| Verified | 352 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **424** |
-| Partial | 98 |
+| **Attended (Verified + Implemented)** | **425** |
+| Partial | 97 |
 | Missing | 215 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **313** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **312** |
 | Future | 30 |
 | Out of Scope | 25 |
 | Environment Dependent | 6 |
@@ -97,6 +97,44 @@ confirming the previously-unverified claim). See
 Missing) - new `HarvestListing.is_sorted`/`sorting_notes`, farmer-declared only. Verified
 350→351, Missing 216→215, current-scope remaining 314→313. Full backend suite: 787 passed,
 0 failed. See `docs/audit/FINAL_CANONICAL_group_C.md`'s D52-01 entry.)
+
+(Later continuation session, after an unexpected shutdown - reconstructed from git/doc
+evidence, not from any prior session's claims: full backend suite re-run fresh found 1
+failure, `test_security.py::test_jwt_rejects_tampered_token` - root-caused, not just
+re-run-until-green. The test tampered only the JWT's last 2 base64url characters; a
+5000-iteration stress test confirmed base64's final character carries 2 unused padding
+bits, so ~1-in-1600 tamper attempts decoded to byte-identical signature bytes and
+correctly passed verification (a real code-level defect would have been a security bug;
+this was a test-design flaw, verified by direct signature-byte comparison, not assumed).
+Fixed by tampering a middle signature character instead (guaranteed byte-significant);
+0/5000 flakes after the fix. No scenario-status change - this is test-reliability, not a
+product gap. Full suite: 787 passed, 0 failed (unchanged, confirming no regression from
+the fix itself).
+
+D78-13 (security notification) PARTIAL→VERIFIED (+1 Verified, -1 Partial): closed the
+new-device-login half, previously disclosed as unbuilt because no device/session
+identifier existed anywhere in this codebase. New `RefreshToken.device_id` (client-
+generated per-install random id, not a hardware fingerprint - migration
+`21f2c9cef22d`); `auth_service.login()` checks login history for that device_id
+*before* issuing the current login's own token, and fires `NEW_DEVICE_LOGIN_ALERT`
+(`SECURITY_ALERT` category) the first time only, per device, per farmer - verified by 4
+new targeted tests, including that a second login from the same device never re-fires
+and a genuinely new second device does. No device_id sent (older client) is honestly
+skipped, never fabricated as new or known. Message body omits all device/IP detail;
+`dedup_suffix` is a SHA-256 hash of device_id, never the raw client value, in the shared
+`notifications` table. Mobile: new `DeviceIdentity` (per-install id via
+`flutter_secure_storage`, same random-byte pattern as the existing crop-photo
+`client_upload_id`, survives logout, resets only on reinstall), wired into
+`AuthRepository.login()`. Verified 351→352, Partial 98→97, current-scope remaining
+313→312. Full backend suite: 791 passed, 0 failed (+4 new tests, 0 regressions).
+`flutter analyze` (41 issues, 0 errors, unchanged) and `flutter test` (263 passed, 0
+failed, unchanged) both independently re-run. Migration verified upgrade → `alembic
+check` (empty diff for this change specifically) → downgrade → re-upgrade. One
+pre-existing, unrelated drift was found by the same `alembic check` and disclosed, not
+fixed: `crop_cycle_closure_snapshots`'s unique constraint/index shape (from the earlier
+season-closure batch) doesn't match its model declaration - out of scope for this batch,
+does not affect this change's own correctness. See
+`docs/audit/FINAL_CANONICAL_group_D.md`'s D78-13 entry.)
 
 Reconciliation applied this session (see each canonical group file's own "Reconciliation
 deltas applied" table for full citations):

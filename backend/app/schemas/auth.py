@@ -61,6 +61,13 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     phone_number: str
     password: str
+    # D78-13 (docs/audit/FINAL_CANONICAL_group_D.md): an optional, client-
+    # generated per-install identifier - not a hardware fingerprint - that
+    # lets the backend detect a genuinely new device logging in. Older
+    # clients that don't send it simply get no new-device detection for
+    # that login, by honest design (see auth_service.login()), never a
+    # fabricated guess.
+    device_id: str | None = Field(default=None, max_length=255)
 
 
 class RefreshRequest(BaseModel):

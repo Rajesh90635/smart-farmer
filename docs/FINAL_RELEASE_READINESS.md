@@ -4,48 +4,39 @@ Reconciles `docs/FINAL_100_DOMAIN_SCENARIO_MATRIX.md`, `docs/FINAL_AUTOMATION_WO
 `docs/FINAL_CROSS_MODULE_WORKFLOW_REPORT.md`, and `docs/FINAL_GAP_REPORT.md` into a single
 release-readiness view.
 
-**Updated this continuation session** — see `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL
-COUNTS" for the current authoritative status totals (798 total: 351 Verified, 73
-Implemented, 98 Partial, 215 Missing, 0 Broken, 30 Future, 25 Out of Scope, 6 Environment
-Dependent; 313 current-scope items remain, down from 391 at the start of the prior session
-and 341 at the start of this continuation). Prior session's work spans: all of P0 (D97-12
-closed-season task guard, D6-07/D11-05 crop-cycle concurrency guard, D68-02 refund bounds
-check, D100-14 re-verified); the P1 task-management cluster
-(snooze/reschedule/skip/fail/priority/overdue-reminder sweep); D1-19 account
-deactivation; the crop-failure reason taxonomy; crop-stage additions
-(LAND_PREPARATION/GERMINATING); the weather-risk safety-detection cluster (frost,
-cumulative-rainfall flood/waterlogging, consecutive-dry-days drought — this batch also
-caught and fixed a genuine production timezone bug in date-bucketing, see
-`docs/audit/FINAL_CANONICAL_group_A.md`'s D15-09 entry); irrigation/soil data quality
-(validated enums on `Plot`, a new `IrrigationRecord` model); and the entire Soil Testing
-domain foundation (`SoilSample`/`SoilTestResult`, 12 scenarios, built from zero code). This
-continuation session added: cluster #7 re-verification (input-inventory usage-tracking,
-6 rows, no new code); the notification-wiring batch (D78-03 disease, D78-08 dispute,
-D78-05 harvest — no code needed — all VERIFIED; D78-13 security PARTIAL, password-change
-alerting built and tested, new-device-login alerting disclosed as genuinely unbuilt); and
-the marketplace/harvest completeness batch (D47-01 approaching audit log/409, D64-05
-payment date, D66-03 pending-payment timeout sweep — all VERIFIED, were Partial; D50-03
-yield/acre, D51-02 moisture, D51-04 defects, D67-05 farmer dispute response — all
-VERIFIED, were Missing; D51-02/D51-04 deliberately scoped to `HarvestRecord` only, not
-`HarvestListing`, disclosed); and the season-closure batch (new `CropCycleClosureSnapshot`
-table, created once by `close_my_crop_cycle` — D97-02 through D97-09, all 8 rows, now
-VERIFIED, consolidating what the source audit doc separately proposed as new `CropCycle`
-columns and a shared table into one table; verified frozen against a later ledger edit);
-and the grading-engine batch (new admin-authored `CropGradeOption` table, empty by default,
-no fabricated per-crop grading dataset — D52-02 root VERIFIED, D51-03 folded into the same
-dimension-agnostic mechanism VERIFIED, D59-04 quality-mismatch warning at accept-offer
-VERIFIED, D52-01 sorting declaration built independently VERIFIED).
-Backend suite: **787 passed, 0 failed** (was 702 at the start of the prior session, 761 at
-the start of the notification-wiring batch, 765 before the marketplace/harvest batch, 775
-before the season-closure batch, 778 before this last batch — +85 new tests total from the
-prior session's start, 0 regressions from this session's own changes. An earlier run in
-this continuation saw 2 failures in `tests/test_case_sla_service.py` — a shared-test-DB
-pollution flake confirmed unrelated to this session's work, that file was never touched —
-which did not reproduce in later runs, consistent with non-deterministic pollution rather
-than a real regression; not fixed in this batch, disclosed as a known test-reliability
-issue rather than hidden). Also independently re-verified this session: `flutter analyze`
-(41 issues, 0 errors, matches the prior claim) and, for the first time this session,
-`flutter test` (263 passed, 0 failed, confirming the previously-unverified claim).
+**Updated this later continuation session** (resumed after an unexpected shutdown;
+reconstructed from git/doc evidence, not from any prior session's claims) — see
+`docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" for the current authoritative status
+totals (798 total: 352 Verified, 73 Implemented, 97 Partial, 215 Missing, 0 Broken, 30
+Future, 25 Out of Scope, 6 Environment Dependent; 312 current-scope items remain, down from
+391 two sessions ago, 341 at the start of the prior continuation, 313 at the start of this
+one). Prior sessions' work spans: all of P0; the P1 task-management cluster; D1-19 account
+deactivation; the crop-failure reason taxonomy; crop-stage additions; the weather-risk
+safety-detection cluster; irrigation/soil data quality; the entire Soil Testing domain
+foundation; cluster #7 re-verification; the notification-wiring batch (D78-03/05/08
+VERIFIED, D78-13 left PARTIAL); the marketplace/harvest completeness batch; the
+season-closure batch (new `CropCycleClosureSnapshot` table); and the grading-engine batch
+(new `CropGradeOption` table) plus D52-01 sorting. This session: (1) root-caused and fixed
+a genuine test-reliability defect found on a fresh full-suite run,
+`test_security.py::test_jwt_rejects_tampered_token` (tampered only the JWT's last 2
+base64url characters, whose final 2 bits are unused padding - ~1/1600 tamper attempts left
+the signature byte-identical and correctly passed verification; not a security bug in the
+JWT code itself, confirmed by direct byte comparison; fixed by tampering a
+byte-significant middle character instead, 0/5000 flakes after); (2) closed D78-13's
+previously-disclosed new-device-login gap end-to-end - new `RefreshToken.device_id`
+(client-generated per-install id, not a hardware fingerprint), `auth_service.login()`
+detects a device_id never seen before for that account and fires a new
+`NEW_DEVICE_LOGIN_ALERT` exactly once per device per farmer (verified: same device never
+re-fires, a second distinct device does, no device_id sent is honestly skipped not
+fabricated), message body omits all device/IP detail, `dedup_suffix` hashes device_id
+(never stores it raw); mobile `DeviceIdentity` wired into `AuthRepository.login()`.
+Backend suite: **791 passed, 0 failed** (was 787 before this session's 2 fixes; +4 new
+tests, 0 regressions from either change). Migration (`21f2c9cef22d`) verified
+upgrade→`alembic check`(empty diff for this change)→downgrade→re-upgrade; one
+pre-existing, unrelated schema drift on `crop_cycle_closure_snapshots` (from the earlier
+season-closure batch) was found by the same `alembic check` and is disclosed, not fixed,
+here. Also independently re-verified this session: `flutter analyze` (41 issues, 0 errors,
+unchanged) and `flutter test` (263 passed, 0 failed, unchanged).
 
 ## Functional
 
@@ -70,12 +61,14 @@ issue rather than hidden). Also independently re-verified this session: `flutter
 
 ## Backend
 
-- **Test result: 787 passed, 0 failed** (full suite; up from 702 at the start of the prior
-  session — +85 new tests spanning the P0 fixes, D78-07's notification assertion, the
-  irrigation/soil-testing domain batch, and this continuation's notification-wiring,
-  marketplace/harvest completeness, season-closure, and grading-engine batches — confirmed
-  by a full clean re-run, not merely the new tests in isolation). An earlier run in this
-  same continuation saw 2 failures in `tests/test_case_sla_service.py`'s own pre-existing
+- **Test result: 791 passed, 0 failed** (full suite; up from 702 at the start of the
+  prior-prior session, 787 at the start of this later continuation — +4 new tests for
+  D78-13's new-device-login detection, plus a fix to a genuinely flaky pre-existing test,
+  `test_security.py::test_jwt_rejects_tampered_token` (tampered only the JWT's last base64
+  characters, whose final bits are unused padding — not a real signature-verification bug,
+  confirmed by direct byte comparison; see `docs/FINAL_GAP_REPORT.md`) — confirmed by a
+  full clean re-run, not merely the new tests in isolation). An earlier run in the prior
+  continuation saw 2 failures in `tests/test_case_sla_service.py`'s own pre-existing
   shared-test-DB pollution flake (see the session summary above); every later run's clean
   0-failure result is consistent with that being non-deterministic, not a regression caused
   by this session's actual changes.
@@ -90,8 +83,11 @@ issue rather than hidden). Also independently re-verified this session: `flutter
 - Migration status: every migration cited in the cluster audits was verified end-to-end at
   the time it was written (upgrade → data check → downgrade → re-upgrade →
   `alembic revision --autogenerate` empty diff) per the project's own established
-  convention; no drift detected in this session's own work (products/SLA/input-inventory
-  test fixes touched no schema).
+  convention; this session's `21f2c9cef22d` (device_id) round-tripped clean with no drift
+  of its own. `alembic check` did surface one pre-existing, unrelated drift on
+  `crop_cycle_closure_snapshots` from an earlier season-closure-batch migration (a
+  unique-constraint/index shape mismatch against its model) — disclosed here, not fixed,
+  out of scope for this session's work.
 - API status: RBAC (`require_role`), farmer-ownership (`get_owned`, 404-not-403 by design
   to prevent ID enumeration), and consent-gating are consistently applied — VERIFIED by a
   9-endpoint cross-farmer isolation sweep (D100-07, `test_phase40_integration.py`,
@@ -170,9 +166,11 @@ issue rather than hidden). Also independently re-verified this session: `flutter
 - Weather automation: pull-based alerts VERIFIED; proactive (scheduler-driven) push sweep
   now VERIFIED (closes the "farmer who never opens the app is never warned" gap).
 - Notifications: dedup via DB unique constraint (VERIFIED); no expiry/TTL concept exists
-  (disclosed MISSING); 8 of 13 candidate notification categories still don't exist
-  (Task/Market/Stock/Soil/Disaster-as-distinct/Sync/Security — MISSING, confirmed by grep,
-  each individually cited in `c12`).
+  (disclosed MISSING); this line was stale as of this session's re-check against
+  `app/models/notification.py`'s actual `NotificationCategory` enum — Task, Stock, Payment,
+  Dispute, and (this session) Security all now exist; 4 of the original 13 candidate
+  categories remain genuinely MISSING (Market, Soil, Disaster-as-distinct, Sync),
+  confirmed by grep, each individually cited in `c12`.
 - Retry/idempotency: DB-enforced idempotency keys (orders, photo uploads, notification
   dedup) all VERIFIED; exponential backoff for sync retries confirmed genuinely MISSING
   (immediate retry on every connectivity event, no delay/backoff math anywhere).

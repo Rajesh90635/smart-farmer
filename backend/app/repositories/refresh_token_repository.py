@@ -7,14 +7,31 @@ from sqlalchemy.orm import Session
 from app.models.refresh_token import RefreshToken
 
 
-def create(db: Session, *, user_id: uuid.UUID, token_hash: str, expires_at: datetime) -> RefreshToken:
-    token = RefreshToken(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
+def create(
+    db: Session, *, user_id: uuid.UUID, token_hash: str, expires_at: datetime, device_id: str | None = None
+) -> RefreshToken:
+    token = RefreshToken(user_id=user_id, token_hash=token_hash, expires_at=expires_at, device_id=device_id)
     db.add(token)
     return token
 
 
 def get_by_hash(db: Session, token_hash: str) -> RefreshToken | None:
     return db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash)).scalar_one_or_none()
+
+
+def has_login_history_for_device(db: Session, user_id: uuid.UUID, device_id: str) -> bool:
+    """D78-13: true once this account has ever had a refresh token issued
+    (active or revoked/expired - history, not just current sessions) with
+    this exact device_id. Called BEFORE issuing the current login's own
+    token, so a device's very first login is correctly seen as new."""
+    return (
+        db.execute(
+            select(RefreshToken.id)
+            .where(RefreshToken.user_id == user_id, RefreshToken.device_id == device_id)
+            .limit(1)
+        ).first()
+        is not None
+    )
 
 
 def revoke(db: Session, token: RefreshToken) -> None:
