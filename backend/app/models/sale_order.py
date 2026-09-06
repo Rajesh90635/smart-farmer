@@ -75,6 +75,12 @@ class SaleOrder(Base):
     price_per_unit: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     gross_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     charges: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+    # D57-04/D57-05/D58-02/D58-03 (docs/audit/FINAL_CANONICAL_group_C.md):
+    # optional itemized breakdown of `charges` - farmer-entered, never
+    # computed. None (not 0) when the farmer only ever gave the lump sum.
+    transport_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    commission_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    storage_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     net_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
 
     collection_method: Mapped[str] = mapped_column(String(50), nullable=False)

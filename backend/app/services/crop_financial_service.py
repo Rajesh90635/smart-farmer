@@ -17,13 +17,22 @@ from app.core import error_codes
 from app.core.area_units import AreaUnit, from_square_meters
 from app.core.errors import AppError
 from app.models.crop_cost_estimate import CropCostEstimate
+from app.models.crop_cycle import Season
 from app.models.ledger_entry import LedgerEntryType
-from app.repositories import ai_reference_repository, crop_cost_estimate_repository, crop_cycle_repository, ledger_entry_repository
+from app.repositories import (
+    ai_reference_repository,
+    crop_cost_estimate_repository,
+    crop_cycle_repository,
+    ledger_entry_repository,
+    plot_repository,
+)
 from app.schemas.cost_estimate import (
     CropCostEstimateCreateRequest,
     CropCostEstimateListResponse,
     CropCostEstimateResponse,
     CropFinancialSummaryResponse,
+    PlotFinancialTotalsResponse,
+    SeasonFinancialTotalsResponse,
     StageFinancialSummary,
 )
 
@@ -105,6 +114,30 @@ def get_financial_summary(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID)
         cost_per_acre=_per_acre(actual_cost, acres),
         revenue_per_acre=_per_acre(actual_revenue, acres),
         profit_loss_per_acre=_per_acre(actual_profit_loss, acres),
+    )
+
+
+def get_plot_financial_summary(db: Session, farmer_id: str, plot_id: uuid.UUID) -> PlotFinancialTotalsResponse:
+    """D70-04 (docs/audit/FINAL_CANONICAL_group_C.md): totals across every
+    crop cycle this plot has ever had - see PlotFinancialTotalsResponse's
+    own docstring for this row's deliberately scoped-down boundary."""
+    farmer_uuid = uuid.UUID(farmer_id)
+    plot = plot_repository.get_owned(db, plot_id, farmer_uuid)
+    if plot is None:
+        raise AppError(error_codes.NOT_FOUND, "Plot not found.", 404)
+
+    total_cost, total_revenue = ledger_entry_repository.compute_totals_for_plot(db, plot_id, farmer_uuid)
+    return PlotFinancialTotalsResponse(
+        plot_id=plot_id, total_cost=total_cost, total_revenue=total_revenue, profit_loss=total_revenue - total_cost
+    )
+
+
+def get_season_financial_summary(db: Session, farmer_id: str, season: Season) -> SeasonFinancialTotalsResponse:
+    """D70-05: same shape as get_plot_financial_summary, scoped by Season
+    across every one of the farmer's own crop cycles."""
+    total_cost, total_revenue = ledger_entry_repository.compute_totals_for_season(db, uuid.UUID(farmer_id), season)
+    return SeasonFinancialTotalsResponse(
+        season=season.value, total_cost=total_cost, total_revenue=total_revenue, profit_loss=total_revenue - total_cost
     )
 
 

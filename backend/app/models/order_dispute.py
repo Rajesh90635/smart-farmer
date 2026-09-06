@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, Text
+from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -52,6 +52,9 @@ class OrderDispute(Base):
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     evidence_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated, own
+    # storage pipeline - never a reuse of CropPhoto's key/table.
+    evidence_image_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     status: Mapped[DisputeStatus] = mapped_column(
         SAEnum(DisputeStatus, name="dispute_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),

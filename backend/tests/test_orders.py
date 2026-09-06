@@ -1,8 +1,10 @@
+import io
 import threading
 import uuid
 
 from tests.conftest import auth_headers
 from tests.marketplace_factories import valid_dealer_listing_payload
+from tests.photo_factories import make_test_jpeg
 
 
 def _listing(client, verified_dealer, approved_product, **overrides):
@@ -342,6 +344,49 @@ def test_refund_amount_cannot_exceed_the_orders_final_amount(client, registered_
         headers=auth_headers(admin_tokens),
     )
     assert response.status_code == 422
+
+
+def test_farmer_can_upload_dispute_evidence_image(client, registered_farmer, verified_dealer, approved_product):
+    """D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated
+    dispute-evidence pipeline, never a reuse of the crop-photo one."""
+    _, farmer_tokens = registered_farmer
+    dealer_tokens, _ = verified_dealer
+    listing = _listing(client, verified_dealer, approved_product)
+    cart = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 1}, headers=auth_headers(farmer_tokens)).json()
+    order = client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/dealer/orders/{order['id']}/accept", headers=auth_headers(dealer_tokens))
+    for status in ["preparing", "ready_for_dispatch", "dispatched", "out_for_delivery", "delivered"]:
+        client.post(f"/api/v1/dealer/orders/{order['id']}/advance?target_status={status}", headers=auth_headers(dealer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/dispute", json={"reason": "damaged_product"}, headers=auth_headers(farmer_tokens))
+
+    files = {"file": ("evidence.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    response = client.post(f"/api/v1/orders/{order['id']}/dispute/evidence", files=files, headers=auth_headers(farmer_tokens))
+    assert response.status_code == 200
+    assert response.json()["evidence_image_key"] is not None
+
+    dispute = client.get(f"/api/v1/orders/{order['id']}/dispute", headers=auth_headers(farmer_tokens)).json()
+    assert dispute["evidence_image_key"] is not None
+
+
+def test_farmer_cannot_upload_evidence_to_another_farmers_dispute(client, registered_farmer, another_farmer, verified_dealer, approved_product):
+    _, farmer_tokens = registered_farmer
+    dealer_tokens, _ = verified_dealer
+    listing = _listing(client, verified_dealer, approved_product)
+    cart = client.post("/api/v1/cart", json={"dealer_product_id": listing["id"], "quantity": 1}, headers=auth_headers(farmer_tokens)).json()
+    order = client.post(f"/api/v1/orders/{cart['id']}/checkout", json={"idempotency_key": str(uuid.uuid4())}, headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/orders/{order['id']}/pay", headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/pay/complete", json={"succeed": True}, headers=auth_headers(farmer_tokens))
+    client.post(f"/api/v1/dealer/orders/{order['id']}/accept", headers=auth_headers(dealer_tokens))
+    for status in ["preparing", "ready_for_dispatch", "dispatched", "out_for_delivery", "delivered"]:
+        client.post(f"/api/v1/dealer/orders/{order['id']}/advance?target_status={status}", headers=auth_headers(dealer_tokens))
+    client.post(f"/api/v1/orders/{order['id']}/dispute", json={"reason": "damaged_product"}, headers=auth_headers(farmer_tokens))
+
+    _, other_tokens = another_farmer
+    files = {"file": ("evidence.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    response = client.post(f"/api/v1/orders/{order['id']}/dispute/evidence", files=files, headers=auth_headers(other_tokens))
+    assert response.status_code == 404
 
 
 def test_admin_can_list_open_disputes_to_discover_what_needs_resolution(client, registered_farmer, verified_dealer, approved_product, admin_tokens):

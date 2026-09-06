@@ -10,7 +10,15 @@ from sqlalchemy.orm import Session
 from app.core.current_user import CurrentUser, require_role
 from app.core.roles import Role
 from app.db.session import get_db
-from app.schemas.cost_estimate import CropCostEstimateCreateRequest, CropCostEstimateListResponse, CropCostEstimateResponse, CropFinancialSummaryResponse
+from app.models.crop_cycle import Season
+from app.schemas.cost_estimate import (
+    CropCostEstimateCreateRequest,
+    CropCostEstimateListResponse,
+    CropCostEstimateResponse,
+    CropFinancialSummaryResponse,
+    PlotFinancialTotalsResponse,
+    SeasonFinancialTotalsResponse,
+)
 from app.schemas.profit_forecast import CropProfitForecastResponse
 from app.services import crop_financial_service, profit_forecast_service
 
@@ -61,3 +69,23 @@ def get_profit_forecast(
     db: Session = Depends(get_db),
 ) -> CropProfitForecastResponse:
     return profit_forecast_service.get_profit_forecast(db, current_user.user_id, crop_cycle_id)
+
+
+@router.get("/plots/{plot_id}/financial-summary", response_model=PlotFinancialTotalsResponse)
+def get_plot_financial_summary(
+    plot_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> PlotFinancialTotalsResponse:
+    """D70-04 (docs/audit/FINAL_CANONICAL_group_C.md)."""
+    return crop_financial_service.get_plot_financial_summary(db, current_user.user_id, plot_id)
+
+
+@router.get("/farmers/me/seasons/{season}/financial-summary", response_model=SeasonFinancialTotalsResponse)
+def get_season_financial_summary(
+    season: Season,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> SeasonFinancialTotalsResponse:
+    """D70-05 (docs/audit/FINAL_CANONICAL_group_C.md)."""
+    return crop_financial_service.get_season_financial_summary(db, current_user.user_id, season)

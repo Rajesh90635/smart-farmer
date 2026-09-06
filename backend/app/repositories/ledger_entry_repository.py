@@ -10,6 +10,7 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.crop_cycle import CropCycle, Season
 from app.models.ledger_entry import LedgerEntry, LedgerEntryType
 
 
@@ -55,6 +56,42 @@ def compute_totals(db: Session, crop_cycle_id: uuid.UUID, farmer_id: uuid.UUID) 
         select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
             LedgerEntry.crop_cycle_id == crop_cycle_id, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.REVENUE
         )
+    ).scalar_one()
+    return Decimal(total_expense), Decimal(total_revenue)
+
+
+def compute_totals_for_plot(db: Session, plot_id: uuid.UUID, farmer_id: uuid.UUID) -> tuple[Decimal, Decimal]:
+    """D70-04 (docs/audit/FINAL_CANONICAL_group_C.md): the same aggregation
+    as compute_totals above, joined out to every crop cycle that plot has
+    ever had (not just the currently-active one) - a pure read aggregation
+    over the existing LedgerEntry -> CropCycle -> Plot relational path, no
+    new column, no new table."""
+    total_expense = db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0))
+        .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
+        .where(CropCycle.plot_id == plot_id, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.EXPENSE)
+    ).scalar_one()
+    total_revenue = db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0))
+        .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
+        .where(CropCycle.plot_id == plot_id, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.REVENUE)
+    ).scalar_one()
+    return Decimal(total_expense), Decimal(total_revenue)
+
+
+def compute_totals_for_season(db: Session, farmer_id: uuid.UUID, season: Season) -> tuple[Decimal, Decimal]:
+    """D70-05: same shape as compute_totals_for_plot, scoped by the
+    farmer's own crop cycles matching one Season value across every
+    farm/plot they own."""
+    total_expense = db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0))
+        .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
+        .where(CropCycle.season == season, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.EXPENSE)
+    ).scalar_one()
+    total_revenue = db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0))
+        .join(CropCycle, LedgerEntry.crop_cycle_id == CropCycle.id)
+        .where(CropCycle.season == season, LedgerEntry.farmer_id == farmer_id, LedgerEntry.entry_type == LedgerEntryType.REVENUE)
     ).scalar_one()
     return Decimal(total_expense), Decimal(total_revenue)
 

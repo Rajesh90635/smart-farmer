@@ -173,7 +173,19 @@ def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: Acce
     # gross. Now farmer-entered at accept time (never estimated/fabricated
     # by the backend), matching the ledger/cost-estimate convention used
     # everywhere else in this app - see AcceptOfferRequest's docstring.
-    charges = payload.charges if payload is not None else Decimal("0")
+    #
+    # D57-04/D57-05/D58-02/D58-03: an itemized breakdown, when given,
+    # REPLACES the lump `charges` (which becomes their sum) rather than
+    # being added to it - a farmer who only ever sends `charges` sees no
+    # behavior change at all.
+    transport_charge = payload.transport_charge if payload is not None else None
+    commission_charge = payload.commission_charge if payload is not None else None
+    storage_charge = payload.storage_charge if payload is not None else None
+    has_itemized_breakdown = any(v is not None for v in (transport_charge, commission_charge, storage_charge))
+    if has_itemized_breakdown:
+        charges = (transport_charge or Decimal("0")) + (commission_charge or Decimal("0")) + (storage_charge or Decimal("0"))
+    else:
+        charges = payload.charges if payload is not None else Decimal("0")
     if charges > gross_value:
         raise AppError(error_codes.VALIDATION_ERROR, "Charges cannot exceed the sale's gross value.", 422)
     net_value = gross_value - charges
@@ -191,6 +203,9 @@ def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: Acce
         price_per_unit=final_price,
         gross_value=gross_value,
         charges=charges,
+        transport_charge=transport_charge,
+        commission_charge=commission_charge,
+        storage_charge=storage_charge,
         net_value=net_value,
         collection_method=listing.delivery_option.value,
         service_area_snapshot=listing.service_area,

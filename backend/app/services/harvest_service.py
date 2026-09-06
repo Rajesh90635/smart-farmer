@@ -15,7 +15,7 @@ from app.core.errors import AppError
 from app.models.harvest_listing import HarvestListing
 from app.models.harvest_record import HarvestRecord, HarvestStatus
 from app.models.notification import NotificationCategory, NotificationPriority
-from app.repositories import crop_cycle_repository, harvest_repository, user_repository
+from app.repositories import crop_cycle_repository, harvest_repository, professional_repository, user_repository
 from app.schemas.harvest import (
     HarvestConfirmReadyRequest,
     HarvestListingCreateRequest,
@@ -236,6 +236,23 @@ def list_my_listings(db: Session, farmer_id: str, *, limit: int = 50, offset: in
     return HarvestListingListResponse(items=[HarvestListingResponse.model_validate(i) for i in items], total=total)
 
 
-def list_marketplace_listings(db: Session, *, crop_id: uuid.UUID | None = None, limit: int = 50, offset: int = 0) -> HarvestListingListResponse:
-    items, total = harvest_repository.list_active_listings(db, crop_id=crop_id, limit=limit, offset=offset)
+def list_marketplace_listings(
+    db: Session, *, crop_id: uuid.UUID | None = None, near_me_user_id: str | None = None, limit: int = 50, offset: int = 0
+) -> HarvestListingListResponse:
+    """D59-05 (docs/audit/FINAL_CANONICAL_group_C.md): `near_me_user_id`,
+    when given, resolves THAT buyer's own registered
+    ProfessionalProfile.service_area and filters listings against it - at
+    the same approximate state/district granularity already used
+    everywhere else (never exact coordinates). A buyer with no registered
+    service_area yet gets the unfiltered list, never a fabricated match."""
+    district = state = None
+    if near_me_user_id is not None:
+        buyer_profile = professional_repository.get_by_user_id(db, uuid.UUID(near_me_user_id))
+        area = (buyer_profile.service_area or {}) if buyer_profile else {}
+        district = area.get("district")
+        state = area.get("state")
+
+    items, total = harvest_repository.list_active_listings(
+        db, crop_id=crop_id, district=district, state=state, limit=limit, offset=offset
+    )
     return HarvestListingListResponse(items=[HarvestListingResponse.model_validate(i) for i in items], total=total)

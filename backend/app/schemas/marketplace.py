@@ -47,9 +47,19 @@ class AcceptOfferRequest(BaseModel):
     backend - matching this app's ledger/cost-estimate convention of never
     fabricating a financial figure. Omitted or 0 means no transport/
     commission/storage cost was deducted from this sale, not that none
-    exists in reality."""
+    exists in reality.
+
+    D57-04/D57-05/D58-02/D58-03 (docs/audit/FINAL_CANONICAL_group_C.md):
+    optional itemized breakdown, farmer-entered same as `charges` itself.
+    When any of these three is supplied, they REPLACE `charges` (which
+    becomes their sum) rather than being added alongside it - a farmer (or
+    an old client) that only ever sends the lump `charges` field keeps
+    working completely unchanged."""
 
     charges: Decimal = Field(default=Decimal("0"), ge=0)
+    transport_charge: Decimal | None = Field(default=None, ge=0)
+    commission_charge: Decimal | None = Field(default=None, ge=0)
+    storage_charge: Decimal | None = Field(default=None, ge=0)
 
 
 class OfferResponse(BaseModel):
@@ -98,6 +108,12 @@ class SaleOrderResponse(BaseModel):
     price_per_unit: Decimal
     gross_value: Decimal
     charges: Decimal
+    # D57-04/D57-05/D58-02/D58-03: populated only when the farmer supplied
+    # an itemized breakdown at accept-offer time; None (never a fabricated
+    # 0) when only the lump `charges` figure was ever given.
+    transport_charge: Decimal | None = None
+    commission_charge: Decimal | None = None
+    storage_charge: Decimal | None = None
     net_value: Decimal
     collection_method: str
     status: SaleOrderStatus
@@ -131,6 +147,9 @@ class SaleDisputeResponse(BaseModel):
     sale_order_id: uuid.UUID
     reason: SaleDisputeReason
     status: SaleDisputeStatus
+    # D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): non-None once either
+    # party has uploaded a supporting evidence image.
+    evidence_image_key: str | None = None
     created_at: datetime
     resolved_at: datetime | None = None
     resolution_note: str | None = None

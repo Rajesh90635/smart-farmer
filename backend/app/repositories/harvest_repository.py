@@ -75,10 +75,19 @@ def get_active_listing_for_crop_cycle(db: Session, harvest_record_id: uuid.UUID)
     ).scalar_one_or_none()
 
 
-def list_active_listings(db: Session, *, crop_id: uuid.UUID | None, limit: int, offset: int) -> tuple[list[HarvestListing], int]:
+def list_active_listings(
+    db: Session, *, crop_id: uuid.UUID | None, district: str | None = None, state: str | None = None, limit: int, offset: int
+) -> tuple[list[HarvestListing], int]:
     stmt = select(HarvestListing).where(HarvestListing.is_active.is_(True))
     if crop_id is not None:
         stmt = stmt.where(HarvestListing.crop_id == crop_id)
+    # D59-05 (docs/audit/FINAL_CANONICAL_group_C.md): approximate-only
+    # state/district match against the listing's own service_area JSONB -
+    # never exact coordinates, preserving the existing privacy design.
+    if district is not None:
+        stmt = stmt.where(HarvestListing.service_area["district"].astext == district)
+    elif state is not None:
+        stmt = stmt.where(HarvestListing.service_area["state"].astext == state)
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     items = db.execute(stmt.order_by(HarvestListing.created_at.desc()).limit(limit).offset(offset)).scalars().all()
     return list(items), total

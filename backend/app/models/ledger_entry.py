@@ -64,6 +64,11 @@ class LedgerCategory(str, enum.Enum):
     LAND_RENT = "land_rent"
     TRANSPORT = "transport"
     HARVEST_SALE = "harvest_sale"
+    # D69-08 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated category
+    # so storage spend is no longer undifferentiated within OTHER - purely
+    # a bookkeeping label, independent of whether a real storage-booking
+    # feature (Domain 53, Missing) ever exists.
+    STORAGE = "storage"
     OTHER = "other"
 
 

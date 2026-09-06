@@ -42,15 +42,44 @@ D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE ro
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 69 |
+| VERIFIED | 83 |
 | IMPLEMENTED | 14 |
-| PARTIAL | 19 |
+| PARTIAL | 4 |
 | MISSING | 46 |
 | BROKEN | 0 |
-| FUTURE | 6 |
+| FUTURE | 7 |
 | OUT_OF_SCOPE | 20 |
 | ENVIRONMENT_DEPENDENT | 0 |
 | TOTAL | 174 |
+
+*(Later continuation session — Partial-only completion pass. Processed all 19 Partial rows:
+- **14 PARTIAL→VERIFIED**: D50-01 (accepted design - repurposed field + D50-03's per-acre
+  derivation already satisfy this, no code); D52-05/D55-06/D55-07 (already complete - the
+  real `SaleOrderStatus.COLLECTED`/`DELIVERED` chain via `POST /sales/{id}/advance` already
+  existed and was already tested end-to-end, stale citation, no code); D55-08 (D57-04's new
+  `transport_charge` now gives a real, sale-specific transport-cost figure); D57-04/D57-05/
+  D58-02/D58-03 (new itemized `transport_charge`/`commission_charge`/`storage_charge` on
+  `AcceptOfferRequest`/`SaleOrder`, replacing the lump `charges` only when supplied - one
+  fix closes all four identically-rooted rows); D59-05 (new `near_me` filter on
+  `GET /marketplace/listings`, matching the buyer's own registered `service_area`); D67-03
+  (new dedicated dispute-evidence image pipeline for both `OrderDispute`/`SaleDispute`);
+  D69-08 (new `LedgerCategory.STORAGE`); D70-04/D70-05 (new plot-scoped/season-scoped
+  ledger-totals rollups, deliberately scoped to totals only - see each row's own note on
+  why the fuller D71-05/D71-07 Plot/Season P&L views were NOT built as a side effect).
+- **1 PARTIAL→FUTURE**: D51-07 - blocked on a real grade-to-price rate table this project
+  has no authoritative source for; D52-02's grading engine removed the OTHER blocker but
+  not this one.
+- **4 stay PARTIAL, genuinely blocked, NOT implemented**: D57-02 (structurally needs the
+  Missing D56/D57-01 market registry); D57-07 (itemization half now done, but its own
+  scenario name - comparison ACROSS options - still needs that same market registry);
+  D58-06 (2 of 4 itemized components done via D58-02/03; D58-04 handling and D58-05
+  storage remain genuinely Missing, disclosed as a partial-itemization state rather than
+  force-closed); D61-04 (structurally needs the Missing D61-02 pooled-listing feature).
+Backend: 20 new/updated tests across `test_ledger.py`, `test_marketplace_offers.py`,
+`test_orders.py`, `test_crop_financials.py`, all passing. Migrations `ff72e5d0b5a7`
+(storage category), `6701f6e3a235` (itemized sale-order charges), `9c134957c681` (dispute
+evidence keys) all round-tripped clean. Group C: PARTIAL 19→4, VERIFIED 69→83, FUTURE 6→7,
+MISSING unchanged at 46. See `docs/FINAL_GAP_REPORT.md` for the cross-group total.)*
 
 *(Updated this session: D68-02 PARTIAL→VERIFIED, P0 refund-bounds fix — see its own entry
 below. -1 PARTIAL, +1 VERIFIED, total unchanged.)*
@@ -176,10 +205,11 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 50 Yield
 - Scenario ID: D50-01
 - Exact scenario name: Yield estimate
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `profit_forecast_service.py:13-16,101-102` (treats `HarvestRecord.estimated_quantity` as "estimated yield")
-- Missing component: No first-class `Yield` entity — no per-area rate, no unit-of-yield distinct from unit-of-sale
-- Required implementation: Either explicitly document the repurposed-field design as final (no change needed), or introduce a dedicated yield-rate field distinct from the sale-quantity field
+- Current implementation status: **VERIFIED (later continuation session, was Partial - decision made: repurposed-field design is final, per this row's own suggested resolution path)**
+- Existing relevant files/classes/functions: `profit_forecast_service.py:13-16,101-102` (treats `HarvestRecord.estimated_quantity` as "estimated yield"); `D50-03`'s existing `yield_per_acre` (VERIFIED) already derives a real per-area rate FROM this same field via `Plot.area_sqm`, closing the "no per-area rate" half of this row's own gap independently
+- Decision made this session: introducing a second, dedicated yield-rate field distinct from the existing quantity field would duplicate data with no real farmer-facing benefit - the repurposed field, combined with D50-03's already-VERIFIED per-acre derivation, fully satisfies this scenario's literal wording without fabricating a new concept.
+- Missing component: none
+- Required implementation: none
 - Dependencies: D49-01 (expected quantity), D50-03 (yield/acre — currently MISSING, would consume this)
 - Backend work: `harvest_record.py`, `profit_forecast_service.py` if a distinct field is ever added
 - Database/migration work: none required for current scope; a new `yield_rate`/`yield_unit` column if a first-class model is later built
@@ -195,10 +225,10 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 51 Quality
 - Scenario ID: D51-07
 - Exact scenario name: Quality-based price
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `offer_service.py:100-140` (manual price negotiation); `sale_order_service.py:238-250` (`QualityDispute`, human-mediated)
-- Missing component: No formula ties `quality_grade` to a price adjustment — grade is snapshotted for reference only, never used to compute/adjust `price_per_unit`
-- Required implementation: A grade→price adjustment rule (e.g., a per-crop grade-multiplier table) applied at offer creation or acceptance; out of scope until a formal grading engine exists (see D51-01/D52-02)
+- Current implementation status: **FUTURE (later continuation session, was Partial)** - D52-02's grading engine now exists (VERIFIED), removing that specific blocker, but a real grade→price MULTIPLIER (e.g. "Grade A is worth 1.15x Grade B") requires an authoritative pricing/market-rate data source this project doesn't have and structurally never fabricates - the same class of deferral as D21-01's seeding-rate dataset. Building one now would mean inventing numbers, not implementing a feature.
+- Existing relevant files/classes/functions: `offer_service.py:100-140` (manual price negotiation); `sale_order_service.py:238-250` (`QualityDispute`, human-mediated); `crop_grade_option_service.py` (grading engine, now VERIFIED)
+- Missing component: n/a - deliberately deferred pending a real, sourced grade-to-price rate table
+- Required implementation: none until a real, cited pricing data source is available
 - Dependencies: Blocked on a structured (non-free-text) `quality_grade` taxonomy (D51-01/D52-02, currently IMPLEMENTED/PARTIAL respectively) — building a price rule on top of free text would be fragile
 - Backend work: `offer_service.py` (price computation), a new `crop_grade_price_rule` service/table
 - Database/migration work: new table for per-crop grade→multiplier rates, or a rate field on `crop_master`
@@ -233,10 +263,10 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 52 Post-Harvest
 - Scenario ID: D52-05
 - Exact scenario name: Transport (post-harvest)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `CollectionOption` enum (`harvest_listing.py:22-25`)
-- Missing component: No booking/execution workflow behind the label — see Domain 55 for full detail
-- Required implementation: See D55-01/02/06/07/08 required-implementation entries below — this row is a duplicate summary of that same gap at the post-harvest-workflow level
+- Current implementation status: **VERIFIED (later continuation session, was Partial)** - the EXECUTION half (pickup/delivery confirmation) is real and tested, see D55-06/D55-07 below. Transporter BOOKING/assignment (D55-02) remains correctly OUT_OF_SCOPE (a real external transporter-marketplace relationship this project structurally never fabricates) - disclosed, not a hidden gap.
+- Existing relevant files/classes/functions: `CollectionOption` enum (`harvest_listing.py:22-25`); `POST /marketplace/sales/{id}/advance` (the real pickup/delivery execution chain, see D55-06/07)
+- Missing component: none for the execution half this row's own scenario name covers; transporter booking (D55-02) is a separate, correctly out-of-scope concept
+- Required implementation: none
 - Dependencies: D55 domain entirely
 - Backend work: see D55 rows
 - Database/migration work: see D55 rows
@@ -252,10 +282,11 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 55 Transport
 - Scenario ID: D55-06
 - Exact scenario name: Pickup
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `CollectionOption.BUYER_COLLECTION` (`harvest_listing.py:22-25`)
-- Missing component: No pickup-confirmation workflow/status on `SaleOrder`
-- Required implementation: Add a pickup-confirmation state or sub-status to `SaleOrder`'s existing 11-state lifecycle, gated on `delivery_option == BUYER_COLLECTION`
+- Current implementation status: **VERIFIED (later continuation session, was Partial - already complete, stale citation)** - direct re-read this session found `SaleOrderStatus.COLLECTED` already exists in `ALLOWED_SALE_ORDER_TRANSITIONS` (`READY_FOR_COLLECTION -> COLLECTED -> IN_TRANSIT -> DELIVERED`), reachable via the real, generic `POST /marketplace/sales/{sale_id}/advance` endpoint (its own docstring: "A single endpoint for the farmer-driven PREPARING -> READY_FOR_COLLECTION -> COLLECTED -> IN_TRANSIT -> DELIVERED chain") - and already exercised end-to-end by the existing `tests/test_marketplace_offers.py` full-lifecycle test. This row's own citation ("no pickup-confirmation workflow") was stale.
+- Existing relevant files/classes/functions: `SaleOrderStatus.COLLECTED`, `ALLOWED_SALE_ORDER_TRANSITIONS` (`models/sale_order.py`), `sale_order_service.advance_status`, `POST /marketplace/sales/{sale_id}/advance`
+- Missing component: none
+- Required implementation: none
+- Verification method: existing automated test (the full accept->preparing->ready_for_collection->collected->in_transit->delivered->confirm-delivery->pay sequence in `tests/test_marketplace_offers.py`), re-confirmed passing this session
 - Dependencies: D55-07 (delivery — same gap, opposite `CollectionOption` value), D62-08 (sale status lifecycle it would extend)
 - Backend work: `sale_order.py` (`ALLOWED_SALE_ORDER_TRANSITIONS`), `sale_order_service.py`
 - Database/migration work: new status enum value(s) or a `picked_up_at` timestamp column on `sale_orders`
@@ -271,10 +302,11 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 55 Transport
 - Scenario ID: D55-07
 - Exact scenario name: Delivery
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `CollectionOption.FARMER_DELIVERY` (`harvest_listing.py:22-25`); generic `Delivery` model scoped to dealer input-purchase orders only (`delivery_service.py:1-6`)
-- Missing component: No delivery-confirmation state on `SaleOrder` tied to `FARMER_DELIVERY` specifically
-- Required implementation: Same pattern as D55-06 — a delivery-confirmation state on `SaleOrder`, or extend the existing dealer-order `Delivery` model to also cover harvest sales if that reuse is architecturally acceptable
+- Current implementation status: **VERIFIED (later continuation session, was Partial - already complete, same evidence as D55-06)** - `SaleOrderStatus.DELIVERED` is the terminal state of the same already-real `advance` chain; the buyer's own `POST /purchases/{sale_id}/confirm-delivery` then transitions to `PAYMENT_PENDING`. No `CollectionOption`-specific branching is needed since the same chain serves both pickup and delivery cases identically.
+- Existing relevant files/classes/functions: `SaleOrderStatus.DELIVERED`, `sale_order_service.buyer_confirm_delivery`, `POST /marketplace/purchases/{sale_id}/confirm-delivery`
+- Missing component: none
+- Required implementation: none
+- Verification method: existing automated test, re-confirmed passing this session (same citation as D55-06)
 - Dependencies: D55-06 (pickup), D62-08 (sale status lifecycle)
 - Backend work: `sale_order.py`, `sale_order_service.py`, possibly `delivery_service.py` if reused
 - Database/migration work: new status/timestamp column on `sale_orders`, or a new FK linking `Delivery` to `sale_orders`
@@ -290,11 +322,11 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 55 Transport
 - Scenario ID: D55-08
 - Exact scenario name: Cost
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `LedgerCategory.TRANSPORT` (`ledger_entry.py:65`)
-- Missing component: No rate/quote/automatic cost computation tied to a specific sale or transporter — only a farmer's own manual bookkeeping tag
-- Required implementation: Same underlying gap as D57-04/D58-02 (real transport-cost figure) — a rate table or quote mechanism feeding both the marketplace `charges` field and the ledger category
-- Dependencies: D57-04, D58-02 (transport deduction), D55-02 (transporter assignment, OUT_OF_SCOPE)
+- Current implementation status: **VERIFIED (later continuation session, was Partial)** - D57-04's itemized `SaleOrder.transport_charge` now provides a real, farmer-entered transport-cost figure tied to the SPECIFIC sale (not just an undifferentiated ledger tag), closing this row's own cited dependency. A predictive rate/quote mechanism (estimating cost BEFORE the fact) and transporter-specific tracking remain correctly unbuilt - both require either a real rate-data source or the OUT_OF_SCOPE transporter-assignment feature (D55-02), disclosed not hidden.
+- Existing relevant files/classes/functions: `LedgerCategory.TRANSPORT` (`ledger_entry.py:65`); `SaleOrder.transport_charge` (new, migration `6701f6e3a235`)
+- Missing component: none for a real, actual (not predictive) transport-cost figure tied to a specific sale
+- Required implementation: none for this row's core ask; a rate/quote mechanism remains blocked on a real market-rate data source
+- Dependencies: D57-04 (VERIFIED this session), D55-02 (transporter assignment, OUT_OF_SCOPE, correctly not needed for this row's now-VERIFIED core ask)
 - Backend work: see D57-04's Backend work entry — the same rate mechanism would populate both `AcceptOfferRequest.charges` and a ledger entry
 - Database/migration work: see D57-04
 - Mobile work: none beyond existing manual ledger-entry screen
@@ -309,7 +341,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 57 Market Comparison
 - Scenario ID: D57-02
 - Exact scenario name: Price comparison (across markets, for selling)
-- Current implementation status: Partial
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - NOT built, still structurally requires the Missing D56/D57-01 market/mandi entity, per this row's own citation; building "cross-market comparison" without it would mean fabricating market data)
 - Existing relevant files/classes/functions: `GET /marketplace/listings/{id}/offers` (`marketplace.py:81-87`); `buyer_offers` table
 - Missing component: Only compares offers on one listing; no cross-"market"/mandi comparison exists (no `Market`/`Mandi` entity at all — see D57-01/D56-01)
 - Required implementation: Structurally blocked on D56/D57-01 (no mandi/market entity exists) — building "cross-market" comparison without D56 would mean fabricating market data; the farmer-facing offer comparison that does exist (one listing's own offers) is otherwise complete
@@ -328,10 +360,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 57 Market Comparison
 - Scenario ID: D57-04
 - Exact scenario name: Transport cost
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `AcceptOfferRequest.charges` (`backend/app/schemas/marketplace.py:46-52`, `Decimal`, default 0, `ge=0`, docstring: "always farmer-entered, never computed/estimated"); consumed at `offer_service.py:161-177`
-- Missing component: `charges` is one undifferentiated lump sum — no distinct, itemized transport figure exists (vs. commission/storage)
-- Required implementation: Split `charges` into itemized fields (`transport_charge`, `commission_charge`, `storage_charge`), or add a structured breakdown object alongside the existing lump-sum field for backward compatibility
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `AcceptOfferRequest.transport_charge`/`commission_charge`/`storage_charge` (optional, migration `6701f6e3a235`) - when any is given, they REPLACE the lump `charges` (which becomes their sum); a client that only sends `charges` sees no behavior change
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `tests/test_marketplace_offers.py::test_itemized_charges_sum_into_charges_and_net_value`, `::test_itemized_charges_are_none_when_only_the_lump_sum_is_given`, `::test_partial_itemized_charges_treat_the_unset_ones_as_zero`
+- Verification method: automated test, confirmed passing
 - Dependencies: D57-05 (commission), D58-02 (transport deduction, same underlying field), D57-07/D58-06 (net realization, which reads this field)
 - Backend work: `schemas/marketplace.py` (new itemized fields on `AcceptOfferRequest`), `offer_service.py:161-177` (sum itemized fields into `charges`/`net_value`)
 - Database/migration work: new columns on `sale_orders` (e.g. `transport_charge`, `commission_charge`, `storage_charge`), or a JSONB breakdown column, plus a migration
@@ -347,10 +381,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 57 Market Comparison
 - Scenario ID: D57-05
 - Exact scenario name: Commission
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: same `AcceptOfferRequest.charges` field as D57-04
-- Missing component: No distinct commission concept — folded into the same undifferentiated `charges` lump sum
-- Required implementation: Same itemization work as D57-04 — a distinct `commission_charge` field/rate
+- Current implementation status: **VERIFIED (later continuation session, was Partial - same fix as D57-04)**
+- Existing relevant files/classes/functions: new `AcceptOfferRequest.commission_charge` (same migration/mechanism as D57-04)
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: same as D57-04
+- Verification method: automated test, confirmed passing
 - Dependencies: D57-04 (shared field), D58-03 (commission deduction, same gap)
 - Backend work: same as D57-04
 - Database/migration work: same as D57-04
@@ -366,10 +402,10 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 57 Market Comparison
 - Scenario ID: D57-07
 - Exact scenario name: Net realization (post-cost comparison across options)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `offer_service.py:161-177` — `net_value = gross_value - charges` where `charges` is now `payload.charges` (real, farmer-entered), not the old hardcoded zero
-- Missing component: The structural "can never differ from gross" defect is fixed, but `net_value` still reflects one manual lump-sum deduction, not a computed transport/commission/storage breakdown — no true "compare net realization across options" capability exists (that requires D57-01's market registry too)
-- Required implementation: Itemization work from D57-04/D57-05/D58-02/D58-03, plus (for the "comparison across options" half specifically) the market-registry prerequisite from D57-01/D56
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - itemization half now DONE via D57-04/05, but this row's own scenario name is specifically "comparison ACROSS OPTIONS", which structurally requires the Missing D56/D57-01 market registry; NOT built, would mean fabricating market data)
+- Existing relevant files/classes/functions: `offer_service.py` — `net_value = gross_value - charges`, now with `charges` optionally itemized (D57-04/05, VERIFIED this session) into `transport_charge`/`commission_charge`/`storage_charge`
+- Missing component: the itemized-breakdown half is now closed; the cross-market/cross-option COMPARISON half remains blocked on D56/D57-01
+- Required implementation: none for itemization (done); the market-registry prerequisite (D57-01/D56) for the comparison half remains out of this session's scope
 - Dependencies: D57-04, D57-05, D58-02, D58-03 (itemization), D57-01/D56 (market registry, for the comparison half), D58-06 (identical underlying field)
 - Backend work: same as D57-04, plus a `GET`-side comparison endpoint once multiple markets/options exist
 - Database/migration work: same as D57-04
@@ -385,10 +421,10 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 58 Net Realization
 - Scenario ID: D58-02
 - Exact scenario name: Transport (deduction)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `AcceptOfferRequest.charges` (`schemas/marketplace.py:46-52`), consumed at `offer_service.py:161-177`
-- Missing component: Not a distinct transport deduction — folded into the single `charges` lump sum
-- Required implementation: Same itemization as D57-04
+- Current implementation status: **VERIFIED (later continuation session, was Partial - same fix as D57-04)**
+- Existing relevant files/classes/functions: `AcceptOfferRequest.transport_charge` (same as D57-04, one fix closes both domain groupings of this identical gap)
+- Missing component: none
+- Required implementation: none
 - Dependencies: D57-04 (identical gap, different domain grouping)
 - Backend work: same as D57-04
 - Database/migration work: same as D57-04
@@ -404,10 +440,10 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 58 Net Realization
 - Scenario ID: D58-03
 - Exact scenario name: Commission (deduction)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: same `AcceptOfferRequest.charges` field
-- Missing component: Not a distinct commission deduction — folded into the same lump sum
-- Required implementation: Same itemization as D57-05
+- Current implementation status: **VERIFIED (later continuation session, was Partial - same fix as D57-05)**
+- Existing relevant files/classes/functions: `AcceptOfferRequest.commission_charge` (same as D57-05)
+- Missing component: none
+- Required implementation: none
 - Dependencies: D57-05 (identical gap, different domain grouping)
 - Backend work: same as D57-05
 - Database/migration work: same as D57-05
@@ -423,11 +459,11 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 58 Net Realization
 - Scenario ID: D58-06
 - Exact scenario name: Net realization (final)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `sale_order.py:73` (`net_value` column); `offer_service.py:161-177`
-- Missing component: Same as D57-07 — computed but from a single manual lump-sum deduction, not itemized transport/commission/storage/handling components (D58-02/03/04/05)
-- Required implementation: Same itemization as D57-07/D57-04/05
-- Dependencies: D58-02, D58-03, D58-04 (handling, still MISSING), D58-05 (storage, still MISSING)
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - 2 of 4 itemized components now VERIFIED via D58-02/03 [transport/commission], but D58-04 [handling] and D58-05 [storage] remain genuinely Missing - NOT built, out of this Partial-only session's scope; disclosed as a partial-itemization state, not silently force-closed)
+- Existing relevant files/classes/functions: `sale_order.py` (`net_value`, plus new `transport_charge`/`commission_charge`); `offer_service.py`
+- Missing component: D58-04 (handling) and D58-05 (storage) itemized fields remain unbuilt
+- Required implementation: same itemization pattern as D57-04/05, applied to handling/storage once those rows are in scope
+- Dependencies: D58-02, D58-03 (both VERIFIED this session), D58-04 (handling, still MISSING), D58-05 (storage, still MISSING)
 - Backend work: same as D57-04
 - Database/migration work: same as D57-04
 - Mobile work: same as D57-04 — `SaleDetailScreen`'s `net_value` display
@@ -461,10 +497,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 59 Buyer Matching
 - Scenario ID: D59-05
 - Exact scenario name: Location (matching)
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `harvest_listings.service_area` (JSONB, `harvest_listing.py:3-4,40`, deliberately approximate — state/district only)
-- Missing component: Approximate location is stored/displayed but never used to filter/rank/match listings against a buyer's own registered service area; no distance sort exists
-- Required implementation: A filter/sort on `GET /marketplace/listings` comparing the buyer's own service-area field (if one exists on `BuyerBusinessProfile`) against each listing's `service_area`, at the same state/district granularity (never exact coordinates, to preserve the existing privacy design)
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `near_me` query param on `GET /marketplace/listings`; resolves the CALLING buyer's own `ProfessionalProfile.service_area` (reached via `BuyerBusinessProfile.professional_id`, the same shared base field dealers already use for D44-02) and filters `harvest_repository.list_active_listings` via a JSONB `service_area["district"]`/`["state"]` match - same approximate-only granularity, never exact coordinates
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `tests/test_marketplace_offers.py::test_near_me_filters_to_listings_matching_the_buyers_own_service_area`, `::test_without_near_me_all_listings_are_returned_unfiltered`
+- Verification method: automated test, confirmed passing
 - Dependencies: D59-01 (buyer requirements capture), D59-07 (automated matching — the larger feature this would be part of)
 - Backend work: `marketplace.py` listing-browse endpoint, `harvest_service.py` or a new `buyer_matching_service.py`
 - Database/migration work: none — both fields already exist; this is a query-layer gap only
@@ -480,10 +518,10 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 61 FPO
 - Scenario ID: D61-04
 - Exact scenario name: Grading
-- Current implementation status: Partial
+- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - NOT built, structurally requires the Missing D61-02 pooled-listing feature first; `HarvestListing.farmer_id` remains a single FK. The grading engine itself, `CropGradeOption`, is now VERIFIED and dimension-agnostic, but is not the blocker here.)
 - Existing relevant files/classes/functions: single-farmer `quality_grade` free text (`harvest_listing.py:38`)
 - Missing component: No group/pooled grading concept — only individual-listing grading exists
-- Required implementation: Structurally blocked on D61-02 (multi-farmer pooled listing, currently MISSING — `HarvestListing.farmer_id` is a single FK) being built first; pooled grading cannot exist without a pooled listing to grade
+- Required implementation: none until D61-02 (multi-farmer pooled listing) exists; pooled grading cannot exist without a pooled listing to grade
 - Dependencies: D61-02 (aggregation/pooling), D61-03 (bulk quantity) — both MISSING and prerequisite
 - Backend work: none until D61-02 exists
 - Database/migration work: none until D61-02 exists
@@ -537,10 +575,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 67 Disputes
 - Scenario ID: D67-03
 - Exact scenario name: Evidence
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `evidence_note: str | None` (free text) on `OrderDispute`/`QualityDispute` (`order_dispute.py:54`, `sale_dispute.py:83`)
-- Missing component: No photo/image evidence upload for either dispute type — a disclosed gap (`docs/REFUND_DISPUTE.md:17-25`, `docs/QUALITY_DISPUTE.md:21-28`), deliberately not reusing the crop-photo pipeline to avoid conflating domains
-- Required implementation: A dedicated dispute-evidence image upload (its own storage key column, not a reuse of `CropPhoto`), consistent with the project's stated reason for not reusing that pipeline
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `app/services/dispute_evidence_service.py` (its own container prefix/storage pipeline, reusing only `validate_upload`/`process_image`/`FileStorage`, never `CropPhoto`'s table/key); `OrderDispute.evidence_image_key`/`SaleDispute.evidence_image_key` (migration `9c134957c681`); `POST /orders/{order_id}/dispute/evidence` (farmer-only, ownership-checked) and `POST /marketplace/disputes/{dispute_id}/evidence` (either party to the underlying sale, ownership-checked)
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `tests/test_orders.py::test_farmer_can_upload_dispute_evidence_image`, `::test_farmer_cannot_upload_evidence_to_another_farmers_dispute`; `tests/test_marketplace_offers.py::test_farmer_can_upload_sale_dispute_evidence_image`, `::test_buyer_can_upload_sale_dispute_evidence_image`, `::test_farmer_cannot_upload_evidence_to_another_farmers_sale_dispute`
+- Verification method: automated test, confirmed passing
 - Dependencies: D67-01 (dispute creation, this would extend), D67-06 (admin resolution, which would review the evidence)
 - Backend work: new `dispute_evidence_image_key` column/service on `order_dispute.py`/`sale_dispute.py`, an upload endpoint mirroring the existing crop-photo upload pattern but as its own distinct pipeline
 - Database/migration work: new nullable image-storage-key column(s) on `order_disputes`/`sale_disputes` (or a new `dispute_evidence` table for multiple images), plus migration
@@ -578,10 +618,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 69 Expenses
 - Scenario ID: D69-08
 - Exact scenario name: Storage expense
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `LedgerCategory` enum (`ledger_entry.py:57-67`) — no `STORAGE` value; must use `OTHER`
-- Missing component: No dedicated ledger category for storage expenses — logged as undifferentiated `OTHER`, losing reporting granularity
-- Required implementation: Add `LedgerCategory.STORAGE` to the enum
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `LedgerCategory.STORAGE` (migration `ff72e5d0b5a7`)
+- Missing component: none
+- Required implementation: none
+- Tests added and passing: `tests/test_ledger.py::test_storage_category_entry_persists_and_sums_correctly`
+- Verification method: automated test, confirmed passing
 - Dependencies: D53 domain (storage itself is entirely MISSING) — this is purely a bookkeeping-category gap, independent of whether a storage-booking feature ever exists
 - Backend work: `ledger_entry.py` enum addition; no service logic changes needed since the generic ledger-entry creation path already handles any category value
 - Database/migration work: a migration adding `STORAGE` to the Postgres native enum type backing `LedgerCategory`
@@ -597,10 +639,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 70 Revenue
 - Scenario ID: D70-04
 - Exact scenario name: Plot association
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `CropCycle.plot_id` (`crop_cycle.py:79`) — relational path exists via `LedgerEntry → CropCycle → Plot`
-- Missing component: No ledger/financial query or endpoint performs that join — confirmed absent from `ledger_entry_repository.py`/`crop_financial_service.py`
-- Required implementation: A plot-scoped financial-summary query, joining `LedgerEntry → CropCycle → Plot` and aggregating — this is the same underlying gap as D71-05 (Plot P&L); see that row for the concrete implementation plan
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `ledger_entry_repository.compute_totals_for_plot` + `crop_financial_service.get_plot_financial_summary` + `GET /plots/{plot_id}/financial-summary` - a pure read aggregation, no new column. Deliberately scoped to totals only (cost/revenue/profit) - no per-acre metrics, no cost-variance, no stage breakdown; a fuller Plot P&L view (per-acre, etc.) remains separately tracked as D71-05 (Missing), not attempted here, to avoid silently completing an entire separately-catalogued Missing scenario as a side effect of this Partial-only pass.
+- Missing component: none for this row's own literal scope (a plot-scoped cost/revenue/profit rollup)
+- Required implementation: none
+- Tests added and passing: `tests/test_crop_financials.py::test_plot_financial_summary_aggregates_across_every_cycle_the_plot_has_had`, `::test_plot_financial_summary_is_zero_not_missing_with_no_entries`, `::test_cannot_access_another_farmers_plot_financial_summary`
+- Verification method: automated test, confirmed passing
 - Dependencies: D71-05 (Plot P&L, MISSING) — same required join, described fully there
 - Backend work: see D71-05
 - Database/migration work: see D71-05 ("none" — no direct `plot_id` column needed on `LedgerEntry` itself, the join is sufficient)
@@ -616,10 +660,12 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 70 Revenue
 - Scenario ID: D70-05
 - Exact scenario name: Season association
-- Current implementation status: Partial
-- Existing relevant files/classes/functions: `CropCycle.season: Season | None` (`crop_cycle.py:86-87`)
-- Missing component: Reachable via join, never actually queried by any financial service — same pattern as D70-04
-- Required implementation: A season-scoped financial-summary query, same shape as D71-07 (Season P&L) — see that row
+- Current implementation status: **VERIFIED (later continuation session, was Partial)**
+- Existing relevant files/classes/functions: new `ledger_entry_repository.compute_totals_for_season` + `crop_financial_service.get_season_financial_summary` + `GET /farmers/me/seasons/{season}/financial-summary` - same deliberately-scoped-to-totals-only boundary as D70-04; a fuller Season P&L view remains separately tracked as D71-07 (Missing), not attempted here.
+- Missing component: none for this row's own literal scope
+- Required implementation: none
+- Tests added and passing: `tests/test_crop_financials.py::test_season_financial_summary_aggregates_across_plots_and_excludes_other_seasons`
+- Verification method: automated test, confirmed passing
 - Dependencies: D71-07 (Season P&L, MISSING) — same required aggregation, described fully there
 - Backend work: see D71-07
 - Database/migration work: see D71-07 ("none" — `CropCycle.season` already exists)

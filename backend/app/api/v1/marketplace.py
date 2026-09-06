@@ -5,15 +5,20 @@ sale lifecycle, dispute/feedback.
 """
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core import error_codes
+from app.core.config import Settings, get_settings
 from app.core.current_user import CurrentUser, require_role
+from app.core.errors import AppError
 from app.core.payment_provider_dependency import get_payment_gateway_provider
 from app.core.roles import Role
+from app.core.storage_dependency import get_file_storage
 from app.db.session import get_db
 from app.models.sale_order import SaleOrderStatus
 from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
+from app.services.storage.base import FileStorage
 from app.schemas.harvest import HarvestListingListResponse
 from app.schemas.marketplace import (
     AcceptOfferRequest,
@@ -62,14 +67,20 @@ def get_my_buyer_profile(
 @router.get("/listings", response_model=HarvestListingListResponse)
 def browse_listings(
     crop_id: uuid.UUID | None = Query(default=None),
+    near_me: bool = Query(default=False),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(require_role(_BUYER_ROLE)),
     db: Session = Depends(get_db),
 ) -> HarvestListingListResponse:
     """Buyer-facing 'Sell Your Crop' browse - service_area shown is
-    already approximate-only at the data model level."""
-    return harvest_service.list_marketplace_listings(db, crop_id=crop_id, limit=limit, offset=offset)
+    already approximate-only at the data model level. D59-05
+    (docs/audit/FINAL_CANONICAL_group_C.md): near_me filters against the
+    CALLING buyer's own registered service_area, at the same approximate
+    granularity - never exact coordinates."""
+    return harvest_service.list_marketplace_listings(
+        db, crop_id=crop_id, near_me_user_id=current_user.user_id if near_me else None, limit=limit, offset=offset
+    )
 
 
 @router.post("/listings/{listing_id}/offers", response_model=OfferResponse, status_code=201)
@@ -245,6 +256,25 @@ def add_farmer_dispute_response(
     """D67-05 (docs/audit/FINAL_CANONICAL_group_C.md): symmetric
     counterpart to add_quality_dispute_details above."""
     sale_order_service.add_farmer_response(db, current_user.user_id, dispute_id, payload)
+
+
+@router.post("/disputes/{dispute_id}/evidence", response_model=SaleDisputeResponse)
+async def upload_sale_dispute_evidence(
+    dispute_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value, _BUYER_ROLE)),
+    db: Session = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+    settings: Settings = Depends(get_settings),
+) -> SaleDisputeResponse:
+    """D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): either party to the
+    underlying sale (farmer or buyer) may attach evidence."""
+    if not file.content_type:
+        raise AppError(error_codes.VALIDATION_ERROR, "Missing file content type.", 422)
+    content = await file.read()
+    return sale_order_service.upload_dispute_evidence(
+        db, current_user.user_id, dispute_id, current_user.role, content, file.content_type, storage, settings
+    )
 
 
 # --- Sales (buyer side) ---

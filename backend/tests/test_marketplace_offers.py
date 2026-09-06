@@ -1,12 +1,27 @@
+import io
 import threading
 
 from tests.conftest import auth_headers
+from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
 from tests.harvest_factories import valid_buyer_payload, valid_harvest_listing_payload, valid_offer_payload
+from tests.photo_factories import make_test_jpeg
 
 
 def _create_listing(client, tokens, crop_cycle_id, **overrides):
     harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
     return client.post(f"/api/v1/harvests/{harvest['id']}/listing", json=valid_harvest_listing_payload(**overrides), headers=auth_headers(tokens)).json()
+
+
+def _create_second_crop_cycle(client, tokens, sample_crop_id):
+    """A second, independent plot+cycle for the same farmer - needed
+    whenever a test wants two listings at once, since a plot only ever
+    has one active crop cycle (D6-07) and a harvest listing needs its own
+    crop cycle."""
+    headers = auth_headers(tokens)
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    cycle = client.post(f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers).json()
+    return cycle["id"]
 
 
 def test_buyer_registration_starts_pending(client):
@@ -27,6 +42,38 @@ def test_verified_buyer_can_browse_listings(client, farmer_with_crop_cycle, veri
     assert response.status_code == 200
     ids = [item["id"] for item in response.json()["items"]]
     assert listing["id"] in ids
+
+
+def test_near_me_filters_to_listings_matching_the_buyers_own_service_area(client, farmer_with_crop_cycle, verified_buyer, sample_crop_id):
+    """D59-05 (docs/audit/FINAL_CANONICAL_group_C.md): verified_buyer's own
+    registered service_area is Kerala/Thrissur, matching the default
+    listing payload - a listing elsewhere is correctly excluded."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    matching = _create_listing(client, farmer_tokens, crop_cycle_id)
+    other_cycle_id = _create_second_crop_cycle(client, farmer_tokens, sample_crop_id)
+    elsewhere = _create_listing(
+        client, farmer_tokens, other_cycle_id, service_area={"state": "Karnataka", "district": "Bengaluru Urban"}
+    )
+
+    response = client.get("/api/v1/marketplace/listings?near_me=true", headers=auth_headers(buyer_tokens))
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()["items"]]
+    assert matching["id"] in ids
+    assert elsewhere["id"] not in ids
+
+
+def test_without_near_me_all_listings_are_returned_unfiltered(client, farmer_with_crop_cycle, verified_buyer, sample_crop_id):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    other_cycle_id = _create_second_crop_cycle(client, farmer_tokens, sample_crop_id)
+    elsewhere = _create_listing(
+        client, farmer_tokens, other_cycle_id, service_area={"state": "Karnataka", "district": "Bengaluru Urban"}
+    )
+
+    response = client.get("/api/v1/marketplace/listings", headers=auth_headers(buyer_tokens))
+    ids = [item["id"] for item in response.json()["items"]]
+    assert elsewhere["id"] in ids
 
 
 # --- Buyer's own min/max purchase quantity enforcement (D59-03) ---
@@ -146,6 +193,66 @@ def test_charges_cannot_exceed_gross_value(client, farmer_with_crop_cycle, verif
 
     sale = client.post(f"/api/v1/marketplace/offers/{offer['id']}/accept", json={"charges": "5000.00"}, headers=auth_headers(farmer_tokens))
     assert sale.status_code == 422
+
+
+def test_itemized_charges_sum_into_charges_and_net_value(client, farmer_with_crop_cycle, verified_buyer):
+    """D57-04/D57-05/D58-02/D58-03 (docs/audit/FINAL_CANONICAL_group_C.md):
+    an itemized breakdown, when given, replaces the lump charges figure
+    with the itemized fields' own sum."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="100.00")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(quantity="100.00", price_per_unit="30.00"), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(
+        f"/api/v1/marketplace/offers/{offer['id']}/accept",
+        json={"transport_charge": "100.00", "commission_charge": "50.00", "storage_charge": "25.00"},
+        headers=auth_headers(farmer_tokens),
+    )
+    assert sale.status_code == 200
+    body = sale.json()
+    assert body["transport_charge"] == "100.00"
+    assert body["commission_charge"] == "50.00"
+    assert body["storage_charge"] == "25.00"
+    assert body["charges"] == "175.00"
+    assert body["net_value"] == "2825.00"
+
+
+def test_itemized_charges_are_none_when_only_the_lump_sum_is_given(client, farmer_with_crop_cycle, verified_buyer):
+    """Backward compatibility: a farmer/client that only ever sends
+    `charges` sees no itemized breakdown fabricated for them."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="100.00")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(quantity="100.00", price_per_unit="30.00"), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(
+        f"/api/v1/marketplace/offers/{offer['id']}/accept", json={"charges": "250.00"}, headers=auth_headers(farmer_tokens)
+    ).json()
+    assert sale["charges"] == "250.00"
+    assert sale["transport_charge"] is None
+    assert sale["commission_charge"] is None
+    assert sale["storage_charge"] is None
+
+
+def test_partial_itemized_charges_treat_the_unset_ones_as_zero(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    listing = _create_listing(client, farmer_tokens, crop_cycle_id, quantity_available="100.00")
+    offer = client.post(
+        f"/api/v1/marketplace/listings/{listing['id']}/offers", json=valid_offer_payload(quantity="100.00", price_per_unit="30.00"), headers=auth_headers(buyer_tokens)
+    ).json()
+
+    sale = client.post(
+        f"/api/v1/marketplace/offers/{offer['id']}/accept", json={"transport_charge": "100.00"}, headers=auth_headers(farmer_tokens)
+    ).json()
+    assert sale["transport_charge"] == "100.00"
+    assert sale["commission_charge"] is None
+    assert sale["charges"] == "100.00"
 
 
 def test_cannot_accept_an_expired_offer(client, farmer_with_crop_cycle, verified_buyer):
@@ -435,6 +542,41 @@ def test_farmer_cannot_respond_to_another_farmers_dispute(client, farmer_with_cr
         json={"farmer_response": "Trying to respond to someone else's dispute"},
         headers=auth_headers(other_tokens),
     )
+    assert response.status_code == 404
+
+
+def test_farmer_can_upload_sale_dispute_evidence_image(client, farmer_with_crop_cycle, verified_buyer):
+    """D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated
+    dispute-evidence pipeline, never a reuse of the crop-photo one."""
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    files = {"file": ("evidence.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    response = client.post(f"/api/v1/marketplace/disputes/{dispute['id']}/evidence", files=files, headers=auth_headers(farmer_tokens))
+    assert response.status_code == 200
+    assert response.json()["evidence_image_key"] is not None
+
+
+def test_buyer_can_upload_sale_dispute_evidence_image(client, farmer_with_crop_cycle, verified_buyer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    files = {"file": ("evidence.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    response = client.post(f"/api/v1/marketplace/disputes/{dispute['id']}/evidence", files=files, headers=auth_headers(buyer_tokens))
+    assert response.status_code == 200
+    assert response.json()["evidence_image_key"] is not None
+
+
+def test_farmer_cannot_upload_evidence_to_another_farmers_sale_dispute(client, farmer_with_crop_cycle, verified_buyer, another_farmer):
+    farmer_tokens, crop_cycle_id = farmer_with_crop_cycle
+    buyer_tokens, _ = verified_buyer
+    _, dispute = _create_sale_and_dispute_it(client, farmer_tokens, buyer_tokens, crop_cycle_id)
+
+    _, other_tokens = another_farmer
+    files = {"file": ("evidence.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")}
+    response = client.post(f"/api/v1/marketplace/disputes/{dispute['id']}/evidence", files=files, headers=auth_headers(other_tokens))
     assert response.status_code == 404
 
 

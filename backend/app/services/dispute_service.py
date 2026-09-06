@@ -12,15 +12,17 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
+from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.order import OrderStatus
 from app.models.order_dispute import DisputeStatus, OrderDispute, Refund, RefundStatus, RefundType
 from app.repositories import order_repository, user_repository
 from app.schemas.order import DisputeCreateRequest, DisputeListResponse, DisputeResolveRequest, DisputeResponse, RefundResponse
-from app.services import notification_service
+from app.services import dispute_evidence_service, notification_service
 from app.services.audit_logger import AuditLogger
 from app.services.order_transitions import apply_transition
+from app.services.storage.base import FileStorage
 from app.services.weather_alert_rules import AlertCandidate
 
 _OPEN_DISPUTE_STATUSES = [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW, DisputeStatus.ESCALATED]
@@ -154,4 +156,26 @@ def get_my_dispute(db: Session, farmer_id: str, order_id: uuid.UUID) -> DisputeR
     dispute = order_repository.get_dispute_for_order(db, order.id)
     if dispute is None:
         raise AppError(error_codes.NOT_FOUND, "No dispute found for this order.", 404)
+    return DisputeResponse.model_validate(dispute)
+
+
+def upload_evidence_image(
+    db: Session, farmer_id: str, order_id: uuid.UUID, file_content: bytes, declared_mime_type: str, storage: FileStorage, settings: Settings
+) -> DisputeResponse:
+    """D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): the farmer's own
+    dispute on their own order only - same ownership chain as
+    get_my_dispute/create_dispute."""
+    order = order_repository.get_order_owned_by_farmer(db, order_id, uuid.UUID(farmer_id))
+    if order is None:
+        raise AppError(error_codes.NOT_FOUND, "Order not found.", 404)
+    dispute = order_repository.get_dispute_for_order(db, order.id)
+    if dispute is None:
+        raise AppError(error_codes.NOT_FOUND, "No dispute found for this order.", 404)
+
+    dispute.evidence_image_key = dispute_evidence_service.store_evidence_image(
+        file_content, declared_mime_type, dispute.id, storage, settings
+    )
+    AuditLogger(db).log("ORDER_DISPUTE_EVIDENCE_UPLOADED", actor_id=farmer_id, actor_role="farmer", entity="order_dispute", entity_id=str(dispute.id))
+    db.commit()
+    db.refresh(dispute)
     return DisputeResponse.model_validate(dispute)

@@ -13,14 +13,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core import error_codes
+from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.payment import Payment, PaymentProvider, PaymentStatus
 from app.models.sale_dispute import QualityDispute, SaleDispute, SaleDisputeStatus, SaleFeedback
 from app.models.sale_order import ALLOWED_SALE_ORDER_TRANSITIONS, CANCELLATION_REASONS, SaleOrder, SaleOrderStatus
 from app.repositories import harvest_repository, order_repository, professional_repository, sale_order_repository, user_repository
-from app.services import notification_service
+from app.services import dispute_evidence_service, notification_service
 from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
+from app.services.storage.base import FileStorage
 from app.services.weather_alert_rules import AlertCandidate
 from app.schemas.marketplace import (
     FarmerDisputeResponseRequest,
@@ -320,6 +322,43 @@ def add_farmer_response(db: Session, farmer_id: str, dispute_id: uuid.UUID, payl
         entity="sale_dispute", entity_id=str(dispute.id),
     )
     db.commit()
+
+
+def upload_dispute_evidence(
+    db: Session,
+    user_id: str,
+    dispute_id: uuid.UUID,
+    role: str,
+    file_content: bytes,
+    declared_mime_type: str,
+    storage: FileStorage,
+    settings: Settings,
+) -> SaleDisputeResponse:
+    """D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): only a party to the
+    underlying sale (the farmer or the buyer) may attach evidence -
+    404-not-403 by design, same ID-enumeration-avoidance convention as
+    add_farmer_response above."""
+    dispute = sale_order_repository.get_dispute(db, dispute_id)
+    if dispute is None:
+        raise AppError(error_codes.NOT_FOUND, "Dispute not found.", 404)
+
+    if role == "farmer":
+        sale = sale_order_repository.get_sale_owned_by_farmer(db, dispute.sale_order_id, uuid.UUID(user_id))
+    else:
+        buyer = professional_repository.get_by_user_id(db, uuid.UUID(user_id))
+        sale = sale_order_repository.get_sale_owned_by_buyer(db, dispute.sale_order_id, buyer.id) if buyer else None
+    if sale is None:
+        raise AppError(error_codes.NOT_FOUND, "Dispute not found.", 404)
+
+    dispute.evidence_image_key = dispute_evidence_service.store_evidence_image(
+        file_content, declared_mime_type, dispute.id, storage, settings
+    )
+    AuditLogger(db).log(
+        "SALE_DISPUTE_EVIDENCE_UPLOADED", actor_id=user_id, actor_role=role, entity="sale_dispute", entity_id=str(dispute.id)
+    )
+    db.commit()
+    db.refresh(dispute)
+    return SaleDisputeResponse.model_validate(dispute)
 
 
 def submit_feedback(db: Session, user_id: str, sale_id: uuid.UUID, payload: SaleFeedbackCreateRequest, role: str) -> None:

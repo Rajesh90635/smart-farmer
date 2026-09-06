@@ -28,6 +28,22 @@ def test_create_manual_revenue_entry(client, farmer_with_crop_cycle):
     assert response.json()["entry_type"] == "revenue"
 
 
+def test_storage_category_entry_persists_and_sums_correctly(client, farmer_with_crop_cycle):
+    """D69-08 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated ledger
+    category so storage spend is no longer undifferentiated within OTHER."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/ledger/entries",
+        json={"entry_type": "expense", "category": "storage", "amount": "150.00", "entry_date": "2026-01-01"},
+        headers=auth_headers(tokens),
+    )
+    assert response.status_code == 201
+    assert response.json()["category"] == "storage"
+
+    summary = client.get(f"/api/v1/crop-cycles/{crop_cycle_id}/ledger", headers=auth_headers(tokens)).json()
+    assert Decimal(summary["total_expense"]) == Decimal("150.00")
+
+
 def test_cannot_create_entry_under_another_farmers_crop_cycle(client, farmer_with_crop_cycle, another_farmer):
     _, crop_cycle_id = farmer_with_crop_cycle
     _, tokens_b = another_farmer

@@ -121,6 +121,10 @@ class DisputeResponse(BaseModel):
     order_id: uuid.UUID
     reason: DisputeReason
     status: DisputeStatus
+    # D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): non-None once the
+    # farmer has uploaded a supporting evidence image via its own upload
+    # endpoint (never a reuse of the crop-photo pipeline/table).
+    evidence_image_key: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -226,6 +226,78 @@ def test_per_acre_financials_scale_with_actual_plot_area(client, farmer_with_cro
     assert Decimal(summary["profit_loss_per_acre"]) == Decimal("300.00")
 
 
+def test_plot_financial_summary_aggregates_across_every_cycle_the_plot_has_had(client, farmer_with_crop_cycle, sample_crop_id):
+    """D70-04 (docs/audit/FINAL_CANONICAL_group_C.md): the plot's own
+    previous (now-cancelled) cycle's ledger entries must still count -
+    this is a rollup across the plot's whole history, not just its
+    currently-active cycle."""
+    tokens, first_cycle_id = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    plot_id = client.get(f"/api/v1/crops/{first_cycle_id}", headers=headers).json()["plot_id"]
+
+    _create_ledger_expense(client, tokens, first_cycle_id, "300.00")
+    client.put(f"/api/v1/crops/{first_cycle_id}", json={"cultivation_status": "cancelled"}, headers=headers)
+
+    from tests.farm_factories import valid_crop_cycle_payload
+
+    second_cycle = client.post(
+        f"/api/v1/plots/{plot_id}/crops", json=valid_crop_cycle_payload(sample_crop_id), headers=headers
+    ).json()
+    _create_ledger_expense(client, tokens, second_cycle["id"], "200.00")
+    _create_ledger_revenue(client, tokens, second_cycle["id"], "1000.00")
+
+    summary = client.get(f"/api/v1/plots/{plot_id}/financial-summary", headers=headers).json()
+    assert Decimal(summary["total_cost"]) == Decimal("500.00")
+    assert Decimal(summary["total_revenue"]) == Decimal("1000.00")
+    assert Decimal(summary["profit_loss"]) == Decimal("500.00")
+
+
+def test_plot_financial_summary_is_zero_not_missing_with_no_entries(client, farmer_with_crop_cycle):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    headers = auth_headers(tokens)
+    plot_id = client.get(f"/api/v1/crops/{crop_cycle_id}", headers=headers).json()["plot_id"]
+
+    summary = client.get(f"/api/v1/plots/{plot_id}/financial-summary", headers=headers).json()
+    assert Decimal(summary["total_cost"]) == Decimal("0")
+    assert Decimal(summary["total_revenue"]) == Decimal("0")
+
+
+def test_cannot_access_another_farmers_plot_financial_summary(client, farmer_with_crop_cycle, another_farmer):
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    plot_id = client.get(f"/api/v1/crops/{crop_cycle_id}", headers=auth_headers(tokens)).json()["plot_id"]
+
+    _, other_tokens = another_farmer
+    response = client.get(f"/api/v1/plots/{plot_id}/financial-summary", headers=auth_headers(other_tokens))
+    assert response.status_code == 404
+
+
+def test_season_financial_summary_aggregates_across_plots_and_excludes_other_seasons(client, farmer_with_crop_cycle, sample_crop_id):
+    """D70-05 (docs/audit/FINAL_CANONICAL_group_C.md): two different
+    plots/cycles sharing one Season value must be combined; a cycle in a
+    different season must not leak in."""
+    tokens, kharif_cycle_id = farmer_with_crop_cycle  # farmer_with_crop_cycle's default season is kharif
+    headers = auth_headers(tokens)
+
+    from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
+
+    farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=headers).json()
+    plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    another_kharif_cycle = client.post(
+        f"/api/v1/plots/{plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id, season="kharif"), headers=headers
+    ).json()
+    rabi_plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=headers).json()
+    rabi_cycle = client.post(
+        f"/api/v1/plots/{rabi_plot['id']}/crops", json=valid_crop_cycle_payload(sample_crop_id, season="rabi"), headers=headers
+    ).json()
+
+    _create_ledger_expense(client, tokens, kharif_cycle_id, "100.00")
+    _create_ledger_expense(client, tokens, another_kharif_cycle["id"], "50.00")
+    _create_ledger_expense(client, tokens, rabi_cycle["id"], "999.00")
+
+    summary = client.get("/api/v1/farmers/me/seasons/kharif/financial-summary", headers=headers).json()
+    assert Decimal(summary["total_cost"]) == Decimal("150.00")
+
+
 def test_cannot_access_another_farmers_financial_summary(client, farmer_with_crop_cycle, another_farmer):
     _, crop_cycle_id = farmer_with_crop_cycle
     _, tokens_b = another_farmer

@@ -58,6 +58,9 @@ class SaleDispute(Base):
         SAEnum(SaleDisputeReason, name="sale_dispute_reason", native_enum=True, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated, own
+    # storage pipeline - never a reuse of CropPhoto's key/table.
+    evidence_image_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     status: Mapped[SaleDisputeStatus] = mapped_column(
         SAEnum(SaleDisputeStatus, name="sale_dispute_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),

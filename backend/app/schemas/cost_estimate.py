@@ -69,3 +69,25 @@ class CropFinancialSummaryResponse(BaseModel):
     cost_per_acre: Decimal | None = None
     revenue_per_acre: Decimal | None = None
     profit_loss_per_acre: Decimal | None = None
+
+
+class PlotFinancialTotalsResponse(BaseModel):
+    """D70-04 (docs/audit/FINAL_CANONICAL_group_C.md): totals across every
+    crop cycle this plot has ever had, not just the currently-active one.
+    Deliberately scoped to totals only (no per-stage/per-acre breakdown,
+    no cost-variance) - a fuller Plot P&L view is tracked separately as
+    D71-05 (Missing), not attempted here."""
+    plot_id: uuid.UUID
+    total_cost: Decimal
+    total_revenue: Decimal
+    profit_loss: Decimal
+
+
+class SeasonFinancialTotalsResponse(BaseModel):
+    """D70-05: same shape as PlotFinancialTotalsResponse, scoped by
+    Season instead of Plot. A fuller Season P&L view is tracked
+    separately as D71-07 (Missing), not attempted here."""
+    season: str
+    total_cost: Decimal
+    total_revenue: Decimal
+    profit_loss: Decimal

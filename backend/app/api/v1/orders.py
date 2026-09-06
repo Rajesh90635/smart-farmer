@@ -4,16 +4,20 @@ payment + delivery + dispute/refund endpoints.
 """
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core import error_codes
 from app.core.config import Settings, get_settings
 from app.core.current_user import CurrentUser, require_role
+from app.core.errors import AppError
 from app.core.payment_provider_dependency import get_payment_gateway_provider
 from app.core.roles import Role
+from app.core.storage_dependency import get_file_storage
 from app.db.session import get_db
 from app.models.order import OrderStatus
 from app.services.payment.payment_gateway_provider import PaymentGatewayProvider
+from app.services.storage.base import FileStorage
 from app.schemas.order import (
     CartItemAddRequest,
     CartItemUpdateRequest,
@@ -192,6 +196,23 @@ def get_dispute(
     db: Session = Depends(get_db),
 ) -> DisputeResponse:
     return dispute_service.get_my_dispute(db, current_user.user_id, order_id)
+
+
+@router.post("/orders/{order_id}/dispute/evidence", response_model=DisputeResponse)
+async def upload_dispute_evidence(
+    order_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+    settings: Settings = Depends(get_settings),
+) -> DisputeResponse:
+    """D67-03 (docs/audit/FINAL_CANONICAL_group_C.md): a dedicated
+    dispute-evidence pipeline, never a reuse of the crop-photo one."""
+    if not file.content_type:
+        raise AppError(error_codes.VALIDATION_ERROR, "Missing file content type.", 422)
+    content = await file.read()
+    return dispute_service.upload_evidence_image(db, current_user.user_id, order_id, content, file.content_type, storage, settings)
 
 
 @router.get("/disputes", response_model=DisputeListResponse)
