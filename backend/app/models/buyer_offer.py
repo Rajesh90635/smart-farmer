@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Numeric, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -72,5 +72,10 @@ class CounterOffer(Base):
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # Monotonic tiebreaker for "latest counter" ordering - created_at alone can tie
+    # (two counters inserted within the same timestamp tick); id is a random UUID4
+    # with no correlation to insertion order, so a real DB-assigned IDENTITY is used
+    # instead. See get_latest_counter_offer.
+    sequence: Mapped[int] = mapped_column(BigInteger, Identity(always=False), nullable=False)
 
     buyer_offer: Mapped["BuyerOffer"] = relationship(back_populates="counter_offers")

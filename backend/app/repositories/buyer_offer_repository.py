@@ -45,10 +45,24 @@ def create_counter_offer(db: Session, counter: CounterOffer) -> CounterOffer:
 
 
 def list_counter_offers(db: Session, buyer_offer_id: uuid.UUID) -> list[CounterOffer]:
-    return list(db.execute(select(CounterOffer).where(CounterOffer.buyer_offer_id == buyer_offer_id).order_by(CounterOffer.created_at.asc())).scalars().all())
+    # `sequence` (a real, monotonically-increasing IDENTITY column) is the
+    # deterministic tiebreaker for two counters inserted within the same
+    # created_at timestamp tick - see get_latest_counter_offer.
+    return list(
+        db.execute(
+            select(CounterOffer).where(CounterOffer.buyer_offer_id == buyer_offer_id).order_by(CounterOffer.created_at.asc(), CounterOffer.sequence.asc())
+        ).scalars().all()
+    )
 
 
 def get_latest_counter_offer(db: Session, buyer_offer_id: uuid.UUID) -> CounterOffer | None:
+    # Ordering by created_at alone is not reliable - two counters can be inserted
+    # within the same timestamp tick, and Postgres does not guarantee insertion
+    # order for ties. `sequence` is a real, monotonically-increasing IDENTITY
+    # column (unlike `id`, a random UUID4), so it is the deterministic tiebreaker.
     return db.execute(
-        select(CounterOffer).where(CounterOffer.buyer_offer_id == buyer_offer_id).order_by(CounterOffer.created_at.desc()).limit(1)
+        select(CounterOffer)
+        .where(CounterOffer.buyer_offer_id == buyer_offer_id)
+        .order_by(CounterOffer.created_at.desc(), CounterOffer.sequence.desc())
+        .limit(1)
     ).scalar_one_or_none()
