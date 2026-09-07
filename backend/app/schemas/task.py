@@ -14,6 +14,12 @@ class TaskCreateRequest(BaseModel):
     depends_on_task_id: uuid.UUID | None = None
     repeat_interval_days: int | None = Field(default=None, gt=0)
     priority: TaskPriority = TaskPriority.MEDIUM
+    # D37-01 (docs/audit/FINAL_CANONICAL_group_B.md): optional - only ever
+    # set when the farmer explicitly confirms a review's task suggestion
+    # (see CaseResponse.suggests_task), never auto-populated. Validated in
+    # task_service.create_task to belong to a review of THIS crop cycle's
+    # own case, owned by this farmer.
+    source_case_review_id: uuid.UUID | None = None
 
 
 class TaskUpdateRequest(BaseModel):
@@ -54,6 +60,7 @@ class TaskResponse(BaseModel):
     repeat_interval_days: int | None = None
     priority: TaskPriority
     cancellation_reason: str | None = None
+    source_case_review_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 

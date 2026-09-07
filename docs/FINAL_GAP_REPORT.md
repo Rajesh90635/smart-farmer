@@ -14,13 +14,13 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 473 |
+| Verified | 479 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **546** |
-| Partial | 21 |
-| Missing | 159 |
+| **Attended (Verified + Implemented)** | **552** |
+| Partial | 20 |
+| Missing | 154 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **180** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **174** |
 | Future | 38 |
 | Out of Scope | 26 |
 | Environment Dependent | 8 |

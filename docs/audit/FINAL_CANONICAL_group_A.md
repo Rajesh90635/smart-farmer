@@ -51,10 +51,10 @@ groups and are out of scope here).
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 171 |
+| VERIFIED | 172 |
 | IMPLEMENTED | 25 |
 | PARTIAL | 6 |
-| MISSING | 26 |
+| MISSING | 25 |
 | BROKEN | 0 |
 | FUTURE | 15 |
 | OUT_OF_SCOPE | 3 |
@@ -72,6 +72,20 @@ built, per this row's own recommendation despite its blocker (D20) now being res
 VERIFIED, validated irrigation/soil enums on Plot); D18-06/D18-08 MISSING→VERIFIED (-2
 MISSING, +2 VERIFIED, new IrrigationRecord model); D24-04 PARTIAL→VERIFIED (-1 PARTIAL, +1
 VERIFIED, InputInventoryItem.acquired_at).)*
+
+*(Later continuation session — Missing Backlog Batch 6, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 6's approved scenario count, same situation Batch 3/4/5
+disclosed. 1 row in this group MISSING→VERIFIED (-1 Missing, +1
+Verified): D2-07 (farm infrastructure) - new `FarmInfrastructure` model,
+list-per-farm CRUD mirroring `plot_service.py`'s exact shape, farmer-
+entered and informational only. Total unchanged at 252 - an internal
+status move, zero new/removed rows. See
+`docs/audit/FINAL_CANONICAL_group_B.md`'s own Batch 6 note for the rest
+of this batch's scenarios (D37-01/02/03/05/06). See
+docs/FINAL_GAP_REPORT.md for the cross-group reconciliation and exact
+full-suite counts.)*
 
 *(Later continuation session — Missing Backlog Batch 4, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. This session began after
@@ -914,7 +928,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test, confirmed passing
 
 ### D2-07 - Domain 2 (Farm) - Farm infrastructure
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 6)** - new `FarmInfrastructure` model (migration `a6b7c8d9e0f2`), list-per-farm CRUD (`POST/GET /farms/{farm_id}/infrastructure`, `DELETE /farms/{farm_id}/infrastructure/{item_id}`) mirroring `plot_service.py`'s exact shape, farmer-entered and informational only - no automated logic reads these rows. Tests: `tests/test_farm_infrastructure.py` (5 new).
 - Existing relevant files/classes/functions: none - farm.py:36-104 has no storage/well/borewell/shed/equipment field
 - Missing component: entire farm-infrastructure data model
 - Required implementation: add a lightweight FarmInfrastructure table (or JSON field) capturing storage/well/shed/equipment presence, farmer-entered, informational only (no automated logic should read it yet)

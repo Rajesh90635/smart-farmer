@@ -39,6 +39,30 @@ discussed in `FINAL_GAP_REPORT.md` as a borderline case but its resolution is "k
 MISSING, not FUTURE" — i.e. **no status change** — so it appears below with no delta-table
 row, unchanged from the cluster file.)
 
+*(Later continuation session — Missing Backlog Batch 6, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 6's approved scenario count, same situation Batch 3/4/5
+disclosed. 5 rows in this group closed (-4 Missing/-1 Partial, +5
+Verified): D37-01 (recommendation creates task - new nullable
+`Task.source_case_review_id` FK, farmer-confirmed only via a suggestion
+surfaced on `CaseResponse`, never auto-created), D37-02 (due-date hint,
+shares D37-01's implementation), D37-03 (priority - the previously-
+blocked "derived from a recommendation's urgency" half now closed by
+D37-01's suggestion deriving from the case's own real `CasePriority`,
+never fabricated), D37-05 (completion - zero new logic needed, resolves
+automatically through the existing generic complete endpoint, exactly as
+this row's own text anticipated), and D37-06 (follow-up - new nullable
+`TreatmentRecord.source_task_id` FK, reusing the existing effectiveness-
+comparison logic unchanged). A related completeness gap closed in the
+process: `CaseResponse` previously had no `latest_review_id` at all,
+meaning Batch 5's own review-acknowledgement endpoint (D36-04) was
+unreachable from any farmer-facing read path - fixed alongside the new
+suggestion fields. Total unchanged at 149 - every change here is an
+internal status move, zero new/removed rows. See
+docs/FINAL_GAP_REPORT.md for the cross-group reconciliation and exact
+full-suite counts.)*
+
 *(Later continuation session — Missing Backlog Batch 5, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
 the remaining backlog's own dependency graph - no persisted priority-plan
@@ -75,10 +99,10 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 78 |
+| VERIFIED | 83 |
 | IMPLEMENTED | 4 |
-| PARTIAL | 4 |
-| MISSING | 57 |
+| PARTIAL | 3 |
+| MISSING | 53 |
 | BROKEN | 0 |
 | FUTURE | 5 |
 | OUT_OF_SCOPE | 0 |
@@ -894,7 +918,7 @@ bucket above.)
 - Domain: 37 (Recommendation → Task)
 - Scenario ID: D37-01
 - Exact scenario name: Recommendation creates task
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 6)** - new nullable `Task.source_case_review_id` FK (migration `e4f5a6b7c8d9`), farmer-confirmed only: `case_service._build_task_suggestion` surfaces a suggestion on `CaseResponse` (`suggests_task`/`suggested_task_type`/`suggested_due_date`/`suggested_priority`) only when the latest review's outcome is `field_visit_required` - it never creates a Task itself. The farmer then explicitly calls the existing `POST /crop-cycles/{id}/tasks` with the optional `source_case_review_id`, validated (`task_service._validate_source_case_review`) to be a review the farmer owns, for a case tied to THIS SAME crop cycle. **A related completeness gap closed in the process**: `CaseResponse` previously had no `latest_review_id` at all, meaning Batch 5's own `POST /cases/{id}/reviews/{review_id}/acknowledge` (D36-04) was unreachable from any farmer-facing read path - fixed by adding `latest_review_id` alongside the new suggestion fields. Tests: `tests/test_cases.py` (7 new, shared across D37-01/02/03/05/06).
 - Existing relevant files/classes/functions: `case_service.py`/`treatment_service.py` (zero `Task` import/creation, confirmed by grep); `task.py:1-18` docstring; `task.py:57-59` (`tasks` has no FK to `crop_health_cases`/`case_reviews`)
 - Missing component: No code path exists connecting a `CaseReview` outcome to task creation — this is an explicit, deliberate deferral ("no crop-calendar, no validated agronomic rule dataset"), not an oversight
 - Required implementation: If ever built, must avoid inventing an agronomic rule dataset — the safest version is a farmer-confirmed suggestion: when a review outcome implies action (e.g. `field_visit_required`), prompt the farmer with an optional "Create a task for this?" action that pre-fills a generic task, never an auto-generated one with fabricated agronomic content
@@ -913,7 +937,7 @@ bucket above.)
 - Domain: 37 (Recommendation → Task)
 - Scenario ID: D37-02
 - Exact scenario name: Due date
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 6)** - `case_service._build_task_suggestion`'s `suggested_due_date` (today + `_SUGGESTED_TASK_DUE_IN_DAYS`, this row's own worked example of 3 days - a farmer-editable pre-fill default, not a validated agronomic rule), surfaced on `CaseResponse.suggested_due_date`. Shares D37-01's implementation and tests.
 - Existing relevant files/classes/functions: `task.py:68` (`due_date` stored as-is, never auto-derived)
 - Missing component: As a "recommendation → due date" concept, this doesn't exist since no recommendation ever creates a task (D37-01)
 - Required implementation: Once D37-01's farmer-confirmed task-creation flow exists, allow (but never require) the review to suggest a due date offset (e.g. "field visit recommended within 3 days") which pre-fills, not auto-sets, the `due_date` field on the farmer-confirmed task
@@ -932,20 +956,16 @@ bucket above.)
 - Domain: 37 (Recommendation → Task)
 - Scenario ID: D37-03
 - Exact scenario name: Priority
-- Current implementation status: Partial (re-confirmed genuinely blocked, later continuation session - the recommendation-derived half remains blocked on Missing D37-01; NOT built, since building it would mean building D37-01 itself)
+- Current implementation status: **VERIFIED (Missing Backlog Batch 6)** - both halves now closed. The independent half (`Task.priority`, migration `a1b2c3d4e5f6`) was already VERIFIED in an earlier session. The previously-blocked "derived from a recommendation's urgency" half is now closed by D37-01: `case_service._build_task_suggestion`'s `suggested_priority` is derived from the case's own real `CasePriority` (never fabricated - `CasePriority.URGENT` maps to the closest real `TaskPriority.HIGH`, since `TaskPriority` has no 4th level), surfaced on `CaseResponse.suggested_priority`. Shares D37-01's implementation and tests (`tests/test_cases.py::test_case_suggests_a_task_when_review_outcome_is_field_visit_required` asserts `suggested_priority == "high"` for a `farmer_dispute`-reason case).
 - Fix applied this session: `Task.priority` (`TaskPriority` enum: low/medium/high, default
   medium), migration `a1b2c3d4e5f6`, farmer-settable at creation
   (`TaskCreateRequest.priority`), returned in `TaskResponse`. Tested:
   `test_tasks.py::test_task_priority_defaults_to_medium_and_is_settable`. This closes the
   "independent of whether it's ever populated from a recommendation" half this row's own
   citation called out as buildable now.
-- Still genuinely missing: the "derived from a recommendation's urgency" half — correctly
-  blocked on D37-01 (Recommendation creates task), which remains unbuilt (P2). Not
-  reclassified VERIFIED because that half of the scenario's own wording is not yet
-  satisfiable.
 - Mobile work: not yet done — task list/detail screens should render priority; tracked as a
   follow-up.
-- Verification method: automated test (the independent half only), confirmed passing
+- Verification method: automated test, confirmed passing (both halves)
 
 ### D37-04 — Farmer notification
 - Domain: 37 (Recommendation → Task)
@@ -966,7 +986,7 @@ bucket above.)
 - Domain: 37 (Recommendation → Task)
 - Scenario ID: D37-05
 - Exact scenario name: Completion
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 6)** - exactly as this row's own text anticipated, zero new completion logic was needed once D37-01 existed: a recommendation-sourced task (carrying `source_case_review_id`) completes through the existing generic `POST /tasks/{id}/complete` endpoint unchanged. Test: `tests/test_cases.py::test_farmer_can_create_a_task_from_a_suggested_recommendation`.
 - Existing relevant files/classes/functions: `task.py:50-55` (`CheckConstraint` enforcing `completed_at` on completion — generic task completion, 14 passing tests per `PROJECT_STATUS.md` Step 16)
 - Missing component: Generic task completion works and is fully tested, but as a "recommendation task" completion specifically it does not exist, since no task is ever created from a recommendation (D37-01)
 - Required implementation: No new completion logic needed — once D37-01 exists (tasks carry `source_case_review_id`), the existing `POST /tasks/{id}/complete` endpoint already handles completion correctly; this scenario resolves automatically once D37-01 is built
@@ -985,7 +1005,7 @@ bucket above.)
 - Domain: 37 (Recommendation → Task)
 - Scenario ID: D37-06
 - Exact scenario name: Follow-up
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 6)** - new nullable `TreatmentRecord.source_task_id` FK (migration `f5a6b7c8d9e0`), an optional link from a farmer-confirmed recommendation-task back to a `TreatmentRecord`, reusing `treatment_service.py`'s existing effectiveness-comparison logic completely unchanged (a pure informational reference, exactly as this row's own text asked for - no new comparison logic invented). Validated to be a task the farmer owns, for the same crop cycle. Tests: `tests/test_cases.py` (2 new).
 - Existing relevant files/classes/functions: none directly — the unrelated Treatment/Follow-up system (`treatment_service.py`) is the closest analog but has no FK back to `case_reviews`
 - Missing component: Since no task is ever created from a recommendation (D37-01), there is necessarily no mechanism to follow up on one
 - Required implementation: Once D37-01 exists, add an optional link from a completed recommendation-task back to a new `TreatmentFollowUp`/`TreatmentRecord`, letting the farmer report the outcome of acting on the recommendation, reusing `treatment_service.py`'s existing effectiveness-comparison logic rather than inventing a new one

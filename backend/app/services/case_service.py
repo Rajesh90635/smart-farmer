@@ -24,6 +24,7 @@ from app.models.crop_health_case import CasePriority, CaseStatus, CropHealthCase
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.photo_access_grant import PhotoAccessGrant
 from app.models.professional_feedback import ProfessionalFeedback
+from app.models.task import TaskPriority, TaskType
 from app.repositories import case_repository, crop_cycle_repository, farm_repository, location_repository, professional_repository, user_repository
 from app.schemas.case import (
     CaseAssignmentResponse,
@@ -42,6 +43,41 @@ from app.services.weather_alert_rules import AlertCandidate
 
 _MAX_SECOND_OPINIONS = 1
 _ASSIGNMENT_TIMEOUT_HOURS = 24
+
+# D37-01/02/03 (docs/audit/FINAL_CANONICAL_group_B.md): the ONE outcome
+# this project treats as implying a farmer action, per D37-01's own
+# worked example ("e.g. field_visit_required") - deliberately not
+# extended to other outcomes without a similarly explicit citation, to
+# avoid inventing new "this implies action" rules.
+_TASK_SUGGESTING_OUTCOMES = {"field_visit_required"}
+# D37-02's own worked example ("field visit recommended within 3 days") -
+# a farmer-editable pre-fill default, not a validated agronomic rule.
+_SUGGESTED_TASK_DUE_IN_DAYS = 3
+# D37-03: TaskPriority has no URGENT value, so a case's own URGENT maps to
+# the closest real TaskPriority (HIGH) rather than inventing a 4th level.
+_CASE_TO_TASK_PRIORITY = {
+    CasePriority.LOW: TaskPriority.LOW,
+    CasePriority.MEDIUM: TaskPriority.MEDIUM,
+    CasePriority.HIGH: TaskPriority.HIGH,
+    CasePriority.URGENT: TaskPriority.HIGH,
+}
+
+
+def _build_task_suggestion(review: "CaseReview | None", case: CropHealthCase, today) -> dict:
+    """D37-01/02/03 (docs/audit/FINAL_CANONICAL_group_B.md): a farmer-
+    confirmed suggestion only - this NEVER creates a Task itself (see
+    task_service.create_task for the farmer-confirmed creation path).
+    suggested_priority is derived from the case's own real CasePriority
+    (never fabricated) - this is what closes D37-03's previously-blocked
+    "derived from a recommendation's urgency" half."""
+    if review is None or review.outcome not in _TASK_SUGGESTING_OUTCOMES:
+        return {"suggests_task": False, "suggested_task_type": None, "suggested_due_date": None, "suggested_priority": None}
+    return {
+        "suggests_task": True,
+        "suggested_task_type": TaskType.GENERAL,
+        "suggested_due_date": today + timedelta(days=_SUGGESTED_TASK_DUE_IN_DAYS),
+        "suggested_priority": _CASE_TO_TASK_PRIORITY[case.priority],
+    }
 
 _PRIORITY_BY_REASON = {
     "farmer_requested": CasePriority.MEDIUM,
@@ -191,8 +227,15 @@ def get_my_case(db: Session, farmer_id: str, case_id: uuid.UUID) -> CaseResponse
 
     response = CaseResponse.model_validate(case)
     reviews = case_repository.list_reviews_for_case(db, case_id)
-    if reviews:
-        response.latest_review_notes = reviews[-1].notes
+    latest_review = reviews[-1] if reviews else None
+    if latest_review is not None:
+        response.latest_review_notes = latest_review.notes
+        response.latest_review_id = latest_review.id
+    suggestion = _build_task_suggestion(latest_review, case, datetime.now(timezone.utc).date())
+    response.suggests_task = suggestion["suggests_task"]
+    response.suggested_task_type = suggestion["suggested_task_type"]
+    response.suggested_due_date = suggestion["suggested_due_date"]
+    response.suggested_priority = suggestion["suggested_priority"]
     return response
 
 

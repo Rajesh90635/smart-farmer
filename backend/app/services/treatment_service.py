@@ -28,7 +28,7 @@ from app.models.crop_health_case import CaseStatus
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.treatment_follow_up import TreatmentFollowUp
 from app.models.treatment_record import TreatmentRecord
-from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, treatment_repository, user_repository
+from app.repositories import ai_analysis_repository, case_repository, crop_cycle_repository, task_repository, treatment_repository, user_repository
 from app.services import case_service, notification_service
 from app.services.weather_alert_rules import AlertCandidate
 from app.schemas.treatment import (
@@ -54,6 +54,14 @@ def create_treatment(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payl
     existing_analyses = ai_analysis_repository.list_for_crop_cycle(db, crop_cycle_id, farmer_uuid)
     before_analysis = max(existing_analyses, key=lambda a: a.created_at) if existing_analyses else None
 
+    # D37-06 (docs/audit/FINAL_CANONICAL_group_B.md): a source task must be
+    # a real task the farmer owns, for THIS SAME crop cycle - never
+    # trusted merely because it parses as a UUID.
+    if payload.source_task_id is not None:
+        source_task = task_repository.get_owned(db, payload.source_task_id, farmer_uuid)
+        if source_task is None or source_task.crop_cycle_id != crop_cycle_id:
+            raise AppError(error_codes.NOT_FOUND, "Referenced source task not found for this crop cycle.", 404)
+
     treatment = TreatmentRecord(
         farmer_id=farmer_uuid,
         crop_cycle_id=crop_cycle_id,
@@ -63,6 +71,7 @@ def create_treatment(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payl
         application_date=payload.application_date,
         notes=payload.notes,
         next_check_due_date=payload.next_check_due_date,
+        source_task_id=payload.source_task_id,
     )
     treatment_repository.create_treatment(db, treatment)
     db.commit()
@@ -240,6 +249,7 @@ def _to_treatment_response(treatment: TreatmentRecord, before_analysis) -> Treat
         application_date=treatment.application_date,
         notes=treatment.notes,
         next_check_due_date=treatment.next_check_due_date,
+        source_task_id=treatment.source_task_id,
         created_at=treatment.created_at,
     )
 

@@ -35,6 +35,7 @@ from app.models.dealer_product import DealerProduct  # noqa: F401
 from app.models.delivery import Delivery  # noqa: F401
 from app.models.disease_class import DiseaseClass  # noqa: F401
 from app.models.farm import Farm  # noqa: F401
+from app.models.farm_infrastructure import FarmInfrastructure  # noqa: F401
 from app.models.farmer_profile import FarmerProfile  # noqa: F401
 from app.models.harvest_listing import HarvestListing  # noqa: F401
 from app.models.crop_cost_estimate import CropCostEstimate  # noqa: F401

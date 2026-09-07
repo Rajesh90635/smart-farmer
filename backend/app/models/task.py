@@ -121,6 +121,15 @@ class Task(Base):
     )
     repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # D37-01 (docs/audit/FINAL_CANONICAL_group_B.md): optional, farmer-
+    # confirmed only - a review outcome only ever SUGGESTS this task (see
+    # case_service._build_task_suggestion), it is never auto-created.
+    # A reference, not a copy, mirroring TreatmentRecord.before_analysis_id's
+    # own "reference, don't duplicate" pattern.
+    source_case_review_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("case_reviews.id", ondelete="SET NULL"), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)

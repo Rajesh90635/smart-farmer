@@ -13,6 +13,11 @@ class TreatmentCreateRequest(BaseModel):
     # looking "check back on this date" - distinct from FollowUp's own
     # observation_date, which records a check that already happened.
     next_check_due_date: date | None = None
+    # D37-06 (docs/audit/FINAL_CANONICAL_group_B.md): optional link back to
+    # the farmer-confirmed Task a recommendation suggested (D37-01) -
+    # never inferred, only set when the farmer explicitly reports acting
+    # on that task.
+    source_task_id: uuid.UUID | None = None
 
 
 class TreatmentResponse(BaseModel):
@@ -25,6 +30,7 @@ class TreatmentResponse(BaseModel):
     application_date: date
     notes: str | None
     next_check_due_date: date | None = None
+    source_task_id: uuid.UUID | None = None
     created_at: datetime
 
 

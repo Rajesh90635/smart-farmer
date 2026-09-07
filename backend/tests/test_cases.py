@@ -38,6 +38,38 @@ def _create_second_verified_expert():
     return {"access_token": access_token, "refresh_token": "n/a"}
 
 
+def _create_verified_field_agent():
+    """D37-01: 'field_visit_required' is a FIELD_AGENT_OUTCOMES value, not
+    an EXPERT_OUTCOMES one (see app/models/case_review.py) - a case
+    reviewed by an expert can never produce this outcome, so the
+    task-suggestion tests need a real field_agent professional."""
+    from app.core.jwt import create_access_token
+    from app.core.security_passwords import hash_password
+    from app.db.session import SessionLocal
+    from app.models.professional_profile import AvailabilityStatus, ProfessionalProfile, VerificationStatus
+    from app.models.user import User
+    from tests.professional_factories import unique_phone
+
+    db = SessionLocal()
+    user = User(phone_number=unique_phone(), password_hash=hash_password("Str0ngPass1"))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    profile = ProfessionalProfile(
+        user_id=user.id, role="field_agent", display_name="Verified Field Agent",
+        verification_status=VerificationStatus.VERIFIED, availability_status=AvailabilityStatus.AVAILABLE,
+        language_codes=["en"], crop_specialization_ids=[], disease_specialization_categories=[],
+        service_area={"state": "Kerala", "district": "Thrissur"},
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+
+    access_token = create_access_token(subject=str(user.id), role="field_agent")
+    return {"access_token": access_token, "refresh_token": "n/a"}
+
+
 def _create_crop_cycle(client, tokens, sample_crop_id):
     farm = client.post("/api/v1/farms", json=valid_farm_payload(), headers=auth_headers(tokens)).json()
     plot = client.post(f"/api/v1/farms/{farm['id']}/plots", json=valid_plot_payload(), headers=auth_headers(tokens)).json()
@@ -395,5 +427,167 @@ def test_supersedes_review_id_rejects_a_review_from_a_different_case(client, reg
         f"/api/v1/cases/{case_2['id']}/review",
         json={"outcome": "confirmed", "supersedes_review_id": review_1["id"]},
         headers=auth_headers(expert_tokens),
+    )
+    assert response.status_code == 404
+
+
+# --- D37-01/02/03: recommendation -> task suggestion ---
+
+def test_case_suggests_a_task_when_review_outcome_is_field_visit_required(client, registered_farmer, sample_crop_id):
+    _, farmer_tokens = registered_farmer
+    field_agent_tokens = _create_verified_field_agent()
+    # farmer_dispute -> CasePriority.HIGH, so suggested_priority should be TaskPriority.HIGH (D37-03 bonus).
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post(
+        "/api/v1/cases",
+        json=valid_case_payload(crop_cycle_id, reason="farmer_dispute", requested_professional_role="field_agent"),
+        headers=auth_headers(farmer_tokens),
+    ).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(field_agent_tokens))
+    review = client.post(
+        f"/api/v1/cases/{case['id']}/review", json={"outcome": "field_visit_required"}, headers=auth_headers(field_agent_tokens)
+    ).json()
+
+    case_after = client.get(f"/api/v1/cases/{case['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert case_after["latest_review_id"] == review["id"]
+    assert case_after["suggests_task"] is True
+    assert case_after["suggested_task_type"] == "general"
+    assert case_after["suggested_due_date"] is not None
+    assert case_after["suggested_priority"] == "high"  # derived from the case's own real CasePriority.HIGH, D37-03
+
+
+def test_case_does_not_suggest_a_task_for_a_non_suggesting_outcome(client, registered_farmer, sample_crop_id, verified_expert):
+    _, farmer_tokens = registered_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(expert_tokens))
+    client.post(f"/api/v1/cases/{case['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens))
+
+    case_after = client.get(f"/api/v1/cases/{case['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert case_after["suggests_task"] is False
+    assert case_after["suggested_task_type"] is None
+    assert case_after["suggested_due_date"] is None
+    assert case_after["suggested_priority"] is None
+
+
+def test_case_with_no_review_yet_never_suggests_a_task(client, registered_farmer, sample_crop_id):
+    _, farmer_tokens = registered_farmer
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id), headers=auth_headers(farmer_tokens)).json()
+
+    case_after = client.get(f"/api/v1/cases/{case['id']}", headers=auth_headers(farmer_tokens)).json()
+    assert case_after["suggests_task"] is False
+    assert case_after["latest_review_id"] is None
+
+
+# --- D37-01/05/06: farmer-confirmed task creation from a suggestion, completion, treatment follow-up ---
+
+def test_farmer_can_create_a_task_from_a_suggested_recommendation(client, registered_farmer, sample_crop_id):
+    _, farmer_tokens = registered_farmer
+    field_agent_tokens = _create_verified_field_agent()
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post(
+        "/api/v1/cases",
+        json=valid_case_payload(crop_cycle_id, requested_professional_role="field_agent"),
+        headers=auth_headers(farmer_tokens),
+    ).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(field_agent_tokens))
+    review = client.post(
+        f"/api/v1/cases/{case['id']}/review", json={"outcome": "field_visit_required"}, headers=auth_headers(field_agent_tokens)
+    ).json()
+
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Field visit for expert recommendation", "source_case_review_id": review["id"]},
+        headers=auth_headers(farmer_tokens),
+    )
+    assert task.status_code == 201
+    task_body = task.json()
+    assert task_body["source_case_review_id"] == review["id"]
+
+    # D37-05: completes through the existing generic endpoint, no special handling needed.
+    completed = client.post(f"/api/v1/tasks/{task_body['id']}/complete", headers=auth_headers(farmer_tokens))
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+
+
+def test_task_creation_rejects_a_source_review_from_a_different_crop_cycle(client, registered_farmer, sample_crop_id, verified_expert):
+    _, farmer_tokens = registered_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id_1 = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case_1 = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id_1), headers=auth_headers(farmer_tokens)).json()
+    client.post(f"/api/v1/cases/{case_1['id']}/accept", headers=auth_headers(expert_tokens))
+    review = client.post(f"/api/v1/cases/{case_1['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens)).json()
+
+    crop_cycle_id_2 = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id_2}/tasks",
+        json={"title": "Mismatched cycle", "source_case_review_id": review["id"]},
+        headers=auth_headers(farmer_tokens),
+    )
+    assert response.status_code == 404
+
+
+def test_task_creation_rejects_another_farmers_review(client, registered_farmer, another_farmer, sample_crop_id, verified_expert):
+    _, farmer_a_tokens = registered_farmer
+    _, farmer_b_tokens = another_farmer
+    expert_tokens, _ = verified_expert
+    crop_cycle_id_a = _create_crop_cycle(client, farmer_a_tokens, sample_crop_id)
+    case_a = client.post("/api/v1/cases", json=valid_case_payload(crop_cycle_id_a), headers=auth_headers(farmer_a_tokens)).json()
+    client.post(f"/api/v1/cases/{case_a['id']}/accept", headers=auth_headers(expert_tokens))
+    review_a = client.post(f"/api/v1/cases/{case_a['id']}/review", json={"outcome": "confirmed"}, headers=auth_headers(expert_tokens)).json()
+
+    crop_cycle_id_b = _create_crop_cycle(client, farmer_b_tokens, sample_crop_id)
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id_b}/tasks",
+        json={"title": "Not my review", "source_case_review_id": review_a["id"]},
+        headers=auth_headers(farmer_b_tokens),
+    )
+    assert response.status_code == 404
+
+
+def test_treatment_can_link_back_to_a_source_task(client, registered_farmer, sample_crop_id):
+    """D37-06 (docs/audit/FINAL_CANONICAL_group_B.md): reuses the existing
+    effectiveness-comparison logic unchanged - this is a pure informational link."""
+    _, farmer_tokens = registered_farmer
+    field_agent_tokens = _create_verified_field_agent()
+    crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    case = client.post(
+        "/api/v1/cases",
+        json=valid_case_payload(crop_cycle_id, requested_professional_role="field_agent"),
+        headers=auth_headers(farmer_tokens),
+    ).json()
+    client.post(f"/api/v1/cases/{case['id']}/accept", headers=auth_headers(field_agent_tokens))
+    review = client.post(
+        f"/api/v1/cases/{case['id']}/review", json={"outcome": "field_visit_required"}, headers=auth_headers(field_agent_tokens)
+    ).json()
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/tasks",
+        json={"title": "Field visit", "source_case_review_id": review["id"]},
+        headers=auth_headers(farmer_tokens),
+    ).json()
+
+    treatment = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id}/treatments",
+        json={"application_date": "2026-01-01", "source_task_id": task["id"]},
+        headers=auth_headers(farmer_tokens),
+    )
+    assert treatment.status_code == 201
+    assert treatment.json()["source_task_id"] == task["id"]
+
+
+def test_treatment_rejects_a_source_task_from_a_different_crop_cycle(client, registered_farmer, sample_crop_id):
+    _, farmer_tokens = registered_farmer
+    crop_cycle_id_1 = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    task = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id_1}/tasks", json={"title": "Some task"}, headers=auth_headers(farmer_tokens)
+    ).json()
+
+    crop_cycle_id_2 = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
+    response = client.post(
+        f"/api/v1/crop-cycles/{crop_cycle_id_2}/treatments",
+        json={"application_date": "2026-01-01", "source_task_id": task["id"]},
+        headers=auth_headers(farmer_tokens),
     )
     assert response.status_code == 404

@@ -146,6 +146,36 @@ changes this batch). Alembic migration chain re-verified single-headed and appli
 to both dev and test databases. See `docs/audit/FINAL_CANONICAL_group_{B,C,D}.md`'s
 per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
 
+**Updated this later continuation session** (Missing Backlog Batch 6 - assembled directly
+from the remaining backlog's own dependency graph, since no persisted priority-plan doc names
+Batch 6's approved scenario count either, same as Batch 3/4/5) — `docs/FINAL_GAP_REPORT.md`'s
+"FROZEN CANONICAL COUNTS" now read 798 total: 479 Verified, 73 Implemented, 20 Partial, 154
+Missing, 0 Broken, 38 Future, 26 Out of Scope, 8 Environment Dependent; 174 current-scope
+items remain (down from 180 after Batch 5). 6 rows moved Missing→VERIFIED: D2-07 (farm
+infrastructure - new `FarmInfrastructure` model, list-per-farm CRUD mirroring
+`plot_service.py`'s exact shape, farmer-entered and informational only) and D37-01/02/03/05/06
+(recommendation creates task - new nullable `Task.source_case_review_id` FK, a farmer-
+confirmed suggestion surfaced on `CaseResponse` via `case_service._build_task_suggestion`,
+never auto-created; due-date hint and priority share the same suggestion; completion needed
+zero new logic via the existing generic complete endpoint; follow-up added a new nullable
+`TreatmentRecord.source_task_id` FK reusing the existing effectiveness-comparison logic
+unchanged). A related completeness gap closed in the process: `CaseResponse` previously had
+no `latest_review_id` at all, meaning Batch 5's own review-acknowledgement endpoint (D36-04)
+was unreachable from any farmer-facing read path - fixed alongside the new suggestion fields.
+Full backend suite: **986 passed, 0 failed** (up from 972 - +13 new tests, this batch's own:
+`tests/test_farm_infrastructure.py` (5), `tests/test_cases.py` (8)). This run also resolved
+the previously-disclosed `test_personalization.py` flake and a newly-found one
+(`test_cases.py::test_create_case_with_no_available_field_agent_waits_for_assignment`, which
+this batch's own new field_agent-creating test helper had exposed by accumulating verified
+`field_agent` rows in the shared, never-reset `smart_farmer_test` database across prior
+sessions) - both traced to the same disclosed shared-test-database-scale pollution, not an
+application defect, and resolved this session by dropping and recreating `smart_farmer_test`
+from migrations rather than by touching any application or test code. Full Flutter suite:
+**312 passed, 0 failed** (unchanged - no mobile changes this batch). Alembic migration chain
+re-verified single-headed (head `a6b7c8d9e0f2`) and applies cleanly to both dev and the
+freshly-recreated test database. See `docs/audit/FINAL_CANONICAL_group_{A,B}.md`'s
+per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
+
 ## Functional
 
 - 100 domains audited (13 cluster passes, `docs/audit/`), 798 individually-classified

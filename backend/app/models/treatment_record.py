@@ -40,6 +40,13 @@ class TreatmentRecord(Base):
     before_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ai_analyses.id", ondelete="SET NULL"), nullable=True
     )
+    # D37-06 (docs/audit/FINAL_CANONICAL_group_B.md): optional link back to
+    # the farmer-confirmed Task a recommendation suggested (D37-01) - a
+    # reference only, reusing this treatment's own existing effectiveness-
+    # comparison logic unchanged rather than inventing a new one.
+    source_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
 
     application_date: Mapped[date] = mapped_column(Date, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

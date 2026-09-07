@@ -161,6 +161,19 @@ def get_review_for_case(db: Session, review_id: uuid.UUID, case_id: uuid.UUID) -
     return db.execute(select(CaseReview).where(CaseReview.id == review_id, CaseReview.case_id == case_id)).scalar_one_or_none()
 
 
+def get_review_owned_by_farmer(db: Session, review_id: uuid.UUID, farmer_id: uuid.UUID) -> CaseReview | None:
+    """D37-01 (docs/audit/FINAL_CANONICAL_group_B.md): used by
+    task_service.create_task to validate a farmer-supplied
+    source_case_review_id - a CaseReview has no farmer_id of its own,
+    ownership is via its parent CropHealthCase, so this always joins
+    through CropHealthCase rather than trusting a review_id alone."""
+    return db.execute(
+        select(CaseReview).join(CropHealthCase, CaseReview.case_id == CropHealthCase.id).where(
+            CaseReview.id == review_id, CropHealthCase.farmer_id == farmer_id
+        )
+    ).scalar_one_or_none()
+
+
 def create_consent(db: Session, consent: CaseConsent) -> CaseConsent:
     db.add(consent)
     return consent

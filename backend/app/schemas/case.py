@@ -1,11 +1,12 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
 from app.models.case_assignment import AssignmentStatus
 from app.models.case_review import ReviewerRole
 from app.models.crop_health_case import CasePriority, CaseReason, CaseStatus
+from app.models.task import TaskPriority, TaskType
 
 
 class CaseCreateRequest(BaseModel):
@@ -39,6 +40,20 @@ class CaseResponse(BaseModel):
     # single-case detail endpoint) - list_my_cases/create_case leave it
     # None to avoid an extra query per row in a list.
     latest_review_notes: str | None = None
+    # D36-04 (docs/audit/FINAL_CANONICAL_group_B.md): the farmer needs this
+    # id to call POST /cases/{id}/reviews/{review_id}/acknowledge - without
+    # it that endpoint was unreachable from any farmer-facing read path.
+    # Same "only set by get_my_case" scoping as latest_review_notes above.
+    latest_review_id: uuid.UUID | None = None
+    # D37-01/02/03 (docs/audit/FINAL_CANONICAL_group_B.md): a farmer-
+    # confirmed task suggestion derived from the LATEST review's outcome
+    # and this case's own real CasePriority - never auto-created, never
+    # fabricated (see case_service._build_task_suggestion). All None/False
+    # when the latest review doesn't imply a suggested action.
+    suggests_task: bool = False
+    suggested_task_type: TaskType | None = None
+    suggested_due_date: date | None = None
+    suggested_priority: TaskPriority | None = None
     created_at: datetime
     closed_at: datetime | None
 

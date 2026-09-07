@@ -23,7 +23,7 @@ from app.core.errors import AppError
 from app.models.crop_cycle import CultivationStatus
 from app.models.notification import NotificationCategory, NotificationPriority
 from app.models.task import Task, TaskStatus, TaskType
-from app.repositories import crop_cycle_repository, farm_repository, plot_repository, task_repository, user_repository
+from app.repositories import case_repository, crop_cycle_repository, farm_repository, plot_repository, task_repository, user_repository
 from app.schemas.task import (
     TaskActionRequest,
     TaskCalendarGroupResponse,
@@ -71,6 +71,9 @@ def create_task(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payload: 
     if payload.depends_on_task_id is not None:
         _validate_dependency(db, farmer_uuid, crop_cycle_id, payload.depends_on_task_id)
 
+    if payload.source_case_review_id is not None:
+        _validate_source_case_review(db, farmer_uuid, crop_cycle_id, payload.source_case_review_id)
+
     task = Task(
         farmer_id=farmer_uuid,
         crop_cycle_id=crop_cycle_id,
@@ -81,6 +84,7 @@ def create_task(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID, payload: 
         depends_on_task_id=payload.depends_on_task_id,
         repeat_interval_days=payload.repeat_interval_days,
         priority=payload.priority,
+        source_case_review_id=payload.source_case_review_id,
     )
     task_repository.create(db, task)
 
@@ -104,6 +108,16 @@ def _validate_dependency(db: Session, farmer_uuid: uuid.UUID, crop_cycle_id: uui
     if dependency.crop_cycle_id != crop_cycle_id:
         raise AppError(error_codes.VALIDATION_ERROR, "A task can only depend on another task in the same crop cycle.", 422)
     return dependency
+
+
+def _validate_source_case_review(db: Session, farmer_uuid: uuid.UUID, crop_cycle_id: uuid.UUID, review_id: uuid.UUID) -> None:
+    """D37-01 (docs/audit/FINAL_CANONICAL_group_B.md): a source review must
+    be a real review the farmer owns (via its case), for a case tied to
+    THIS SAME crop cycle - never trusted merely because it parses as a
+    UUID, same discipline as _validate_dependency above."""
+    review = case_repository.get_review_owned_by_farmer(db, review_id, farmer_uuid)
+    if review is None or review.case.crop_cycle_id != crop_cycle_id:
+        raise AppError(error_codes.NOT_FOUND, "Referenced case review not found for this crop cycle.", 404)
 
 
 def get_task(db: Session, farmer_id: str, task_id: uuid.UUID) -> TaskResponse:
@@ -382,6 +396,7 @@ def _to_response(db: Session, task: Task, *, today: date) -> TaskResponse:
         repeat_interval_days=task.repeat_interval_days,
         priority=task.priority,
         cancellation_reason=task.cancellation_reason,
+        source_case_review_id=task.source_case_review_id,
     )
 
 
