@@ -42,6 +42,28 @@ class HarvestListResponse(BaseModel):
     total: int
 
 
+class YieldHistoryEntry(BaseModel):
+    """D50-04 (docs/audit/FINAL_CANONICAL_group_C.md): one past harvest for
+    this crop, across ANY crop cycle this farmer has closed - never
+    fabricated for a cycle with no recorded quantity yet (see
+    actual_quantity's own None-ability)."""
+    crop_cycle_id: uuid.UUID
+    harvest_id: uuid.UUID
+    actual_harvest_date: date | None
+    actual_quantity: Decimal | None
+    unit: str
+
+
+class YieldHistoryResponse(BaseModel):
+    crop_id: uuid.UUID
+    items: list[YieldHistoryEntry]
+    # None (never a fabricated 0) when no entry in `items` has a real
+    # actual_quantity yet - same "don't average nothing into zero"
+    # convention as this project's other aggregate fields.
+    average_yield: Decimal | None
+    average_yield_unit: str | None
+
+
 class HarvestListingCreateRequest(BaseModel):
     quantity_available: Decimal = Field(gt=0)
     unit: str = Field(min_length=1, max_length=20)
@@ -55,6 +77,12 @@ class HarvestListingCreateRequest(BaseModel):
     # D52-01 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared only.
     is_sorted: bool = False
     sorting_notes: str | None = Field(default=None, max_length=500)
+    # D51-06 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared only,
+    # never verified against a real issuing authority.
+    certificate_reference: str | None = Field(default=None, max_length=200)
+    # D55-05 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
+    # preferred pickup/delivery date.
+    preferred_pickup_date: date | None = None
 
 
 class HarvestListingResponse(BaseModel):
@@ -71,6 +99,8 @@ class HarvestListingResponse(BaseModel):
     is_active: bool
     is_sorted: bool
     sorting_notes: str | None
+    certificate_reference: str | None
+    preferred_pickup_date: date | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

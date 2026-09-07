@@ -14,17 +14,95 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 488 |
+| Verified | 505 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **561** |
+| **Attended (Verified + Implemented)** | **578** |
 | Partial | 20 |
-| Missing | 143 |
+| Missing | 126 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **163** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **146** |
 | Future | 38 |
 | Out of Scope | 28 |
 | Environment Dependent | 8 |
 | **TOTAL** | **798** |
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING BACKLOG"
+prioritization plan's Batch 8 — the first batch built from the pure Missing-scenario
+backlog rather than a mixed audit-closure pass, per the user's own explicit "implement the
+current canonical 143 Missing scenarios" instruction. No persisted priority-plan doc names
+Batch 8's approved scenario count either, same situation every prior batch disclosed -
+scenarios were selected directly from the remaining Missing backlog's own dependency graph,
+strictly prioritizing rows with (a) no unbuilt product-scope decision and (b) no dependency
+on external data/infrastructure this project doesn't have, per the user's own stop-and-flag
+rule. 17 rows moved Missing→VERIFIED (-17 Missing, +17 Verified): D3-07 (plot boundary as
+plain JSONB points, not PostGIS - not enabled in this project), D5-02 (admin-authored crop
+variety creation), D9-08 (task completion_percentage, farmer-entered, never changes
+status), D13-02/D17-06/D19-04 (season/water/soil append-only history tables, each mirroring
+CropCycleStageHistory's exact convention), D13-04 (zero-code bonus - PROVED, not assumed,
+that already-VERIFIED D8-08 recurrence + D13-05 pruning task type already satisfy perennial
+recurring maintenance), D14-02 (hourly forecast, real Open-Meteo hourly params, reuses the
+weather_snapshots table via a new snapshot_type rather than a new table), D15-05/D15-07
+(storm/hail decoded from the real, public WMO weather-code table - codes 95/96/99), D17-02/
+D17-03 (farmer-declared water_availability + derived water_shortage), D50-04 (historical
+yield aggregation - average_yield honestly stays None today since actual_quantity is never
+populated anywhere in this codebase, a separately-deferred D49-02/D50-02 dependency,
+confirmed by direct grep not assumed), D51-06 (certificate_reference, farmer-declared),
+D55-05 (preferred_pickup_date - a narrower, farmer-stated-preference scope than a full
+buyer-confirmed schedule, which would need D55-06/D55-07's own shape decided first), D58-04
+(handling_charge, same itemized-breakdown convention as transport/commission/storage), and
+D74-03 (photo-to-CropDamageRecord evidence link, reusing the existing disease-AI photo
+pipeline, D74-02's own dependency already VERIFIED).
+
+Genuinely blocked and left Missing, not force-closed (per row, with the real reason):
+D15-06 (Cyclone - no WMO code represents a large-scale cyclone system; re-investigated
+alongside D15-05/07's own WMO decode work and confirmed genuinely blocked on a real
+track/warning feed, same root cause as D75-05), D55-04 (Transport rate - its own row
+explicitly needs a real rate-reference dataset), D11-06 (auto-task on re-sow - would
+contradict this project's own twice-made "no auto-generated agronomic tasks" decision,
+D8-02/D9-01 precedent), D1-14 (automated-action consent - needs a product decision on
+*which* automated action to gate), D7-10 (post-harvest stage - would require redefining
+HARVESTED as non-terminal, touching many already-VERIFIED invariants), D78-11 (distinct
+DISASTER_ALERT category - buildable, but closing it means reclassifying already-VERIFIED
+weather-risk alerts (frost/flood/drought), which touches existing VERIFIED test assertions;
+deferred to a dedicated, more careful batch rather than rushed here), D81-05/D81-09
+(Observation/Notes offline - an entirely new domain/entity shape, a product decision this
+batch does not make unilaterally, same judgment three prior batches already made). Every
+other remaining Missing row was individually checked and falls into one of: a genuinely
+absent external data source/feed/hardware (Govt Schemes, Satellite/PostGIS, IoT hardware,
+live Mandi/market prices, insurer claim/settlement feeds, per-crop shelf-life or per-stage
+sensitivity reference datasets), a large net-new product domain needing an explicit
+decision (Machinery, Labour, FPO pooling, Community), or a dependency on one of the above.
+
+Total unchanged at 798 - every change this batch was an internal status move, zero new/
+removed rows. Full backend suite: 1055 passed, 1 failed (up from 996 pre-Batch-8 baseline).
+Full Flutter suite: 312 passed, 0 failed (unchanged from baseline - no mobile changes this
+batch; every addition was backend-only, confirmed non-breaking for mobile parsing since
+Flutter models read named keys and ignore unknown ones). Migrations: 9 new revisions
+(5b57af46965e was the pre-batch clock-tie hotfix; 5b87cb6eb39c, fc2b32df536e, 39a9e48c0858,
+cd0584254c03, a595f6178964, e9f7a17d3dd6 are this batch's own), single alembic head
+throughout, applied cleanly to both dev and test databases. `alembic check`: only the same
+pre-existing, already-disclosed `crop_cycle_closure_snapshots` drift remains — no new drift
+introduced by any of this batch's migrations.
+
+**The 1 failure is NOT caused by this batch** - `tests/test_rule_versioning.py::test_a_query_for_an_old_date_still_reproduces_the_old_decision_after_a_threshold_change`,
+in a file this batch never touched (D89 Rule Versioning). Root-caused, not assumed: 
+`rule_version_repository.get_effective_at` orders by `RuleVersionSnapshot.effective_from.desc()
+LIMIT 1` with no secondary tiebreaker - the exact same bug CLASS this session's own
+offer-negotiation clock-tie hotfix (`get_latest_counter_offer`) already fixed elsewhere, but
+this occurrence was never patched here. The failing test backdates `effective_from` to a
+HARDCODED constant (`datetime(2020, 1, 1)`) on every run; since this project's test database
+is a real, persistent Postgres instance never truncated between runs (a pattern this report
+has repeatedly disclosed elsewhere), repeated executions of this exact test across this
+session's many full-suite verification passes accumulated 11 rows all sharing that identical
+`effective_from` timestamp (confirmed by direct query) - the tie-break, unconstrained by any
+secondary ordering key, nondeterministically returns a stale row from an earlier run instead
+of the current run's own row. This is a genuine, pre-existing, reproducible-in-isolation
+defect (confirmed via `pytest tests/test_rule_versioning.py` alone, 1 failed/7 passed) -
+latent under a normal single-run/fresh-database condition, surfaced here specifically by this
+session's own unusually repeated re-execution against the persistent test database. NOT
+fixed as part of this batch (out of this batch's authorized scope - implementing Missing
+scenarios, not general bug-fixing); flagged for the user's explicit decision, same as the
+counter-offer bug was before its own hotfix was authorized.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
 BACKLOG" prioritization plan's Batch 7. No persisted priority-plan doc names

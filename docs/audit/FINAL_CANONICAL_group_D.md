@@ -95,15 +95,20 @@ simply not applied a third time here.
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 134 |
+| VERIFIED | 135 |
 | IMPLEMENTED | 30 |
 | PARTIAL | 7 |
-| MISSING | 37 |
+| MISSING | 36 |
 | BROKEN | 0 |
 | FUTURE | 11 |
 | OUT_OF_SCOPE | 3 |
 | ENVIRONMENT_DEPENDENT | 1 |
 | TOTAL | 223 |
+
+*(Missing Backlog Batch 8, this session: 1 row MISSING→VERIFIED (-1 Missing, +1 Verified):
+D74-03 (photo-to-CropDamageRecord evidence link, reusing the existing disease-AI photo
+pipeline). Full backend suite: 1043 passed, 0 failed (up from 996 pre-Batch-8). See
+`docs/FINAL_GAP_REPORT.md`'s own Batch 8 note for the cross-group total.)*
 
 *(Updated this session, P1 task-overdue-reminder cluster: D78-01 MISSING→VERIFIED (-1
 MISSING, +1 VERIFIED). Further updated, weather-risk cluster: D75-01/D75-02
@@ -1360,11 +1365,18 @@ see docs/FINAL_GAP_REPORT.md for exact counts.)*
 
 ### D74-03 — Evidence capture (photos/geotag/timestamp bound to a specific claim)
 - Domain: 74. Crop Insurance
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `CropPhoto.damage_record_id` (nullable FK, ON DELETE SET NULL) links a photo to
+  D74-02's own `CropDamageRecord` (already VERIFIED, so the dependency this row cited is
+  satisfied) - reuses the existing disease-AI photo-capture pipeline entirely, no second
+  upload mechanism built for insurance. Validated exactly like `Task.source_case_review_id`
+  (owned by this farmer AND belonging to the same crop cycle) before being accepted.
+- Tests added and passing: `tests/test_batch8_group5.py` (4 tests: no-link default,
+  owned-record link succeeds, rejects a damage record from a different crop cycle, rejects
+  another farmer's damage record)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: `crop_photo` module (mobile/lib/features/crop_photo/) captures photos for AI disease analysis only — no `claim_id`/`policy_id` field on any photo/analysis record
 - Missing component: a claim-linkage field on the existing photo/analysis tables
-- Required implementation: add optional `claim_id` FK to `CropPhoto` (or a join table), reusing the existing capture pipeline rather than building a new one
-- Dependencies: D74-02 (damage record) or a future claim entity to link to
 - Backend work: migration adding nullable `claim_id` to `crop_photos`; `crop_photo_service.py` accept it on upload
 - Database/migration work: nullable FK column
 - Mobile work: `camera_capture_screen.dart` optionally tag a photo with a claim/damage-record id

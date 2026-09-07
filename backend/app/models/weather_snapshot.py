@@ -23,6 +23,10 @@ from app.db.session import Base
 class WeatherSnapshotType(str, enum.Enum):
     CURRENT = "current"
     FORECAST = "forecast"
+    # D14-02 (docs/audit/FINAL_CANONICAL_group_A.md): one row per real
+    # Open-Meteo hourly data point (hour_timestamp identifies which) -
+    # same "reuse the one table via snapshot_type" convention as FORECAST.
+    HOURLY = "hourly"
 
 
 class WeatherSnapshot(Base):
@@ -38,6 +42,7 @@ class WeatherSnapshot(Base):
         index=True,
     )
     forecast_date: Mapped[Date | None] = mapped_column(Date, nullable=True)  # only for FORECAST rows
+    hour_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)  # only for HOURLY rows
 
     provider: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. "open_meteo" - never "none"
 

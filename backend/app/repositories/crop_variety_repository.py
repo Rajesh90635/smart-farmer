@@ -6,6 +6,17 @@ from sqlalchemy.orm import Session
 from app.models.crop_variety import CropVariety
 
 
+def create(db: Session, variety: CropVariety) -> CropVariety:
+    db.add(variety)
+    return variety
+
+
+def get_by_crop_and_name(db: Session, crop_id: uuid.UUID, name: str) -> CropVariety | None:
+    return db.execute(
+        select(CropVariety).where(CropVariety.crop_id == crop_id, CropVariety.name == name)
+    ).scalar_one_or_none()
+
+
 def list_for_crop(db: Session, crop_id: uuid.UUID) -> list[CropVariety]:
     return list(
         db.execute(select(CropVariety).where(CropVariety.crop_id == crop_id).order_by(CropVariety.name)).scalars().all()

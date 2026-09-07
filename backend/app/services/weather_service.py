@@ -14,7 +14,7 @@ from app.core.config import Settings
 from app.core.errors import AppError
 from app.models.weather_snapshot import WeatherSnapshot, WeatherSnapshotType
 from app.repositories import farm_repository, weather_repository
-from app.schemas.weather import CropActionAdvisoryResponse, FarmWeatherResponse, ForecastDayResponse, WeatherReadingResponse
+from app.schemas.weather import CropActionAdvisoryResponse, FarmWeatherResponse, ForecastDayResponse, HourlyForecastResponse, WeatherReadingResponse
 from app.services.weather.weather_provider import WeatherProvider, WeatherReading
 from app.services.weather_alert_rules import evaluate_spray_condition_warning
 
@@ -37,9 +37,10 @@ def get_farm_weather(
 
     fresh_current = weather_repository.get_fresh_current(db, farm_id)
     fresh_forecast = weather_repository.get_fresh_forecast(db, farm_id)
+    fresh_hourly = weather_repository.get_fresh_hourly(db, farm_id)
 
     if fresh_current is not None and fresh_forecast:
-        return _build_response(fresh_current, fresh_forecast, is_stale=False, settings=settings, farm=farm)
+        return _build_response(fresh_current, fresh_forecast, fresh_hourly, is_stale=False, settings=settings, farm=farm)
 
     result = provider.get_weather(
         latitude=float(farm.latitude), longitude=float(farm.longitude), forecast_days=_DEFAULT_FORECAST_DAYS
@@ -49,7 +50,8 @@ def get_farm_weather(
         stale_current = weather_repository.get_latest_current(db, farm_id)
         if stale_current is not None:
             stale_forecast = weather_repository.get_fresh_forecast(db, farm_id) or []
-            return _build_response(stale_current, stale_forecast, is_stale=True, settings=settings, farm=farm)
+            stale_hourly = weather_repository.get_fresh_hourly(db, farm_id) or []
+            return _build_response(stale_current, stale_forecast, stale_hourly, is_stale=True, settings=settings, farm=farm)
         return FarmWeatherResponse(
             available=False, unavailable_reason=result.unavailable_reason or "Weather information is temporarily unavailable."
         )
@@ -92,12 +94,30 @@ def get_farm_weather(
         weather_repository.save_snapshot(db, snap)
         forecast_snapshots.append(snap)
 
+    hourly_snapshots = []
+    for entry in result.hourly or []:
+        snap = WeatherSnapshot(
+            farm_id=farm_id,
+            snapshot_type=WeatherSnapshotType.HOURLY,
+            hour_timestamp=entry.timestamp,
+            provider=result.provider_name,
+            temperature_c=entry.reading.temperature_c,
+            rain_probability_percent=entry.reading.rain_probability_percent,
+            rainfall_mm=entry.reading.rainfall_mm,
+            wind_speed_kmh=entry.reading.wind_speed_kmh,
+            condition_code=entry.reading.condition_code,
+            fetched_at=now,
+            expires_at=now + timedelta(minutes=settings.weather_forecast_cache_minutes),
+        )
+        weather_repository.save_snapshot(db, snap)
+        hourly_snapshots.append(snap)
+
     db.commit()
-    return _build_response(current_snapshot, forecast_snapshots, is_stale=False, settings=settings, farm=farm)
+    return _build_response(current_snapshot, forecast_snapshots, hourly_snapshots, is_stale=False, settings=settings, farm=farm)
 
 
 def _build_response(
-    current: WeatherSnapshot, forecast: list[WeatherSnapshot], *, is_stale: bool, settings: Settings, farm
+    current: WeatherSnapshot, forecast: list[WeatherSnapshot], hourly: list[WeatherSnapshot], *, is_stale: bool, settings: Settings, farm
 ) -> FarmWeatherResponse:
     return FarmWeatherResponse(
         available=True,
@@ -108,6 +128,10 @@ def _build_response(
         forecast=[
             ForecastDayResponse(forecast_date=f.forecast_date, reading=WeatherReadingResponse.model_validate(f))
             for f in forecast
+        ],
+        hourly=[
+            HourlyForecastResponse(timestamp=h.hour_timestamp, reading=WeatherReadingResponse.model_validate(h))
+            for h in hourly
         ],
         crop_action=_compute_crop_action_advisory(current, settings),
         region=_build_region(farm),

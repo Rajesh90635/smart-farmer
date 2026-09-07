@@ -16,7 +16,7 @@ from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.area_units import AreaUnit
@@ -43,6 +43,16 @@ class SoilCategory(str, enum.Enum):
     OTHER = "other"
 
 
+class WaterAvailability(str, enum.Enum):
+    """D17-02 (docs/audit/FINAL_CANONICAL_group_A.md): farmer-declared,
+    self-reported reliability of this plot's water access - never
+    measured/inferred by this system (no flow-meter/sensor integration
+    exists), same honesty convention as is_sorted/quality_grade."""
+    ADEQUATE = "adequate"
+    LIMITED = "limited"
+    SCARCE = "scarce"
+
+
 class Plot(Base):
     __tablename__ = "plots"
     __table_args__ = (
@@ -65,6 +75,13 @@ class Plot(Base):
 
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
+    # D3-07 (docs/audit/FINAL_CANONICAL_group_A.md): a farmer-drawn polygon
+    # boundary as a plain ordered list of {"latitude", "longitude"} points -
+    # deliberately NOT a PostGIS geometry column (PostGIS is not enabled in
+    # this project - see D76-01's own note) and never used to (re)compute
+    # area_value/area_sqm, which stay exactly what the farmer entered
+    # separately. Display/reference only.
+    boundary_points: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     soil_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     irrigation_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -75,6 +92,15 @@ class Plot(Base):
     )
     soil_category: Mapped[SoilCategory | None] = mapped_column(
         SAEnum(SoilCategory, name="soil_category", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
+
+    # D17-02 (docs/audit/FINAL_CANONICAL_group_A.md): additive and
+    # independent of irrigation_source/irrigation_type (which describe the
+    # TYPE of water source, not its reliability) - None means "not yet
+    # reported," never a fabricated guess.
+    water_availability: Mapped[WaterAvailability | None] = mapped_column(
+        SAEnum(WaterAvailability, name="water_availability", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=True,
     )
 
@@ -92,3 +118,13 @@ class Plot(Base):
 
     farm: Mapped["Farm"] = relationship(back_populates="plots")
     crop_cycles: Mapped[list["CropCycle"]] = relationship(back_populates="plot", cascade="all, delete-orphan")
+
+    # D17-03 (docs/audit/FINAL_CANONICAL_group_A.md): a farmer-declared
+    # shortage flag derived from water_availability - never a separate
+    # fabricated detection mechanism. None (not-yet-reported) is honestly
+    # distinct from False (reported adequate/limited).
+    @property
+    def water_shortage(self) -> bool | None:
+        if self.water_availability is None:
+            return None
+        return self.water_availability == WaterAvailability.SCARCE

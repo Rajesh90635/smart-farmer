@@ -34,6 +34,11 @@ class TaskActionRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
 
 
+class TaskProgressReportRequest(BaseModel):
+    """D9-08 (docs/audit/FINAL_CANONICAL_group_A.md)."""
+    completion_percentage: int = Field(ge=0, le=100)
+
+
 class WeatherAdvisoryResponse(BaseModel):
     action: str
     reason_message_key: str
@@ -61,6 +66,7 @@ class TaskResponse(BaseModel):
     priority: TaskPriority
     cancellation_reason: str | None = None
     source_case_review_id: uuid.UUID | None = None
+    completion_percentage: int | None = None
 
     model_config = {"from_attributes": True}
 

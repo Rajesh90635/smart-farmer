@@ -20,6 +20,7 @@ from app.models.case_review import CaseReview  # noqa: F401
 from app.models.consent_record import ConsentRecord  # noqa: F401
 from app.models.crop_cycle import CropCycle  # noqa: F401
 from app.models.crop_cycle_closure_snapshot import CropCycleClosureSnapshot  # noqa: F401
+from app.models.crop_cycle_season_history import CropCycleSeasonHistory  # noqa: F401
 from app.models.crop_cycle_stage_history import CropCycleStageHistory  # noqa: F401
 from app.models.crop_grade_option import CropGradeOption  # noqa: F401
 from app.models.crop_health_case import CropHealthCase  # noqa: F401
@@ -57,6 +58,8 @@ from app.models.order_dispute import OrderDispute, Refund  # noqa: F401
 from app.models.payment import Payment  # noqa: F401
 from app.models.photo_access_grant import PhotoAccessGrant  # noqa: F401
 from app.models.plot import Plot  # noqa: F401
+from app.models.plot_soil_history import PlotSoilHistory  # noqa: F401
+from app.models.plot_water_history import PlotWaterHistory  # noqa: F401
 from app.models.price_anomaly_flag import PriceAnomalyFlag  # noqa: F401
 from app.models.product import Product  # noqa: F401
 from app.models.professional_feedback import ProfessionalFeedback  # noqa: F401

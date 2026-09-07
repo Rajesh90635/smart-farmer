@@ -17,6 +17,7 @@ from app.schemas.task import (
     TaskCalendarResponse,
     TaskCreateRequest,
     TaskListResponse,
+    TaskProgressReportRequest,
     TaskResponse,
     TaskUpdateRequest,
 )
@@ -73,6 +74,18 @@ def update_task(
 ) -> TaskResponse:
     """D9-05/D9-06: snooze and reschedule share this one endpoint."""
     return task_service.update_task(db, current_user.user_id, task_id, payload)
+
+
+@router.post("/tasks/{task_id}/report-progress", response_model=TaskResponse)
+def report_task_progress(
+    task_id: uuid.UUID,
+    payload: TaskProgressReportRequest,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> TaskResponse:
+    """D9-08 (docs/audit/FINAL_CANONICAL_group_A.md): farmer-entered
+    partial-completion tracking - never changes status."""
+    return task_service.report_progress(db, current_user.user_id, task_id, payload)
 
 
 @router.post("/tasks/{task_id}/complete", response_model=TaskResponse)

@@ -8,11 +8,13 @@ from app.core.errors import AppError
 from app.models.ai_analysis import ResultStatus
 from app.models.crop_cycle import ALLOWED_TRANSITIONS, CropCycle, CultivationStatus, FailureReason
 from app.models.crop_cycle_closure_snapshot import CropCycleClosureSnapshot
+from app.models.crop_cycle_season_history import CropCycleSeasonHistory
 from app.models.crop_cycle_stage_history import CropCycleStageHistory
 from app.repositories import (
     ai_analysis_repository,
     crop_cycle_closure_snapshot_repository,
     crop_cycle_repository,
+    crop_cycle_season_history_repository,
     crop_cycle_stage_history_repository,
     crop_master_repository,
     crop_variety_repository,
@@ -20,6 +22,7 @@ from app.repositories import (
     notification_repository,
     plot_repository,
 )
+from app.schemas.crop_season_history import CropCycleSeasonHistoryListResponse, CropCycleSeasonHistoryResponse
 from app.schemas.crop_stage_history import CropCycleStageHistoryResponse
 from app.schemas.crop import (
     CropCycleCloseRequest,
@@ -84,6 +87,19 @@ def _record_stage_history(db: Session, crop_cycle_id: uuid.UUID, status: Cultiva
         entered_at=datetime.now(timezone.utc),
     )
     crop_cycle_stage_history_repository.create(db, entry)
+
+
+def _record_season_history(db: Session, crop_cycle_id: uuid.UUID, season) -> None:
+    """D13-02 (docs/audit/FINAL_CANONICAL_group_A.md): mirrors
+    _record_stage_history's own convention exactly - records that a
+    season change actually happened, when. Only ever called for a
+    genuine change (callers check that before calling this)."""
+    entry = CropCycleSeasonHistory(
+        crop_cycle_id=crop_cycle_id,
+        season=season,
+        changed_at=datetime.now(timezone.utc),
+    )
+    crop_cycle_season_history_repository.create(db, entry)
 
 
 def create_crop_cycle(db: Session, farmer_id: str, plot_id: uuid.UUID, payload: CropCycleCreateRequest) -> CropCycleResponse:
@@ -204,6 +220,7 @@ def update_my_crop_cycle(
     if crop_cycle is None:
         raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
 
+    season_changed = payload.season is not None and payload.season != crop_cycle.season
     if payload.season is not None:
         crop_cycle.season = payload.season
     if payload.seed_variety is not None:
@@ -228,6 +245,8 @@ def update_my_crop_cycle(
     audit.log(
         "CROP_CYCLE_UPDATED", actor_id=farmer_id, actor_role="farmer", entity="crop_cycle", entity_id=str(crop_cycle.id)
     )
+    if season_changed:
+        _record_season_history(db, crop_cycle.id, crop_cycle.season)
     if status_changed:
         _record_stage_history(db, crop_cycle.id, crop_cycle.cultivation_status)
         audit.log(
@@ -422,4 +441,17 @@ def get_stage_history_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id:
     items = crop_cycle_stage_history_repository.list_for_crop_cycle(db, crop_cycle_id)
     return CropCycleStageHistoryListResponse(
         items=[CropCycleStageHistoryResponse.model_validate(i) for i in items], total=len(items)
+    )
+
+
+def get_season_history_for_crop_cycle(db: Session, farmer_id: str, crop_cycle_id: uuid.UUID) -> CropCycleSeasonHistoryListResponse:
+    """D13-02 (docs/audit/FINAL_CANONICAL_group_A.md). Read-only, mirrors
+    get_stage_history_for_crop_cycle exactly."""
+    crop_cycle = crop_cycle_repository.get_owned(db, crop_cycle_id, uuid.UUID(farmer_id))
+    if crop_cycle is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
+
+    items = crop_cycle_season_history_repository.list_for_crop_cycle(db, crop_cycle_id)
+    return CropCycleSeasonHistoryListResponse(
+        items=[CropCycleSeasonHistoryResponse.model_validate(i) for i in items], total=len(items)
     )

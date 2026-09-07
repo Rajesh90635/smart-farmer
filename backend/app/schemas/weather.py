@@ -1,6 +1,8 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
+
+from app.services.weather.wmo_codes import classify_condition_code
 
 
 class WeatherReadingResponse(BaseModel):
@@ -16,12 +18,31 @@ class WeatherReadingResponse(BaseModel):
     condition_code: str | None = None
     sunrise: datetime | None = None
     sunset: datetime | None = None
+    # D15-05/D15-07 (docs/audit/FINAL_CANONICAL_group_A.md): decoded from
+    # condition_code via the real WMO code table (app/services/weather/
+    # wmo_codes.py) - never a separate fabricated classification. None
+    # whenever condition_code itself is None.
+    is_storm: bool | None = None
+    is_hail: bool | None = None
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def _classify_condition_code(self) -> "WeatherReadingResponse":
+        classification = classify_condition_code(self.condition_code)
+        self.is_storm = classification.is_storm
+        self.is_hail = classification.is_hail
+        return self
 
 
 class ForecastDayResponse(BaseModel):
     forecast_date: date
+    reading: WeatherReadingResponse
+
+
+class HourlyForecastResponse(BaseModel):
+    """D14-02 (docs/audit/FINAL_CANONICAL_group_A.md)."""
+    timestamp: datetime
     reading: WeatherReadingResponse
 
 
@@ -47,6 +68,10 @@ class FarmWeatherResponse(BaseModel):
     fetched_at: datetime | None = None
     current: WeatherReadingResponse | None = None
     forecast: list[ForecastDayResponse] = []
+    # D14-02 (docs/audit/FINAL_CANONICAL_group_A.md): the next 24 real
+    # hourly readings, oldest first - empty (never fabricated) whenever
+    # the provider/cache has none yet.
+    hourly: list[HourlyForecastResponse] = []
     crop_action: CropActionAdvisoryResponse | None = None
     # D88-05 (docs/audit/FINAL_CANONICAL_group_D.md): the farm's already-
     # seeded Mandal/Village master data, surfaced alongside the reading -

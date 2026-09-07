@@ -181,9 +181,15 @@ def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: Acce
     transport_charge = payload.transport_charge if payload is not None else None
     commission_charge = payload.commission_charge if payload is not None else None
     storage_charge = payload.storage_charge if payload is not None else None
-    has_itemized_breakdown = any(v is not None for v in (transport_charge, commission_charge, storage_charge))
+    handling_charge = payload.handling_charge if payload is not None else None
+    has_itemized_breakdown = any(v is not None for v in (transport_charge, commission_charge, storage_charge, handling_charge))
     if has_itemized_breakdown:
-        charges = (transport_charge or Decimal("0")) + (commission_charge or Decimal("0")) + (storage_charge or Decimal("0"))
+        charges = (
+            (transport_charge or Decimal("0"))
+            + (commission_charge or Decimal("0"))
+            + (storage_charge or Decimal("0"))
+            + (handling_charge or Decimal("0"))
+        )
     else:
         charges = payload.charges if payload is not None else Decimal("0")
     if charges > gross_value:
@@ -206,6 +212,7 @@ def accept_offer(db: Session, farmer_id: str, offer_id: uuid.UUID, payload: Acce
         transport_charge=transport_charge,
         commission_charge=commission_charge,
         storage_charge=storage_charge,
+        handling_charge=handling_charge,
         net_value=net_value,
         collection_method=listing.delivery_option.value,
         service_area_snapshot=listing.service_area,

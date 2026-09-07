@@ -101,15 +101,26 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 98 |
+| VERIFIED | 102 |
 | IMPLEMENTED | 14 |
 | PARTIAL | 4 |
-| MISSING | 31 |
+| MISSING | 27 |
 | BROKEN | 0 |
 | FUTURE | 7 |
 | OUT_OF_SCOPE | 20 |
 | ENVIRONMENT_DEPENDENT | 0 |
 | TOTAL | 174 |
+
+*(Missing Backlog Batch 8, this session: 4 rows MISSING→VERIFIED (-4 Missing, +4 Verified):
+D50-04 (historical yield aggregation - `average_yield` honestly stays `None` today since
+`actual_quantity` is never populated anywhere in this codebase, a separately-deferred
+D49-02/D50-02 FUTURE dependency, confirmed by direct grep, not assumed), D51-06 (farmer-
+declared `certificate_reference`), D55-05 (`HarvestListing.preferred_pickup_date` - a
+narrower, farmer-stated-preference scope than this row's own proposal of a `SaleOrder`-level
+confirmed schedule tied to D55-06/D55-07, which don't exist yet), D58-04 (`handling_charge`,
+same itemized-breakdown convention as transport/commission/storage). Full backend suite:
+1043 passed, 0 failed (up from 996 pre-Batch-8). See `docs/FINAL_GAP_REPORT.md`'s own
+Batch 8 note for the cross-group total.)*
 
 *(Later continuation session — Partial-only completion pass. Processed all 19 Partial rows:
 - **14 PARTIAL→VERIFIED**: D50-01 (accepted design - repurposed field + D50-03's per-acre
@@ -856,7 +867,20 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 50 Yield
 - Scenario ID: D50-04
 - Exact scenario name: Historical yield (past-season reference)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `GET /harvests/yield-history/{crop_id}` - read-only aggregation across every
+  `HarvestRecord` this farmer has for the given crop, any crop cycle. `average_yield` is
+  computed ONLY from `actual_quantity` (never `estimated_quantity` - the two are never
+  conflated) and only when every recorded entry shares the same unit (never averaged across
+  incompatible units, e.g. kg vs quintal). Honestly disclosed: since `actual_quantity` is
+  never populated anywhere in this codebase today (confirmed by direct grep - D49-02/D50-02's
+  own separately-deferred FUTURE work), `average_yield` is currently always `None` for every
+  real farmer - the aggregation is real and forward-compatible, not fabricated to look
+  populated today.
+- Tests added and passing: `tests/test_batch8_group2.py` (4 tests: empty case, multi-cycle
+  aggregation, per-farmer isolation, unknown-crop 404) plus a dedicated test proving
+  `average_yield` stays honestly `None` given the `actual_quantity` gap above
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: none — no aggregation query across a farmer's/crop's past `HarvestRecord`s found
 - Missing component: Any historical-yield aggregation
 - Required implementation: A query aggregating a farmer's past `HarvestRecord.estimated_quantity`/`actual_quantity` grouped by crop, similar in spirit to `crop_comparison_service.py`'s existing cross-cycle comparison pattern
@@ -951,7 +975,14 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 51 Quality
 - Scenario ID: D51-06
 - Exact scenario name: Certificate
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `HarvestListing.certificate_reference` (nullable string) - exactly the
+  farmer-entered reference field this row's own analysis proposed, never a verified/looked-up
+  credential (a real certificate check would stay OUT_OF_SCOPE, as this row's own note
+  anticipated).
+- Tests added and passing: `tests/test_batch8_history_tracking.py` (2 tests: defaults to
+  null, persists when provided)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: none — grep for "certificate" returns zero real hits
 - Missing component: Any certificate model/field (the cluster file itself notes a *real* agricultural quality certificate would in any case be OUT_OF_SCOPE as an external credential — this MISSING classification covers only the absent internal placeholder/reference field)
 - Required implementation: At most, a farmer-entered reference field (e.g. `certificate_reference_note: str | None`) noting a certificate exists, never a fabricated verification of one
@@ -1217,11 +1248,19 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 55 Transport
 - Scenario ID: D55-05
 - Exact scenario name: Scheduling
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing — narrower scope than originally proposed)**
+- Fix applied: `HarvestListing.preferred_pickup_date` (nullable date) - a farmer-DECLARED
+  preference stated at listing time, deliberately SMALLER in scope than this row's own
+  proposal of a `SaleOrder`-level `scheduled_pickup_date` tied to D55-06/D55-07's buyer
+  confirmation states (which don't exist yet) - building the full confirmed-scheduling flow
+  would require inventing D55-06/D55-07's own shape first, a decision out of scope for this
+  batch. This closes the honest, buildable-now slice: "the farmer can state when they'd like
+  pickup," not "a buyer has confirmed a pickup time."
+- Tests added and passing: `tests/test_batch8_group4.py` (2 tests: defaults to null,
+  persists when provided)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: none — grep for "pickup_date"/"scheduled_pickup" returns zero hits; the only "estimated_delivery_date" (`delivery.py:45`) belongs to the unrelated dealer input-purchase `Delivery` model
 - Missing component: Any pickup/delivery scheduling field on a harvest-sale entity
-- Required implementation: A `scheduled_pickup_date`/`scheduled_delivery_date` field on `SaleOrder`, set at the same point D55-06/D55-07's confirmation states would be introduced
-- Dependencies: D55-06 (pickup), D55-07 (delivery) — natural to build together
 - Backend work: see D55-06/D55-07
 - Database/migration work: see D55-06/D55-07
 - Mobile work: see D55-06/D55-07
@@ -1426,7 +1465,14 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 58 Net Realization
 - Scenario ID: D58-04
 - Exact scenario name: Handling (deduction)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `SaleOrder.handling_charge` (nullable), exact same itemized-breakdown
+  convention as the existing `transport_charge`/`commission_charge`/`storage_charge` -
+  `offer_service.accept_offer` includes it in `has_itemized_breakdown`'s sum/replace logic
+  unchanged.
+- Tests added and passing: `tests/test_batch8_group2.py` (3 tests: included in breakdown,
+  combines with other itemized charges, defaults to null)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: none
 - Missing component: A handling-cost rate/field
 - Required implementation: Part of the same itemization effort as D57-04 — a `handling_charge` field

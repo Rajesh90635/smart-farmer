@@ -15,7 +15,7 @@ from app.middleware.rate_limit import InMemoryRateLimiter
 from app.models.crop_photo import CropPhoto, ImageQualityStatus, UploadStatus
 from app.models.crop_photo_session import CropPhotoSession
 from app.models.dead_letter_report import DeadLetterReport
-from app.repositories import crop_cycle_repository, crop_photo_repository, crop_photo_session_repository, dead_letter_report_repository
+from app.repositories import crop_cycle_repository, crop_damage_repository, crop_photo_repository, crop_photo_session_repository, dead_letter_report_repository
 from app.schemas.crop_photo import (
     CropPhotoListResponse,
     CropPhotoResponse,
@@ -106,6 +106,15 @@ def upload_photo(
     if crop_cycle is None:
         raise AppError(error_codes.NOT_FOUND, "Crop cycle not found.", 404)
 
+    # D74-03 (docs/audit/FINAL_CANONICAL_group_D.md): validated exactly
+    # like source_case_review_id (task_service._validate_source_case_review) -
+    # owned by this farmer AND belonging to THIS crop cycle, never trusted
+    # blindly from client input.
+    if metadata.damage_record_id is not None:
+        damage_record = crop_damage_repository.get_owned(db, metadata.damage_record_id, farmer_uuid)
+        if damage_record is None or damage_record.crop_cycle_id != crop_cycle.id:
+            raise AppError(error_codes.NOT_FOUND, "Damage record not found.", 404)
+
     validated = validate_upload(content=file_content, declared_mime_type=declared_mime_type, settings=settings)
     processed = process_image(validated.image, settings=settings)
     quality = check_quality(validated.image, settings)
@@ -163,6 +172,7 @@ def upload_photo(
         image_quality_status=ImageQualityStatus.ACCEPTED if quality.accepted else ImageQualityStatus.REJECTED,
         quality_reasons=",".join(reasons) if reasons else None,
         perceptual_hash=perceptual_hash,
+        damage_record_id=metadata.damage_record_id,
     )
     crop_photo_repository.create(db, photo)
     db.flush()

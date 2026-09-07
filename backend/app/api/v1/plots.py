@@ -13,6 +13,7 @@ from app.core.current_user import CurrentUser, require_role
 from app.core.roles import Role
 from app.db.session import get_db
 from app.schemas.plot import PlotCreateRequest, PlotListResponse, PlotResponse, PlotUpdateRequest
+from app.schemas.plot_history import PlotSoilHistoryListResponse, PlotWaterHistoryListResponse
 from app.services import plot_service
 
 router = APIRouter(tags=["plots"])
@@ -56,6 +57,28 @@ def update_plot(
     db: Session = Depends(get_db),
 ) -> PlotResponse:
     return plot_service.update_my_plot(db, current_user.user_id, plot_id, payload)
+
+
+@router.get("/plots/{plot_id}/soil-history", response_model=PlotSoilHistoryListResponse)
+def get_plot_soil_history(
+    plot_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> PlotSoilHistoryListResponse:
+    """D19-04 (docs/audit/FINAL_CANONICAL_group_A.md). Read-only - the
+    actual recorded soil_type/soil_category changes for this plot."""
+    return plot_service.get_soil_history_for_plot(db, current_user.user_id, plot_id)
+
+
+@router.get("/plots/{plot_id}/water-history", response_model=PlotWaterHistoryListResponse)
+def get_plot_water_history(
+    plot_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> PlotWaterHistoryListResponse:
+    """D17-06 (docs/audit/FINAL_CANONICAL_group_A.md). Read-only - the
+    actual recorded water_availability changes for this plot."""
+    return plot_service.get_water_history_for_plot(db, current_user.user_id, plot_id)
 
 
 @router.delete("/plots/{plot_id}", status_code=status.HTTP_204_NO_CONTENT)

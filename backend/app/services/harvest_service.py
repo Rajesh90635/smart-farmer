@@ -7,6 +7,7 @@ there is no scheduled job or AI callback anywhere in this phase that
 mutates HarvestRecord.status.
 """
 import uuid
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -15,7 +16,7 @@ from app.core.errors import AppError
 from app.models.harvest_listing import HarvestListing
 from app.models.harvest_record import HarvestRecord, HarvestStatus
 from app.models.notification import NotificationCategory, NotificationPriority
-from app.repositories import crop_cycle_repository, harvest_repository, professional_repository, user_repository
+from app.repositories import crop_cycle_repository, crop_master_repository, harvest_repository, professional_repository, user_repository
 from app.schemas.harvest import (
     HarvestConfirmReadyRequest,
     HarvestListingCreateRequest,
@@ -23,6 +24,8 @@ from app.schemas.harvest import (
     HarvestListingResponse,
     HarvestListResponse,
     HarvestResponse,
+    YieldHistoryEntry,
+    YieldHistoryResponse,
 )
 from app.services import crop_grade_option_service, notification_service
 from app.services.audit_logger import AuditLogger
@@ -221,6 +224,8 @@ def create_listing(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: 
         notes=payload.notes,
         is_sorted=payload.is_sorted,
         sorting_notes=payload.sorting_notes,
+        certificate_reference=payload.certificate_reference,
+        preferred_pickup_date=payload.preferred_pickup_date,
     )
     harvest_repository.create_listing(db, listing)
     harvest.status = HarvestStatus.LISTED
@@ -229,6 +234,42 @@ def create_listing(db: Session, farmer_id: str, harvest_id: uuid.UUID, payload: 
     db.commit()
     db.refresh(listing)
     return HarvestListingResponse.model_validate(listing)
+
+
+def get_yield_history(db: Session, farmer_id: str, crop_id: uuid.UUID) -> YieldHistoryResponse:
+    """D50-04 (docs/audit/FINAL_CANONICAL_group_C.md): read-only,
+    cross-crop-cycle aggregation of this farmer's own past harvests for
+    one crop - no new data, just a historical view over what already
+    exists."""
+    crop = crop_master_repository.get_active(db, crop_id)
+    if crop is None:
+        raise AppError(error_codes.NOT_FOUND, "Crop not found.", 404)
+
+    harvests = harvest_repository.list_harvests_for_farmer_and_crop(db, uuid.UUID(farmer_id), crop_id)
+    items = [
+        YieldHistoryEntry(
+            crop_cycle_id=h.crop_cycle_id,
+            harvest_id=h.id,
+            actual_harvest_date=h.actual_harvest_date,
+            actual_quantity=h.actual_quantity,
+            unit=h.unit,
+        )
+        for h in harvests
+    ]
+
+    recorded = [i for i in items if i.actual_quantity is not None]
+    average_yield: Decimal | None = None
+    average_yield_unit: str | None = None
+    if recorded:
+        units = {i.unit for i in recorded}
+        # Never average across incompatible units (e.g. kg with quintal) -
+        # honestly None rather than a misleading number. Only computed
+        # when every recorded entry shares the same unit.
+        if len(units) == 1:
+            average_yield = sum((i.actual_quantity for i in recorded), Decimal("0")) / len(recorded)
+            average_yield_unit = next(iter(units))
+
+    return YieldHistoryResponse(crop_id=crop_id, items=items, average_yield=average_yield, average_yield_unit=average_yield_unit)
 
 
 def list_my_listings(db: Session, farmer_id: str, *, limit: int = 50, offset: int = 0) -> HarvestListingListResponse:

@@ -71,6 +71,10 @@ class Task(Base):
             "repeat_interval_days IS NULL OR repeat_interval_days > 0",
             name="ck_tasks_repeat_interval_positive",
         ),
+        CheckConstraint(
+            "completion_percentage IS NULL OR (completion_percentage >= 0 AND completion_percentage <= 100)",
+            name="ck_tasks_completion_percentage_range",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -120,6 +124,14 @@ class Task(Base):
         UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
     )
     repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # D9-08 (docs/audit/FINAL_CANONICAL_group_A.md): farmer-entered
+    # progress on a still-PENDING task (e.g. "3 of 5 acres irrigated") -
+    # deliberately generic/unit-agnostic, same "no fabricated per-task-type
+    # semantics" convention as every other cross-task-type field on this
+    # model. Never set by completion (a completed task is 100% done by
+    # definition, not by this field) - see task_service.report_progress.
+    completion_percentage: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # D37-01 (docs/audit/FINAL_CANONICAL_group_B.md): optional, farmer-
     # confirmed only - a review outcome only ever SUGGESTS this task (see

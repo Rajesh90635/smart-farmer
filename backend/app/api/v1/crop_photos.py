@@ -74,6 +74,7 @@ async def upload_photo(
     device_model: str | None = Form(None),
     capture_condition: str | None = Form(None),
     capture_timestamp: datetime | None = Form(None),
+    damage_record_id: uuid.UUID | None = Form(None),
     current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
     db: Session = Depends(get_db),
     storage: FileStorage = Depends(get_file_storage),
@@ -92,6 +93,7 @@ async def upload_photo(
         device_model=device_model,
         capture_condition=capture_condition,
         capture_timestamp=capture_timestamp,
+        damage_record_id=damage_record_id,
     )
 
     return crop_photo_service.upload_photo(

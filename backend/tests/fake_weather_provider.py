@@ -6,17 +6,25 @@ per app/core/weather_provider_dependency.py.
 """
 from datetime import date, timedelta
 
-from app.services.weather.weather_provider import ForecastDay, WeatherProvider, WeatherReading, WeatherResult
+from app.services.weather.weather_provider import ForecastDay, HourlyForecastEntry, WeatherProvider, WeatherReading, WeatherResult
 
 
 class FakeWeatherProvider(WeatherProvider):
-    def __init__(self, *, available: bool = True, current: WeatherReading | None = None, forecast: list[ForecastDay] | None = None):
+    def __init__(
+        self,
+        *,
+        available: bool = True,
+        current: WeatherReading | None = None,
+        forecast: list[ForecastDay] | None = None,
+        hourly: list[HourlyForecastEntry] | None = None,
+    ):
         self._available = available
         self._current = current or WeatherReading(temperature_c=28.0, humidity_percent=60.0)
         self._forecast = forecast if forecast is not None else [
             ForecastDay(forecast_date=date.today(), reading=WeatherReading(rain_probability_percent=20.0)),
             ForecastDay(forecast_date=date.today() + timedelta(days=1), reading=WeatherReading(rain_probability_percent=30.0)),
         ]
+        self._hourly = hourly if hourly is not None else []
 
     @property
     def provider_name(self) -> str:
@@ -25,4 +33,6 @@ class FakeWeatherProvider(WeatherProvider):
     def get_weather(self, *, latitude: float, longitude: float, forecast_days: int) -> WeatherResult:
         if not self._available:
             return WeatherResult(available=False, provider_name=self.provider_name, unavailable_reason="fake provider marked unavailable")
-        return WeatherResult(available=True, provider_name=self.provider_name, current=self._current, forecast=self._forecast)
+        return WeatherResult(
+            available=True, provider_name=self.provider_name, current=self._current, forecast=self._forecast, hourly=self._hourly
+        )

@@ -39,11 +39,20 @@ class ForecastDay:
 
 
 @dataclass(frozen=True)
+class HourlyForecastEntry:
+    """D14-02 (docs/audit/FINAL_CANONICAL_group_A.md): one real Open-Meteo
+    hourly data point - never a synthesized/interpolated value."""
+    timestamp: datetime
+    reading: WeatherReading
+
+
+@dataclass(frozen=True)
 class WeatherResult:
     available: bool
     provider_name: str
     current: WeatherReading | None = None
     forecast: list[ForecastDay] | None = None
+    hourly: list[HourlyForecastEntry] | None = None
     unavailable_reason: str | None = None
 
 

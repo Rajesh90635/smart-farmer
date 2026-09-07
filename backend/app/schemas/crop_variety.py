@@ -1,7 +1,15 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class CropVarietyCreateRequest(BaseModel):
+    """D5-02 (docs/audit/FINAL_CANONICAL_group_A.md): admin-authored, same
+    convention as CropGradeOptionCreateRequest - no fabricated variety
+    dataset, only what an admin actually enters."""
+    name: str = Field(min_length=1, max_length=150)
+    typical_duration_days: int | None = Field(default=None, gt=0)
 
 
 class CropVarietyResponse(BaseModel):

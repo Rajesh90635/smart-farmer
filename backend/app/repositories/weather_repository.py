@@ -47,6 +47,27 @@ def get_fresh_forecast(db: Session, farm_id: uuid.UUID) -> list[WeatherSnapshot]
     )
 
 
+def get_fresh_hourly(db: Session, farm_id: uuid.UUID) -> list[WeatherSnapshot]:
+    """D14-02 (docs/audit/FINAL_CANONICAL_group_A.md): mirrors
+    get_fresh_forecast exactly, for HOURLY rows."""
+    now = datetime.now(timezone.utc)
+    latest_fetch = db.execute(
+        select(WeatherSnapshot.fetched_at)
+        .where(WeatherSnapshot.farm_id == farm_id, WeatherSnapshot.snapshot_type == WeatherSnapshotType.HOURLY, WeatherSnapshot.expires_at > now)
+        .order_by(WeatherSnapshot.fetched_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if latest_fetch is None:
+        return []
+    return list(
+        db.execute(
+            select(WeatherSnapshot)
+            .where(WeatherSnapshot.farm_id == farm_id, WeatherSnapshot.snapshot_type == WeatherSnapshotType.HOURLY, WeatherSnapshot.fetched_at == latest_fetch)
+            .order_by(WeatherSnapshot.hour_timestamp.asc())
+        ).scalars().all()
+    )
+
+
 def save_snapshot(db: Session, snapshot: WeatherSnapshot) -> WeatherSnapshot:
     db.add(snapshot)
     return snapshot

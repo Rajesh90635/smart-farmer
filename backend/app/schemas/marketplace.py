@@ -60,6 +60,9 @@ class AcceptOfferRequest(BaseModel):
     transport_charge: Decimal | None = Field(default=None, ge=0)
     commission_charge: Decimal | None = Field(default=None, ge=0)
     storage_charge: Decimal | None = Field(default=None, ge=0)
+    # D58-04 (docs/audit/FINAL_CANONICAL_group_C.md): same convention as
+    # the three above.
+    handling_charge: Decimal | None = Field(default=None, ge=0)
 
 
 class OfferResponse(BaseModel):
@@ -114,6 +117,7 @@ class SaleOrderResponse(BaseModel):
     transport_charge: Decimal | None = None
     commission_charge: Decimal | None = None
     storage_charge: Decimal | None = None
+    handling_charge: Decimal | None = None
     net_value: Decimal
     collection_method: str
     status: SaleOrderStatus

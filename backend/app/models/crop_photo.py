@@ -147,6 +147,16 @@ class CropPhoto(Base):
     # content itself.
     perceptual_hash: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
 
+    # D74-03 (docs/audit/FINAL_CANONICAL_group_D.md): optional link to an
+    # insurance CropDamageRecord this photo is evidence for - reuses the
+    # existing photo-capture pipeline entirely (no second upload mechanism
+    # built for insurance), same "reference, don't duplicate" convention
+    # as Task.source_case_review_id. None for every disease-AI photo,
+    # unchanged.
+    damage_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("crop_damage_records.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)

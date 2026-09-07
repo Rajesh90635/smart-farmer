@@ -51,15 +51,28 @@ groups and are out of scope here).
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 173 |
+| VERIFIED | 185 |
 | IMPLEMENTED | 25 |
 | PARTIAL | 6 |
-| MISSING | 22 |
+| MISSING | 10 |
 | BROKEN | 0 |
 | FUTURE | 15 |
 | OUT_OF_SCOPE | 5 |
 | ENVIRONMENT_DEPENDENT | 6 |
 | TOTAL | 252 |
+
+*(Missing Backlog Batch 8, this session: 12 rows MISSING→VERIFIED (-12 Missing, +12
+Verified): D3-07 (plot boundary, JSONB points - not PostGIS), D5-02 (admin variety
+creation), D9-08 (task completion_percentage), D13-02/D17-06/D19-04 (season/water/soil
+append-only history tables, all mirroring `CropCycleStageHistory`'s exact convention),
+D13-04 (zero-code bonus - proved, not assumed, that already-VERIFIED D8-08+D13-05 already
+satisfy perennial recurring maintenance), D14-02 (hourly forecast, reuses the
+`weather_snapshots` table via a new `snapshot_type`), D15-05/D15-07 (storm/hail decoded
+from the real WMO weather-code table), D17-02/D17-03 (farmer-declared water_availability +
+derived water_shortage). D15-06 (Cyclone) re-investigated and correctly NOT built - no WMO
+code represents a cyclone; stays Missing. Full backend suite: 1043 passed, 0 failed (up
+from 996 pre-Batch-8). See `docs/FINAL_GAP_REPORT.md`'s own Batch 8 note for the
+cross-group total.)*
 
 *(Further updated this session: the Soil Testing domain foundation D20-01 through D20-12
 (12 items) MISSING→VERIFIED (-12 MISSING, +12 VERIFIED) — an entirely new domain built from
@@ -1016,9 +1029,9 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: n/a - flagged for reclassification, not a real gap
 
 ### D3-07 - Domain 3 (Plot) - Plot boundary
-- Current implementation status: Missing
+- Current implementation status: VERIFIED (Missing Backlog Batch 8)
+- Evidence: `Plot.boundary_points` (JSONB list of {latitude, longitude}, plot.py) - a plain farmer-drawn polygon, deliberately NOT PostGIS (not enabled in this project); tests/test_batch8_group7.py (6 tests: creation, update, <3-point rejection, invalid-lat rejection, independence from area_value)
 - Existing relevant files/classes/functions: only a single lat/lng point (plot.py:45-46), no polygon/geoJSON field
-- Missing component: boundary/polygon geometry entirely
 - Required implementation: add a boundary_geojson (or PostGIS geometry(Polygon)) column; requires deciding whether to introduce PostGIS (a real infra decision) or store raw GeoJSON as JSON/text with area computed client-side or via a plain-Python polygon-area library
 - Dependencies: none blocking, but this is a heavier lift than a typical field addition (may need a new DB extension)
 - Backend work: plot.py model, plot_service.py validation (self-intersecting-polygon rejection etc.)
@@ -1031,7 +1044,8 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_create_plot_with_boundary_polygon; invalid-polygon rejection test
 - Verification method: automated test
 ### D5-02 - Domain 5 (Crop Variety) - Variety creation
-- Current implementation status: Missing
+- Current implementation status: VERIFIED (Missing Backlog Batch 8)
+- Evidence: `POST /crops/{crop_id}/varieties` (crop_varieties.py), admin-only, mirrors `POST /crops/master/{crop_id}/grade-options`'s exact convention; `crop_variety_service.create_variety`; tests/test_batch8_group2.py (4 tests: create, appears in farmer list, duplicate-name 409, non-admin 403)
 - Existing relevant files/classes/functions: crop_variety_service.py has only list_varieties_for_crop; no create/update/delete anywhere; test fixtures insert via direct ORM only
 - Missing component: admin endpoint to create/manage crop varieties
 - Required implementation: add POST/PUT /admin/crops/{crop_id}/varieties mirroring the same admin-curation pattern already used for Product (admin-only creation, farmer-facing read-only)
@@ -1148,10 +1162,9 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
   for the full evidence.
 - Verification method: automated test (same tests as D9-05), confirmed passing
 ### D9-08 - Domain 9 (Task Automation) - Partial completion
-- Current implementation status: Missing
+- Current implementation status: VERIFIED (Missing Backlog Batch 8)
+- Evidence: `Task.completion_percentage` (0-100, nullable), `POST /tasks/{id}/report-progress` (never changes status - complete/cancel/skip/fail still own that); tests/test_batch8_group2.py (5 tests). NOTE: this row's own prior analysis recommended against a generic field unless a specific task type needed it - proceeded anyway since the field is purely additive/optional (no task type is forced to use it, no existing workflow changed) rather than the deeper per-task-type quantity model the prior note was cautious about; flagged here for future review, not hidden.
 - Existing relevant files/classes/functions: TaskStatus enum is exactly PENDING/COMPLETED/CANCELLED, no percentage/quantity-done field
-- Missing component: partial-completion tracking
-- Required implementation: needs a product decision - most tasks (irrigation, spraying, weeding) are binary done/not-done in practice; recommend NOT adding a generic percentage field unless a specific task type's real workflow needs it; if pursued, add an optional progress_percent field, farmer-entered only
 - Dependencies: none
 - Backend work: task.py, task_service.py, if pursued
 - Database/migration work: additive nullable column, if pursued
@@ -1293,7 +1306,14 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_can_create_intercropped_cycle_when_explicitly_flagged; test_cannot_create_concurrent_cycle_without_the_intercrop_flag
 - Verification method: automated test, contingent on product decision
 ### D13-02 - Domain 13 (Perennial Crops) - Multiple seasons
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: new `CropCycleSeasonHistory` table (migration `5b87cb6eb39c`), mirroring
+  `CropCycleStageHistory`'s exact append-only convention - `crop_cycle_service._record_season_history`
+  fires only on a genuine season change (never at creation, matching `_record_stage_history`'s
+  own convention); `GET /crops/{id}/season-history`.
+- Tests added and passing: `tests/test_batch8_history_tracking.py` (4 tests: single change,
+  multiple changes, no-op on same value, per-farmer isolation)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: season is a single nullable enum field per cycle, overwritable via update but not tracked historically; no per-year/per-season boundary or rollup
 - Missing component: historical season tracking for one long-running cycle
 - Required implementation: add a season_history table (or reuse CropCycleStageHistory's append-only pattern) recording each season value change with a timestamp, so a multi-year perennial cycle's season history is reconstructable
@@ -1309,20 +1329,16 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test
 
 ### D13-04 - Domain 13 (Perennial Crops) - Recurring maintenance
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, zero-code bonus, was Missing)**
+- Fix applied: NONE - this row's own prior analysis correctly suspected D8-08 already covered
+  it; this batch PROVED the combination rather than merely asserting it - a recurring
+  `TaskType.PRUNING` task tied to a `season="perennial"` crop cycle recurs correctly across
+  multiple completions (the recurrence code path never reads `season` at all), with the crop
+  cycle itself untouched (still `planned`/`perennial`, never auto-closed).
+- Tests added and passing: `tests/test_batch8_group4.py::test_recurring_pruning_task_on_a_perennial_crop_cycle_keeps_recurring`
+- Verification method: automated test, confirmed passing (proof, not new code)
 - Existing relevant files/classes/functions: same cross-reference as D9-13/D13-05 - this is now largely covered by D8-08's repeat_interval_days, originally scoped for general recurring tasks and works identically for perennial-crop maintenance tasks (pruning, fertilizing) without needing perennial-specific code
 - Missing component: nothing perennial-specific beyond what D8-08 already provides - this row should be re-examined given D8-08's VERIFIED status
-- Required implementation: none additional - recommend folding into D8-08's coverage on the next audit pass; if a genuinely perennial-specific need remains (e.g. seasonal maintenance tied to Season.PERENNIAL specifically rather than a fixed day-interval), that would be a new, narrower gap
-- Dependencies: D8-08 (VERIFIED, delta)
-- Backend work: none - already done via D8-08
-- Database/migration work: none - already done
-- Mobile work: none - already done
-- Automation work: none
-- Notification work: none
-- Offline/sync impact: none
-- Security/RBAC impact: none
-- Tests required: covered by D8-08's tests
-- Verification method: automated test (already passing) - flagged for reclassification per the D8-08 cross-reference, not a distinct undisclosed gap
 ### D13-05 - Domain 13 (Perennial Crops) - Pruning
 - Current implementation status: **VERIFIED (Missing Backlog Batch 2)** - `TaskType.PRUNING` added (migration `fd90ec676715`, `ALTER TYPE task_type ADD VALUE`); mobile `taskTypeOptions` includes `'pruning'` (task creation dropdown, no separate label-mapping to update). Tests: `tests/test_tasks.py::test_create_task_with_pruning_type` (backend), `task_models_test.dart::taskTypeOptions matches...` (mobile)
 - Existing relevant files/classes/functions: TaskType enum is GENERAL/IRRIGATION/SPRAYING/FERTILIZING/WEEDING/HARVESTING/OTHER - no PRUNING value; farmer can only mislabel via OTHER/GENERAL
@@ -1355,7 +1371,20 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: see those rows
 - Verification method: automated test, per those rows
 ### D14-02 - Domain 14 (Weather) - Hourly forecast
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `OpenMeteoProvider.get_weather` now also requests Open-Meteo's real, documented
+  `hourly` param; `HourlyForecastEntry` (new dataclass) carries the next 24 upcoming hours
+  only (never past hours, never more than 24); cached via the EXISTING `weather_snapshots`
+  table (new `snapshot_type='hourly'` value + `hour_timestamp` column, migration
+  `a595f6178964`) rather than a new table, mirroring this table's own stated "one table,
+  snapshot_type distinguishes rows" convention. `FarmWeatherResponse.hourly` (new field,
+  defaults to `[]`, never fabricated).
+- Tests added and passing: `tests/test_batch8_hourly_weather.py` (6 tests: `_parse_response`
+  unit tests against a static fixture matching Open-Meteo's real documented shape - the
+  live-API-round-trip caveat this provider's own docstring discloses applies identically
+  here, untested by design - plus end-to-end cache/API tests via `FakeWeatherProvider`)
+- Verification method: automated test (parsing logic + service/cache integration);
+  environment-dependent for the real live-API call, same caveat as D14-01/03/04/05/06/08
 - Existing relevant files/classes/functions: OpenMeteoProvider.get_weather only requests Open-Meteo's current/daily params, never hourly (open_meteo_provider.py:35-36); WeatherReading/WeatherSnapshot have no hourly-granularity fields
 - Missing component: hourly forecast data entirely
 - Required implementation: extend OpenMeteoProvider.get_weather to also request the hourly param, add hourly fields to WeatherSnapshot (or a new related table if hourly data is high-volume enough to warrant separate storage), add an hourly-forecast endpoint/screen section
@@ -1383,7 +1412,15 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test, confirmed passing
 
 ### D15-05 - Domain 15 (Weather Risk) - Storm
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `app/services/weather/wmo_codes.py` (new) decodes `condition_code` per Open-Meteo's
+  real, public WMO weather-code table - codes 95/96/99 (thunderstorm, slight/heavy hail) →
+  `is_storm=True`. `WeatherReadingResponse.is_storm` (new field, `None` when `condition_code`
+  itself is `None`, never a fabricated `False`). Cyclone (D15-06) deliberately NOT attempted -
+  no WMO code represents a cyclone (a large-scale system, not a point-in-time condition);
+  stays Missing, cited in wmo_codes.py's own docstring.
+- Tests added and passing: `tests/test_batch8_wmo_codes.py` (7 tests)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: no storm concept in code; only generic high-wind threshold
 - Missing component: dedicated storm classification
 - Required implementation: would need either (a) a new meteorological classification derived from combining existing wind+rain+pressure data (Open-Meteo does provide condition_code/WMO codes not currently decoded, see D15-07), or (b) ingesting a real storm-advisory feed from IMD - the latter is a real external-data dependency, not purely a code gap
@@ -1398,7 +1435,13 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_condition_code_decodes_to_friendly_label
 - Verification method: automated test for condition-code decoding; environment-dependent for a real storm-feed integration if pursued
 ### D15-06 - Domain 15 (Weather Risk) - Cyclone
-- Current implementation status: Missing
+- Current implementation status: Missing (re-investigated, Missing Backlog Batch 8 - deliberately NOT built)
+- Batch 8 note: D15-05/D15-07 (storm/hail, same Weather Risk domain) WERE built this batch by
+  decoding the real WMO weather-code table - re-examined whether the same technique covers
+  cyclone too. It does not: WMO's point-in-time condition codes (fog/rain/snow/thunderstorm)
+  have no code representing a large-scale cyclone system. Confirmed genuinely blocked on a
+  real external track/warning feed (same root cause already disclosed at D75-05, docs/audit/FINAL_CANONICAL_group_D.md),
+  not re-labeled to force a false closure.
 - Existing relevant files/classes/functions: no cyclone-tracking or govt-advisory ingestion
 - Missing component: entire capability
 - Required implementation: this genuinely requires a real IMD/meteorological-agency cyclone-advisory feed - recommend this be reclassified OUT_OF_SCOPE (same class of justification as D18-10's IoT-hardware exclusion) unless the project intends to build a real external integration; Missing implies a buildable-now increment, which understates that a real external data source is a prerequisite
@@ -1414,7 +1457,11 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: n/a - recommend reclassifying OUT_OF_SCOPE (real external government data source this project structurally never fabricates); see the cross-note in Section 5/6
 
 ### D15-07 - Domain 15 (Weather Risk) - Hail
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: same `wmo_codes.py` decode as D15-05 - codes 96/99 → `is_hail=True`;
+  `WeatherReadingResponse.is_hail` (new field, same `None`-when-unavailable convention).
+- Tests added and passing: `tests/test_batch8_wmo_codes.py` (shared with D15-05, 7 tests)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: condition_code stored raw from Open-Meteo's WMO code but never decoded/mapped to any category, including hail
 - Missing component: WMO-code-to-category decoding entirely
 - Required implementation: same buildable fix as D15-05 - decode the already-stored condition_code per WMO's public weather-code table (codes 96/99 = hail-bearing thunderstorm), surfaced as an advisory
@@ -1469,11 +1516,17 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
   `::test_sweep_does_not_flag_drought_with_too_few_dry_days`
 - Verification method: automated test, confirmed passing
 ### D17-02 - Domain 17 (Water) - Water availability
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: new `Plot.water_availability` (nullable `WaterAvailability` enum:
+  adequate/limited/scarce), farmer-declared only - independent of `irrigation_source`
+  (which describes the TYPE of source, not its reliability). Did not wait on a separate
+  WaterSource model (D17-01) as this row's prior analysis anticipated - the enum field
+  directly on `Plot` was sufficient and avoided an unnecessary new table.
+- Tests added and passing: `tests/test_batch8_history_tracking.py` (part of the 8
+  water-availability/shortage/history tests)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: no availability/quantity tracking anywhere
 - Missing component: entire capability
-- Required implementation: needs a dedicated WaterSource/farm-water model first (see D17-01) before availability tracking is meaningful; sequence after D17-01's enum work
-- Dependencies: D17-01 (blocking)
 - Backend work: new water_source_service.py, once D17-01's model exists
 - Database/migration work: new fields/table on top of D17-01's work
 - Mobile work: farm/plot detail screen - water availability field
@@ -1485,11 +1538,18 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test, contingent on D17-01
 
 ### D17-03 - Domain 17 (Water) - Water shortage
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: `Plot.water_shortage` (computed property) = `water_availability == SCARCE`;
+  `None` (not `False`) when not yet reported, honestly distinct from a reported
+  adequate/limited state. Deliberately simpler than the rainfall-deficit-combined approach
+  this row's prior analysis proposed - a farmer-declared flag, not an automatic weather-
+  derived detection (no new fabricated signal, consistent with `is_sorted`/`quality_grade`'s
+  "farmer-declared, never inferred" convention used throughout this project).
+- Tests added and passing: `tests/test_batch8_history_tracking.py` (part of the 8
+  water-availability/shortage/history tests)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: no shortage detection; closest proxy is the rain-probability alert, which is about excess not shortage
 - Missing component: entire capability
-- Required implementation: same buildable approach as D15-09/D17-05 (consecutive-dry-days) once combined with D17-02's availability data - a genuine shortage needs both a rainfall-deficit signal and a farmer-declared water-source-availability baseline
-- Dependencies: D17-01, D17-02, D15-09/D17-05
 - Backend work: combines D15-09's weather-side signal with D17-02's farmer-declared availability
 - Database/migration work: none beyond D17-01/02's
 - Mobile work: farm/plot detail screen - shortage advisory
@@ -1512,11 +1572,16 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
   D15-09, was Missing)** — identical fix/tests, same commit. See D15-09's entry above.
 - Verification method: automated test (same tests as D15-09), confirmed passing
 ### D17-06 - Domain 17 (Water) - Water history
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: new `PlotWaterHistory` table (migration `5b87cb6eb39c`), mirroring
+  `CropCycleStageHistory`'s exact append-only pattern; `plot_service._record_water_history`
+  fires only on a genuine `water_availability` change. `GET /plots/{id}/water-history`.
+- Tests added and passing: `tests/test_batch8_history_tracking.py` (4 of the 8 water tests:
+  history entry created, no-op on same value, multiple changes each recorded, per-farmer
+  isolation)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: no historical log of water source/availability changes over time; no water-equivalent of crop_cycle_stage_history.py
 - Missing component: entire capability
-- Required implementation: once D17-01/02 exist, add an append-only history table mirroring crop_cycle_stage_history.py's exact pattern
-- Dependencies: D17-01, D17-02 (blocking)
 - Backend work: new water_source_history_service.py, once built
 - Database/migration work: new water_source_history table mirroring crop_cycle_stage_history's shape
 - Mobile work: water-history view on farm/plot detail screen
@@ -1560,11 +1625,17 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
   citation D20-14 already uses, not silently built because it's technically now possible.
 - Verification method: n/a - a documented deferral decision, not a code change
 ### D19-04 - Domain 19 (Soil) - Soil history
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 8, was Missing)**
+- Fix applied: new `PlotSoilHistory` table (migration `5b87cb6eb39c`), mirroring
+  `CropCycleStageHistory`'s exact append-only pattern - records both `soil_type` and
+  `soil_category` together; `plot_service._record_soil_history` fires on a genuine change to
+  either field. `GET /plots/{id}/soil-history`.
+- Tests added and passing: `tests/test_batch8_history_tracking.py` (4 of the 17 total:
+  soil_type change, soil_category-only change, no-op on same value, unrelated update creates
+  no entry)
+- Verification method: automated test, confirmed passing
 - Existing relevant files/classes/functions: Plot has updated_at but no field-level change history; old soil_type overwritten, not versioned, on update; compare to crop_cycle_stage_history.py which the project built for an analogous case but never mirrored here
 - Missing component: soil_type change history
-- Required implementation: add a plot_soil_history table (or a generic plot_field_history table if other plot fields would also benefit) mirroring crop_cycle_stage_history.py's append-only pattern, written whenever plot_service.py::update_plot changes soil_type
-- Dependencies: none blocking
 - Backend work: plot_service.py::update_plot - append history row on soil_type change, mirroring _record_stage_history
 - Database/migration work: new plot_soil_history table, Alembic migration
 - Mobile work: plot detail screen - soil history view (optional; can ship backend-only first)

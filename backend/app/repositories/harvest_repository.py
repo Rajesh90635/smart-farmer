@@ -49,6 +49,19 @@ def list_harvests_for_farmer(db: Session, farmer_id: uuid.UUID, *, limit: int, o
     return list(items), total
 
 
+def list_harvests_for_farmer_and_crop(db: Session, farmer_id: uuid.UUID, crop_id: uuid.UUID) -> list[HarvestRecord]:
+    """D50-04 (docs/audit/FINAL_CANONICAL_group_C.md): every harvest this
+    farmer has ever recorded for this crop, across ANY crop cycle -
+    oldest first, for a historical-yield view."""
+    return list(
+        db.execute(
+            select(HarvestRecord)
+            .where(HarvestRecord.farmer_id == farmer_id, HarvestRecord.crop_id == crop_id)
+            .order_by(HarvestRecord.created_at.asc())
+        ).scalars().all()
+    )
+
+
 def create_listing(db: Session, listing: HarvestListing) -> HarvestListing:
     db.add(listing)
     return listing

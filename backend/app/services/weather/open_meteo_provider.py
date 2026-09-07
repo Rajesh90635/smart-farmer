@@ -20,7 +20,7 @@ from datetime import date, datetime, timezone
 
 import httpx
 
-from app.services.weather.weather_provider import ForecastDay, WeatherProvider, WeatherReading, WeatherResult
+from app.services.weather.weather_provider import ForecastDay, HourlyForecastEntry, WeatherProvider, WeatherReading, WeatherResult
 
 
 class OpenMeteoProvider(WeatherProvider):
@@ -38,6 +38,10 @@ class OpenMeteoProvider(WeatherProvider):
             "longitude": longitude,
             "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m",
             "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,weather_code,sunrise,sunset,wind_speed_10m_max",
+            # D14-02 (docs/audit/FINAL_CANONICAL_group_A.md): real Open-Meteo
+            # hourly fields, same documented API - never a separate/invented
+            # data source.
+            "hourly": "temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m",
             "timezone": "auto",
             "forecast_days": forecast_days,
         }
@@ -83,7 +87,26 @@ class OpenMeteoProvider(WeatherProvider):
             )
             forecast.append(ForecastDay(forecast_date=date.fromisoformat(date_str), reading=reading))
 
-        return WeatherResult(available=True, provider_name=self.provider_name, current=current, forecast=forecast)
+        hourly_raw = data.get("hourly") or {}
+        hourly: list[HourlyForecastEntry] = []
+        now = datetime.now(timezone.utc)
+        hours = hourly_raw.get("time") or []
+        for i, hour_str in enumerate(hours):
+            timestamp = _parse_iso(hour_str)
+            if timestamp is None or timestamp < now:
+                continue  # D14-02: only the upcoming hours, never the past
+            reading = WeatherReading(
+                temperature_c=_at(hourly_raw.get("temperature_2m"), i),
+                rain_probability_percent=_at(hourly_raw.get("precipitation_probability"), i),
+                rainfall_mm=_at(hourly_raw.get("precipitation"), i),
+                wind_speed_kmh=_at(hourly_raw.get("wind_speed_10m"), i),
+                condition_code=_str_at(hourly_raw.get("weather_code"), i),
+            )
+            hourly.append(HourlyForecastEntry(timestamp=timestamp, reading=reading))
+            if len(hourly) >= 24:  # the next 24 hours only - never the whole multi-day range
+                break
+
+        return WeatherResult(available=True, provider_name=self.provider_name, current=current, forecast=forecast, hourly=hourly)
 
 
 def _at(values: list | None, index: int):

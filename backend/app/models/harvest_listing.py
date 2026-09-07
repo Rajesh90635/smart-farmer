@@ -49,6 +49,19 @@ class HarvestListing(Base):
     # quality_grade.
     is_sorted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sorting_notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # D51-06 (docs/audit/FINAL_CANONICAL_group_C.md): a farmer-declared
+    # reference to a quality certificate they hold (e.g. an organic
+    # certification number) - never verified/looked up by this system,
+    # same honesty convention as quality_grade/is_sorted. Verifying a real
+    # certificate against an issuing authority would be Out-of-Scope.
+    certificate_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # D55-05 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
+    # preferred pickup/delivery date - distinct from
+    # expected_availability_date (when the crop itself becomes available)
+    # and never a real dispatch/logistics booking (no transporter role or
+    # rate reference exists in this project - see D55-04, deliberately not
+    # built alongside this).
+    preferred_pickup_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(

@@ -81,6 +81,9 @@ class SaleOrder(Base):
     transport_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     commission_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     storage_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # D58-04 (docs/audit/FINAL_CANONICAL_group_C.md): same itemized,
+    # farmer-entered, never-computed convention as the three above.
+    handling_charge: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     net_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
 
     collection_method: Mapped[str] = mapped_column(String(50), nullable=False)

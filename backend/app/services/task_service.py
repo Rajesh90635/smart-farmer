@@ -30,6 +30,7 @@ from app.schemas.task import (
     TaskCalendarResponse,
     TaskCreateRequest,
     TaskListResponse,
+    TaskProgressReportRequest,
     TaskResponse,
     TaskUpdateRequest,
     WeatherAdvisoryResponse,
@@ -145,6 +146,27 @@ def update_task(db: Session, farmer_id: str, task_id: uuid.UUID, payload: TaskUp
     task.overdue_alerted_at = None
 
     AuditLogger(db).log("TASK_RESCHEDULED", actor_id=farmer_id, actor_role="farmer", entity="task", entity_id=str(task.id))
+    db.commit()
+    db.refresh(task)
+    return _to_response(db, task, today=datetime.now(timezone.utc).date())
+
+
+def report_progress(db: Session, farmer_id: str, task_id: uuid.UUID, payload: TaskProgressReportRequest) -> TaskResponse:
+    """D9-08 (docs/audit/FINAL_CANONICAL_group_A.md): farmer-entered
+    partial-completion tracking on a still-PENDING task - deliberately
+    generic/unit-agnostic (a percentage, not a per-task-type quantity),
+    same convention as every other cross-task-type field on this model.
+    Never changes status - only complete_task/cancel_task/skip_task/
+    fail_task do that."""
+    task = task_repository.get_owned(db, task_id, uuid.UUID(farmer_id))
+    if task is None:
+        raise AppError(error_codes.NOT_FOUND, "Task not found.", 404)
+    if task.status != TaskStatus.PENDING:
+        raise AppError(error_codes.VALIDATION_ERROR, f"Cannot report progress on a task with status '{task.status.value}'.", 409)
+
+    task.completion_percentage = payload.completion_percentage
+
+    AuditLogger(db).log("TASK_PROGRESS_REPORTED", actor_id=farmer_id, actor_role="farmer", entity="task", entity_id=str(task.id))
     db.commit()
     db.refresh(task)
     return _to_response(db, task, today=datetime.now(timezone.utc).date())
@@ -397,6 +419,7 @@ def _to_response(db: Session, task: Task, *, today: date) -> TaskResponse:
         priority=task.priority,
         cancellation_reason=task.cancellation_reason,
         source_case_review_id=task.source_case_review_id,
+        completion_percentage=task.completion_percentage,
     )
 
 

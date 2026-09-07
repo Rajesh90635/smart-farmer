@@ -16,6 +16,7 @@ from app.schemas.harvest import (
     HarvestListingResponse,
     HarvestListResponse,
     HarvestResponse,
+    YieldHistoryResponse,
 )
 from app.services import harvest_service
 
@@ -56,6 +57,17 @@ def list_harvests_for_crop_cycle(
 ) -> HarvestListResponse:
     """All harvests recorded for this crop cycle, oldest first."""
     return harvest_service.list_harvests_for_crop_cycle(db, current_user.user_id, crop_cycle_id)
+
+
+@router.get("/yield-history/{crop_id}", response_model=YieldHistoryResponse)
+def get_yield_history(
+    crop_id: uuid.UUID,
+    current_user: CurrentUser = Depends(require_role(Role.FARMER.value)),
+    db: Session = Depends(get_db),
+) -> YieldHistoryResponse:
+    """D50-04 (docs/audit/FINAL_CANONICAL_group_C.md): read-only,
+    cross-crop-cycle historical yield for this crop."""
+    return harvest_service.get_yield_history(db, current_user.user_id, crop_id)
 
 
 @router.get("", response_model=HarvestListResponse)

@@ -40,6 +40,7 @@ class CropPhotoResponse(BaseModel):
     upload_status: UploadStatus
     image_quality_status: ImageQualityStatus
     quality_reasons: list[str]
+    damage_record_id: uuid.UUID | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -100,6 +101,11 @@ class PhotoUploadMetadata(BaseModel):
     # reached the server (possibly much later, e.g. an offline-queued
     # upload). None for an older client that doesn't send it yet.
     capture_timestamp: datetime | None = None
+    # D74-03 (docs/audit/FINAL_CANONICAL_group_D.md): optional, only when
+    # this photo is being captured as evidence for an existing
+    # CropDamageRecord - validated (owned, same crop cycle) in
+    # crop_photo_service.upload_photo, never trusted blindly.
+    damage_record_id: uuid.UUID | None = None
 
     @field_validator("latitude")
     @classmethod
