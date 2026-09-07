@@ -176,6 +176,26 @@ re-verified single-headed (head `a6b7c8d9e0f2`) and applies cleanly to both dev 
 freshly-recreated test database. See `docs/audit/FINAL_CANONICAL_group_{A,B}.md`'s
 per-scenario rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
 
+**Updated this later continuation session** (Missing Backlog Batch 9 - deliberately small,
+since the remaining backlog's low-hanging fruit had already been exhausted by Batches 3/4/7/8)
+— `docs/FINAL_GAP_REPORT.md`'s "FROZEN CANONICAL COUNTS" now read 798 total: 508 Verified, 73
+Implemented, 20 Partial, 123 Missing, 0 Broken, 38 Future, 26 Out of Scope, 8 Environment
+Dependent; 143 current-scope items remain (down from 146 after Batch 8). 3 rows moved
+Missing→VERIFIED: D52-03 (Packing - new `HarvestListing.packing_requirements` field,
+migration `54738ef35b1a`), and a zero-code reconciliation finding, D57-06/D58-05 (storage
+cost/deduction) - both already fully implemented and tested via the existing
+`storage_charge` itemized-charge field, simply never reconciled against that fact. Full
+backend suite: 1056 passed, 1 failed (up from 1055 - the 1 failure is the same pre-existing,
+already-disclosed `test_rule_versioning.py` flake, not touched this batch). Full Flutter
+suite unchanged (no mobile changes this batch). Several other rows (D5-05, D7-10, D11-06,
+D26-04, D52-07, D53-06) were re-investigated but deliberately left Missing rather than
+reclassified, on finding that `docs/FINAL_GAP_REPORT.md`'s own Batch 7/8 notes had already
+examined several of these exact rows and consistently chose to leave a genuinely-blocked row
+honestly Missing with its reason disclosed inline rather than reclassify it - this batch
+corrected each row's own stale inline citation to match, without introducing a new
+reclassification precedent. See `docs/audit/FINAL_CANONICAL_group_{A,C}.md`'s per-scenario
+rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
+
 ## Functional
 
 - 100 domains audited (13 cluster passes, `docs/audit/`), 798 individually-classified

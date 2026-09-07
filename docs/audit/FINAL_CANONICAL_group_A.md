@@ -1061,7 +1061,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test
 
 ### D5-05 - Domain 5 (Crop Variety) - Variety-specific recommendations
-- Current implementation status: Missing
+- Current implementation status: Missing (re-confirmed genuinely blocked, Missing Backlog Batch 9) - blocked on an authoritative per-variety agronomic dataset that does not exist in this codebase, same anti-fabrication class as D21-01/D20-14. This row's own older text recommended reclassifying FUTURE, but consistent with this project's established Batch 3/4/7/8 convention of leaving a genuinely-blocked row honestly Missing with its reason disclosed inline rather than reclassifying it, left Missing.
 - Existing relevant files/classes/functions: no service references variety anywhere except the crop-cycle linkage/validation code
 - Missing component: any recommendation (weather/AI/task/crop-risk/assistant) that varies by variety
 - Required implementation: this is a broad, cross-cutting gap rather than one feature - the concrete near-term increment (per D5-04, itemized in Section 2) is using typical_duration_days to suggest expected-harvest-date; deeper variety-specific agronomic recommendations should stay unbuilt until an authoritative per-variety dataset exists (same anti-fabrication boundary already applied to D21-01/D20-14)
@@ -1127,7 +1127,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test (same tests as D9-16), confirmed passing
 
 ### D7-10 - Domain 7 (Crop Stages) - Post-harvest
-- Current implementation status: Missing
+- Current implementation status: Missing (re-confirmed, Missing Backlog Batch 9) - this row's own older text recommended simply cross-checking Harvest-domain coverage, but `docs/FINAL_GAP_REPORT.md`'s Batch 8 investigation already went further and correctly identified the real blocker: any actual fix here would mean redefining `CultivationStatus.HARVESTED` as non-terminal (`crop_cycle.py:87`, `_TERMINAL_STATUSES`), touching multiple already-VERIFIED invariants built on HARVESTED being terminal. That investigation deliberately left this row Missing rather than reclassifying it, and this batch defers to that later, more careful decision rather than the row's own superseded note. Not re-actioned this batch.
 - Existing relevant files/classes/functions: nothing models post-harvest handling as a stage; nothing after HARVESTED
 - Missing component: any post-harvest stage/status
 - Required implementation: this likely belongs with Domain 47-55 (Harvest/Post-Harvest, out of this reconciliation group's scope) rather than as a CropCycle status - recommend not adding a new CultivationStatus value here (HARVESTED is correctly terminal) but instead confirming this scenario is fully covered by whatever post-harvest handling exists in the Harvest domain cluster (c08), which this reconciliation was not asked to touch
@@ -1275,7 +1275,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_farmer_can_request_expert_review_of_a_reported_failure, if pursued
 - Verification method: automated test, contingent on product decision
 ### D11-06 - Domain 11 (Re-Sowing) - New task generation
-- Current implementation status: Missing
+- Current implementation status: Missing (re-confirmed, Missing Backlog Batch 9) - this row's own older text recommended reclassifying FUTURE, but `docs/FINAL_GAP_REPORT.md`'s Batch 8 investigation already examined this exact row and deliberately kept it Missing rather than reclassifying: building it "would contradict this project's own twice-made 'no auto-generated agronomic tasks' decision" (D8-02/D9-01 precedent). This batch defers to that later, more careful decision rather than the row's own superseded note. Not re-actioned this batch.
 - Existing relevant files/classes/functions: creating a crop cycle never creates any Task rows (confirmed, zero reference to task_repository/task_service in create_crop_cycle)
 - Missing component: any auto-task creation tied to re-sowing
 - Required implementation: this is the same root cause as D9-01/D8-02 (deliberate no-auto-task-generation design) - no new work is appropriate here beyond what those FUTURE-classified rows already cover; a re-sow-specific version of auto-task-creation would be a strictly narrower instance of the same already-deferred capability
@@ -1881,7 +1881,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_inventory_item_history_includes_all_events_in_order
 - Verification method: automated test - recommend re-confirming against current input_inventory_service.py/AuditLogger usage before treating this as fully open, since Batch 3 may have already logged these events
 ### D26-04 - Domain 26 (Input Verification) - Authenticity information
-- Current implementation status: Missing
+- Current implementation status: Missing (re-confirmed genuinely blocked, Missing Backlog Batch 9) - blocked on a real external manufacturer/industry-registry verification relationship that does not exist and is not planned in this codebase; a fabricated/simulated verification would violate the project's anti-fabrication convention, same class as D15-06/D18-10's external-dependency exclusions. This row's own older text offered FUTURE or OUT_OF_SCOPE as options, but consistent with this project's established Batch 3/4/7/8 convention of leaving a genuinely-blocked row honestly Missing with its reason disclosed inline rather than reclassifying it, left Missing - the FUTURE-vs-OUT_OF_SCOPE call remains open for a real product decision.
 - Existing relevant files/classes/functions: Product has no QR/barcode/manufacturer-verification capability; explicitly disclosed in docs/PROMPT9_ASSUMPTIONS_RISKS.md:80-89 as an open NEEDS VALIDATION question
 - Missing component: entire capability
 - Required implementation: this needs a real manufacturer-side QR/barcode verification API (an external integration with each manufacturer or a shared industry registry) - a fabricated/simulated verification would violate the project's own anti-fabrication convention; treat this as blocked on a genuine external manufacturer/registry relationship, similar in kind to D15-06/D18-10's external-dependency exclusions

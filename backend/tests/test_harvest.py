@@ -153,6 +153,26 @@ def test_create_listing_records_sorting_declaration(client, farmer_with_crop_cyc
     assert sorted_response.json()["sorting_notes"] == "Removed bruised and undersized produce"
 
 
+def test_create_listing_records_packing_requirements(client, farmer_with_crop_cycle):
+    """D52-03 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
+    only, honestly None (not fabricated empty text) when omitted."""
+    tokens, crop_cycle_id = farmer_with_crop_cycle
+    harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()
+
+    default_response = client.post(
+        f"/api/v1/harvests/{harvest['id']}/listing", json=valid_harvest_listing_payload(), headers=auth_headers(tokens)
+    )
+    assert default_response.json()["packing_requirements"] is None
+
+    harvest2 = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}/new-harvest", headers=auth_headers(tokens)).json()
+    packed_response = client.post(
+        f"/api/v1/harvests/{harvest2['id']}/listing",
+        json=valid_harvest_listing_payload(packing_requirements="50kg jute bags, no plastic"),
+        headers=auth_headers(tokens),
+    )
+    assert packed_response.json()["packing_requirements"] == "50kg jute bags, no plastic"
+
+
 def test_duplicate_active_listing_is_warned_not_silently_created(client, farmer_with_crop_cycle):
     tokens, crop_cycle_id = farmer_with_crop_cycle
     harvest = client.post(f"/api/v1/harvests/from-crop-cycle/{crop_cycle_id}", headers=auth_headers(tokens)).json()

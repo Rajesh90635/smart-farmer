@@ -14,17 +14,50 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 505 |
+| Verified | 508 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **578** |
+| **Attended (Verified + Implemented)** | **581** |
 | Partial | 20 |
-| Missing | 126 |
+| Missing | 123 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **146** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **143** |
 | Future | 38 |
 | Out of Scope | 28 |
 | Environment Dependent | 8 |
 | **TOTAL** | **798** |
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING BACKLOG"
+prioritization plan's Batch 9 — deliberately scoped small after the prior batch's own
+disclosure that essentially every remaining low-hanging Missing item had already been
+investigated by Batches 3/4/7/8 and correctly found to require either a new-domain product
+decision (pest diagnosis, voice input, community forum, nearby-services/machinery/labour
+marketplace, government schemes) or a genuine external/dataset dependency this project
+structurally refuses to fabricate. 3 rows moved Missing→VERIFIED (-3 Missing, +3 Verified):
+D52-03 (Packing — new `HarvestListing.packing_requirements`, migration `54738ef35b1a`,
+farmer-declared free text distinct from generic `notes`, same honesty convention as
+`sorting_notes`/`certificate_reference`; 1 new test), and a genuine zero-code reconciliation
+finding: D57-06 (Storage cost, Market Comparison) and D58-05 (Storage deduction, Net
+Realization) were both still marked Missing despite `AcceptOfferRequest.storage_charge`/
+`SaleOrderResponse.storage_charge` already existing and already tested since D57-04/D58-04's
+own Batch-2/Batch-8 work — these two rows were simply never reconciled against that fact.
+Two other rows initially drafted for reclassification this batch (D5-05, D11-06, D26-04,
+D52-07/D53-06's own older row text all recommended moving to FUTURE) were deliberately left
+Missing instead, on discovering mid-batch that `docs/FINAL_GAP_REPORT.md`'s own Batch 7/8
+notes had already investigated several of these exact rows (D11-06, D7-10, D1-14, D78-11,
+D81-05/09, D52-07/D53-06) and consistently chose to leave a genuinely-blocked row honestly
+Missing with its reason disclosed inline rather than reclassify it — this batch defers to
+that established convention rather than introducing a new one; only the rows' own inline
+text was corrected to cite the real, current blocker instead of a stale recommendation.
+Total unchanged at 798 - every change this batch was either a real additive feature, a
+zero-code reconciliation, or an inline citation fix; zero new/removed rows. Full backend
+suite: 1056 passed, 1 failed (up from 1055 - +1 new test, this batch's own; the 1 failure is
+the same pre-existing `test_rule_versioning.py` clock-tie-under-repeated-runs flake disclosed
+in the Batch 8 note below, left to the user's explicit decision, not fixed here). Full
+Flutter suite: unchanged (no mobile changes this batch). Migration `54738ef35b1a` verified
+upgrade→downgrade→re-upgrade clean on both dev and test databases; `alembic check` shows
+only the same pre-existing, already-disclosed `crop_cycle_closure_snapshots` drift, no new
+drift introduced. See `docs/audit/FINAL_CANONICAL_group_{A,C}.md`'s per-scenario rows for
+full citations.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING BACKLOG"
 prioritization plan's Batch 8 — the first batch built from the pure Missing-scenario

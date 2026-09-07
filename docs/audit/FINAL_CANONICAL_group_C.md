@@ -1020,7 +1020,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 52 Post-Harvest
 - Scenario ID: D52-03
 - Exact scenario name: Packing
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 9)** - new `HarvestListing.packing_requirements` (nullable, migration `54738ef35b1a`), farmer-declared free text distinct from the generic `notes` field, same honesty convention as `sorting_notes`/`certificate_reference` (never inferred, never validated against a real packaging catalog). The AI-assistant question-handling half (`docs/BUYER_WORKFLOW.md:54`) was NOT pursued - out of scope for this field-only increment, disclosed not hidden. Tests: `tests/test_harvest.py::test_create_listing_records_packing_requirements` (1 new).
 - Existing relevant files/classes/functions: none — `docs/BUYER_WORKFLOW.md:54` explicitly lists "what packaging do you need?" as an assistant question type NOT handled
 - Missing component: Any packing/packaging model
 - Required implementation: A `packing_requirements` free-text field on `HarvestListing`, and (separately, larger scope) wiring the AI assistant to actually answer this question type instead of declining it
@@ -1058,7 +1058,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 52 Post-Harvest
 - Scenario ID: D52-07
 - Exact scenario name: Spoilage risk
-- Current implementation status: Missing
+- Current implementation status: Missing (re-confirmed genuinely blocked, Missing Backlog Batch 7 and re-checked Batch 9) - no authoritative per-crop shelf-life reference dataset exists anywhere in this codebase, same anti-fabrication class as D21-01's seed-rate deferral (`docs/FINAL_GAP_REPORT.md`'s own Batch 7 note: "Deliberately NOT built: D53-06/D52-07 (spoilage) - both genuinely blocked..."). Consistent with this project's established Batch 3/4/7/8 convention of leaving a genuinely-blocked row honestly Missing with its reason disclosed inline, rather than reclassifying it, this row is left Missing again rather than moved to FUTURE.
 - Existing relevant files/classes/functions: none — grep for "spoilage" across backend/mobile/docs returns zero real hits
 - Missing component: Any spoilage-risk model, field, or rule
 - Required implementation: A rule-based spoilage-risk estimate (e.g. days-since-harvest vs. a per-crop shelf-life reference) — would require an authoritative per-crop shelf-life dataset, similar in spirit to the already-disclosed no-fabricated-agronomic-data constraint the project applies elsewhere (e.g. D21-01's seed-rate reference, deferred FUTURE for the same reason)
@@ -1172,7 +1172,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-06
 - Exact scenario name: Spoilage (in storage)
-- Current implementation status: Missing
+- Current implementation status: Missing (re-confirmed genuinely blocked, Missing Backlog Batch 7 and re-checked Batch 9) - identical blocker to D52-07 (no authoritative per-crop shelf-life reference dataset); left Missing, not reclassified, same reasoning as D52-07 above.
 - Existing relevant files/classes/functions: none — same as D52-07
 - Missing component: Any spoilage concept
 - Required implementation: Same as D52-07 — blocked on a real per-crop shelf-life reference dataset
@@ -1446,7 +1446,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 57 Market Comparison
 - Scenario ID: D57-06
 - Exact scenario name: Storage cost
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 9, zero-code bonus, was Missing)** - this row's own cited blocker (D53-03, storage cost rate) was already VERIFIED in Batch 7, and the itemization mechanism this row asked for turned out to already exist: `AcceptOfferRequest.storage_charge`/`SaleOrderResponse.storage_charge` (`schemas/marketplace.py`) were built alongside D57-04/D58-04's own itemization work (`offer_service.py` `has_itemized_breakdown` sum/replace logic) but this row was never reconciled against that fact. Confirmed by direct grep and by `tests/test_marketplace_offers.py`'s existing assertions (`storage_charge` included in the itemized-sum test and the lump-sum-only test) - no new code or tests needed.
 - Existing relevant files/classes/functions: none
 - Missing component: A storage-cost rate feeding the net-realization comparison
 - Required implementation: Part of the same itemization effort as D57-04/D58-05 — a `storage_charge` field, sourced from the D53-03 storage-cost rate once that exists
@@ -1491,7 +1491,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 58 Net Realization
 - Scenario ID: D58-05
 - Exact scenario name: Storage (deduction)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 9, zero-code bonus, was Missing)** - identical finding to D57-06 (same underlying `storage_charge` field, same `offer_service.py` deduction-into-`net_value` logic already built alongside D57-04/D58-04). No new code or tests needed - confirmed by the same existing `tests/test_marketplace_offers.py` assertions.
 - Existing relevant files/classes/functions: none
 - Missing component: A storage-cost deduction field
 - Required implementation: Same as D57-06 — part of the itemization effort, sourced from D53-03 once it exists

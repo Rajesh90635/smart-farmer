@@ -62,6 +62,10 @@ class HarvestListing(Base):
     # rate reference exists in this project - see D55-04, deliberately not
     # built alongside this).
     preferred_pickup_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # D52-03 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
+    # packing/packaging requirement for a buyer - free text only, distinct
+    # from the generic `notes` field, matching this domain's own naming.
+    packing_requirements: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(

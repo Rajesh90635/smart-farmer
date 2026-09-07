@@ -83,6 +83,9 @@ class HarvestListingCreateRequest(BaseModel):
     # D55-05 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
     # preferred pickup/delivery date.
     preferred_pickup_date: date | None = None
+    # D52-03 (docs/audit/FINAL_CANONICAL_group_C.md): farmer-declared
+    # packing/packaging requirement, free text only.
+    packing_requirements: str | None = Field(default=None, max_length=500)
 
 
 class HarvestListingResponse(BaseModel):
@@ -101,6 +104,7 @@ class HarvestListingResponse(BaseModel):
     sorting_notes: str | None
     certificate_reference: str | None
     preferred_pickup_date: date | None
+    packing_requirements: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
