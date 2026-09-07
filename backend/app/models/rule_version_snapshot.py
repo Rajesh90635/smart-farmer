@@ -14,7 +14,7 @@ a new snapshot closes the previous open one first.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Index, String
+from sqlalchemy import BigInteger, DateTime, Identity, Index, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,3 +33,10 @@ class RuleVersionSnapshot(Base):
     effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # Monotonic tiebreaker for get_effective_at's "which snapshot is current
+    # among ties" ordering - effective_from alone can tie (this codebase's
+    # own tests backdate it to a fixed literal, and any real caller could in
+    # principle record two snapshots in the same instant); id is a random
+    # UUID4 with no correlation to insertion order, so a real DB-assigned
+    # IDENTITY is used instead, mirroring CounterOffer.sequence.
+    sequence: Mapped[int] = mapped_column(BigInteger, Identity(always=False), nullable=False)

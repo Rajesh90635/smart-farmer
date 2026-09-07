@@ -26,6 +26,25 @@ inconsistency:
 | Environment Dependent | 8 |
 | **TOTAL** | **798** |
 
+**Rule-versioning clock-tie bug (disclosed after Batch 8, now fixed):** the one remaining
+backend test failure — `test_rule_versioning.py::test_a_query_for_an_old_date_still_reproduces_the_old_decision_after_a_threshold_change`
+— has been fixed. Root cause (per Batch 8's own disclosure below): `rule_version_repository.
+get_effective_at` ordered by `effective_from DESC` with no secondary tiebreaker; repeated
+full-suite runs against the persistent shared test database accumulated many
+`RuleVersionSnapshot` rows sharing the test's hardcoded `datetime(2020, 1, 1)` `effective_from`
+value, and the tie-break could return any of them nondeterministically. Fix: added
+`RuleVersionSnapshot.sequence` (a real monotonically-increasing Postgres IDENTITY column,
+migration `7fb0f206a5a5`) as a deterministic secondary `ORDER BY ... , sequence DESC`,
+mirroring the identical fix already applied to `CounterOffer.sequence` for the exact same bug
+class. Verified as a real fix, not a coincidence: confirmed 20 tied rows now exist in the
+test database with the identical `effective_from` (accumulated across this session's own
+repeated runs), then re-ran the target test 5 times in a row against that same polluted
+database — 5/5 passed, proving the tiebreaker resolves the tie correctly rather than merely
+passing on a fresh/unpolluted run. Full backend suite: **1057 passed, 0 failed** (up from
+1056/1 failed). Migration verified upgrade→downgrade→re-upgrade clean on both dev and test
+databases; `alembic check` shows only the same pre-existing, already-disclosed
+`crop_cycle_closure_snapshots` drift, no new drift introduced.
+
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING BACKLOG"
 prioritization plan's Batch 9 — deliberately scoped small after the prior batch's own
 disclosure that essentially every remaining low-hanging Missing item had already been
@@ -50,9 +69,10 @@ that established convention rather than introducing a new one; only the rows' ow
 text was corrected to cite the real, current blocker instead of a stale recommendation.
 Total unchanged at 798 - every change this batch was either a real additive feature, a
 zero-code reconciliation, or an inline citation fix; zero new/removed rows. Full backend
-suite: 1056 passed, 1 failed (up from 1055 - +1 new test, this batch's own; the 1 failure is
+suite: 1056 passed, 1 failed (up from 1055 - +1 new test, this batch's own; the 1 failure was
 the same pre-existing `test_rule_versioning.py` clock-tie-under-repeated-runs flake disclosed
-in the Batch 8 note below, left to the user's explicit decision, not fixed here). Full
+in the Batch 8 note below - since fixed in a following session, see the "Rule-versioning
+clock-tie bug" note above the FROZEN CANONICAL COUNTS table). Full
 Flutter suite: unchanged (no mobile changes this batch). Migration `54738ef35b1a` verified
 upgrade→downgrade→re-upgrade clean on both dev and test databases; `alembic check` shows
 only the same pre-existing, already-disclosed `crop_cycle_closure_snapshots` drift, no new

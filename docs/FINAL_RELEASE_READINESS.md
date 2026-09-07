@@ -185,7 +185,7 @@ Missing→VERIFIED: D52-03 (Packing - new `HarvestListing.packing_requirements` 
 migration `54738ef35b1a`), and a zero-code reconciliation finding, D57-06/D58-05 (storage
 cost/deduction) - both already fully implemented and tested via the existing
 `storage_charge` itemized-charge field, simply never reconciled against that fact. Full
-backend suite: 1056 passed, 1 failed (up from 1055 - the 1 failure is the same pre-existing,
+backend suite: 1056 passed, 1 failed (up from 1055 - the 1 failure was the same pre-existing,
 already-disclosed `test_rule_versioning.py` flake, not touched this batch). Full Flutter
 suite unchanged (no mobile changes this batch). Several other rows (D5-05, D7-10, D11-06,
 D26-04, D52-07, D53-06) were re-investigated but deliberately left Missing rather than
@@ -195,6 +195,15 @@ honestly Missing with its reason disclosed inline rather than reclassify it - th
 corrected each row's own stale inline citation to match, without introducing a new
 reclassification precedent. See `docs/audit/FINAL_CANONICAL_group_{A,C}.md`'s per-scenario
 rows and `docs/FINAL_GAP_REPORT.md`'s own batch note for full citations.
+
+**Rule-versioning clock-tie bug fixed (following session)**: the `test_rule_versioning.py`
+flake disclosed above is now fixed - `RuleVersionSnapshot.sequence` (migration
+`7fb0f206a5a5`), a real monotonic Postgres IDENTITY column used as a deterministic secondary
+sort key in `get_effective_at`, mirroring the identical fix already applied to
+`CounterOffer.sequence` for the same clock-tie bug class. Verified against 20 real tied rows
+accumulated in the test database (not just a fresh-database pass) - 5/5 repeated runs passed
+after the fix. Full backend suite: **1057 passed, 0 failed**. See
+`docs/FINAL_GAP_REPORT.md`'s own "Rule-versioning clock-tie bug" note for full detail.
 
 ## Functional
 
