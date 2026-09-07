@@ -14,17 +14,42 @@ inconsistency:
 
 | Category | Count |
 |---|---:|
-| Verified | 479 |
+| Verified | 488 |
 | Implemented | 73 |
-| **Attended (Verified + Implemented)** | **552** |
+| **Attended (Verified + Implemented)** | **561** |
 | Partial | 20 |
-| Missing | 154 |
+| Missing | 143 |
 | Broken | 0 |
-| **Current-scope work remaining (Partial + Missing + Broken)** | **174** |
+| **Current-scope work remaining (Partial + Missing + Broken)** | **163** |
 | Future | 38 |
-| Out of Scope | 26 |
+| Out of Scope | 28 |
 | Environment Dependent | 8 |
 | **TOTAL** | **798** |
+
+*(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
+BACKLOG" prioritization plan's Batch 7. No persisted priority-plan doc names
+Batch 7's approved scenario count either, same situation Batch 3/4/5/6
+disclosed - assembled directly from the remaining backlog's own dependency
+graph. 11 rows moved off Missing (-11 Missing): 9 to VERIFIED (+9 Verified —
+the entire Storage domain: D53-01 Storage location, D53-02 Capacity, D53-03
+Cost, D53-04 Duration, D53-05 Stored quantity, D53-07 Release from storage,
+D52-04 Storage post-harvest, D48-04 Storage planning pre-harvest — all one
+new `Storage`/`StorageUsage` implementation, migration `a7b8c9d0e1f2`,
+mirroring `harvest_service.py`'s CRUD/ownership conventions; plus D9-13,
+a zero-code fold-in of a duplicate scenario ID for the already-VERIFIED
+D8-08), and 2 to OUT_OF_SCOPE (+2 Out of Scope — D2-10 active farm
+selection and D22-01 fertilizer requirement, both deliberate design/safety
+decisions confirmed by their own row text, not engineering gaps).
+Deliberately NOT built: D53-06/D52-07 (spoilage) - both genuinely blocked
+on an authoritative per-crop shelf-life reference dataset that does not
+exist, same anti-fabrication class as D21-01's seed-rate deferral. Total
+unchanged at 798 - every change this pass was an internal status move,
+zero new/removed rows. Full backend suite: 996 passed (up from 986 - +10
+new tests, `tests/test_storage_facility.py`), 0 failed. Full Flutter suite:
+312 passed, 0 failed (unchanged - no mobile changes this batch). Migrations
+applied cleanly to both dev and test databases, single head (`a7b8c9d0e1f2`).
+See `docs/audit/FINAL_CANONICAL_group_{A,C}.md`'s own Batch 7 notes for the
+full per-scenario breakdown.)*
 
 *(Re-counted this continuation session, per the "SMART FARMER V3 MISSING
 BACKLOG" prioritization + Batch 1 implementation prompts. A credit-efficient

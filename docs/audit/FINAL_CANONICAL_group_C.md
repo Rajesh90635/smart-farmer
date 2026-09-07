@@ -38,6 +38,35 @@ changes, and are folded into this file's evidence rather than the deltas table: 
 (cited as examples of already-correctly-justified MISSING/FUTURE rows — see §3/§5), and
 D60-01/D61-01 (cited as examples of already-correctly-classified OUT_OF_SCOPE rows — see §6).
 
+*(Later continuation session — Missing Backlog Batch 7, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 7's approved scenario count, same situation Batch 3/4/5/6
+disclosed. 8 rows in this group MISSING→VERIFIED (-8 Missing, +8
+Verified): the entire Storage domain (D53-01 Storage location, D53-02
+Capacity, D53-03 Cost, D53-04 Duration, D53-05 Stored quantity, D53-07
+Release from storage), plus D52-04 (Storage, post-harvest) and D48-04
+(Storage planning, pre-harvest) - both zero-extra-code, the same entity
+from a different workflow angle, exactly as each row's own text
+anticipated. New `Storage` model (location, `StorageType` enum, capacity/
+unit, optional `cost_per_unit_per_day`) and `StorageUsage` model
+(`storage_id`/`harvest_record_id` FKs, quantity/unit, `stored_at`/
+`released_at`), migration `a7b8c9d0e1f2`, mirroring `harvest_service.py`'s
+exact CRUD/ownership conventions per D53-01's own citation. `cost_per_
+unit_per_day` is a farmer-entered rate only - it never auto-generates a
+`LedgerEntry`; `LedgerCategory.STORAGE` (D69-08) already existed before
+this batch, satisfying D53-03's sole dependency with zero new work.
+Deliberately NOT built: D53-06/D52-07 (spoilage) - both genuinely blocked
+on an authoritative per-crop shelf-life reference dataset that does not
+exist, same anti-fabrication class as D21-01's seed-rate deferral; their
+own rows recommend FUTURE reclassification, not building, and this batch
+does not force that decision either. Tests: `tests/test_storage_facility.py`
+(10 new; named to avoid colliding with the pre-existing, unrelated
+`tests/test_storage.py` file-blob storage-provider tests). Total unchanged
+at 174 - every change here is an internal status move, zero new/removed
+rows. See docs/FINAL_GAP_REPORT.md for the cross-group reconciliation and
+exact full-suite counts.)*
+
 *(Later continuation session — Missing Backlog Batch 5, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
 the remaining backlog's own dependency graph - no persisted priority-plan
@@ -72,10 +101,10 @@ docs/FINAL_RELEASE_READINESS.md for the cross-group reconciliation.)*
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 90 |
+| VERIFIED | 98 |
 | IMPLEMENTED | 14 |
 | PARTIAL | 4 |
-| MISSING | 39 |
+| MISSING | 31 |
 | BROKEN | 0 |
 | FUTURE | 7 |
 | OUT_OF_SCOPE | 20 |
@@ -770,7 +799,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 48 Harvest Planning
 - Scenario ID: D48-04
 - Exact scenario name: Storage planning
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - zero extra code needed, exactly as this row's own text anticipated: the `Storage` entity built for D53-01 is directly usable for pre-harvest storage planning (a farmer can create/list a `Storage` and check its `capacity` before harvest is ready). Tests: shared with D53-01 (`tests/test_storage_facility.py`).
 - Existing relevant files/classes/functions: none — no storage model/field anywhere (see Domain 53 summary)
 - Missing component: Any storage-planning concept
 - Required implementation: Structurally the same prerequisite gap as the entire Domain 53 (Storage) — a `Storage` entity would need to exist before a "storage plan" referencing it could
@@ -979,7 +1008,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 52 Post-Harvest
 - Scenario ID: D52-04
 - Exact scenario name: Storage (post-harvest)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - zero extra code needed, exactly as this row's own text anticipated: the post-harvest-workflow view of the same `Storage`/`StorageUsage` entities built for D53-01. Tests: shared with D53-01 (`tests/test_storage_facility.py`).
 - Existing relevant files/classes/functions: none — see Domain 53 summary
 - Missing component: Any storage model
 - Required implementation: See D53-01 (Storage location) — this row is the post-harvest-workflow view of that same entirely-absent domain
@@ -1017,7 +1046,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-01
 - Exact scenario name: Storage location
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - new `Storage` model (`storage.py`, migration `a7b8c9d0e1f2`), `storage_service.py`, `POST/GET /storages`, `DELETE /storages/{id}`, mirroring `harvest_service.py`'s exact CRUD/ownership conventions as this row's own citation asked for. Farmer-owned (`farmer_id`-scoped, same pattern as `harvest_repository.get_harvest_owned`). Tests: `tests/test_storage_facility.py` (10 new, covering all of D53-01..05/07).
 - Existing relevant files/classes/functions: none — grep confirms only unrelated file-blob `storage_key` fields exist
 - Missing component: Any physical storage-location model
 - Required implementation: A `Storage` entity (location text/geo, owner/type) as the foundation for the whole Storage domain (D53-02..07)
@@ -1036,7 +1065,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-02
 - Exact scenario name: Capacity
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - `capacity`/`unit` fields on the D53-01 `Storage` entity, optional (a farmer may record a storage location before knowing its exact capacity). Shares D53-01's implementation and tests.
 - Existing relevant files/classes/functions: none
 - Missing component: Any storage-capacity concept
 - Required implementation: A `capacity`/`unit` field on the `Storage` entity from D53-01
@@ -1055,7 +1084,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-03
 - Exact scenario name: Cost
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - `LedgerCategory.STORAGE` (this row's sole cited dependency) already existed before this batch (D69-08, migration `ff72e5d0b5a7`), so the only new work was the optional `cost_per_unit_per_day` rate field on the D53-01 `Storage` entity - a farmer-entered rate only, never auto-generating a `LedgerEntry`; the farmer records actual spend themselves under the existing `LedgerCategory.STORAGE`. Shares D53-01's implementation and tests.
 - Existing relevant files/classes/functions: `LedgerCategory` enum has no `STORAGE` value (same gap as D69-08)
 - Missing component: A dedicated storage-cost category and, ideally, a rate tied to the D53-01 `Storage` entity
 - Required implementation: Add `LedgerCategory.STORAGE` (see D69-08 — same change satisfies both), and optionally a `cost_per_unit_per_day` field on the `Storage` entity from D53-01
@@ -1074,7 +1103,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-04
 - Exact scenario name: Duration
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - new `StorageUsage` model (`storage_usage.py`, migration `a7b8c9d0e1f2`) linking a `Storage` to a `HarvestRecord`, with `stored_at`/`released_at` timestamps. `POST/GET /storages/{id}/usages` validates the referenced `harvest_record_id` is a real harvest the farmer owns (`harvest_repository.get_harvest_owned`), never trusted merely because it parses as a UUID - same discipline as every other cross-entity reference in this project. Shares D53-01's tests.
 - Existing relevant files/classes/functions: none
 - Missing component: Any storage-duration field
 - Required implementation: `stored_at`/`released_at` timestamps on a storage-usage record (see D53-07 — release), tied to the D53-01 `Storage` entity
@@ -1093,7 +1122,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-05
 - Exact scenario name: Stored quantity
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - `quantity`/`unit` fields on the D53-04 `StorageUsage` record. Shares D53-04's implementation and tests.
 - Existing relevant files/classes/functions: none
 - Missing component: Any field tracking quantity currently in storage vs. sold/available
 - Required implementation: A `quantity` field on the `storage_usage` record from D53-04
@@ -1131,7 +1160,7 @@ only, never inferred/verified by this system. Total unchanged at 174.)*
 - Domain: 53 Storage
 - Scenario ID: D53-07
 - Exact scenario name: Release from storage
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (Missing Backlog Batch 7)** - `POST /storages/{id}/usages/{usage_id}/release` (`storage_service.release_storage_usage`) sets the D53-04 `StorageUsage.released_at`. Idempotent - a second call never overwrites the original release timestamp, same convention as `case_service.acknowledge_review` (D36-04). Owner-scoped (404 for another farmer's storage). Shares D53-04's tests.
 - Existing relevant files/classes/functions: none — no storage entity to release from
 - Missing component: Any release workflow
 - Required implementation: The `released_at` timestamp/action on the `storage_usage` record from D53-04

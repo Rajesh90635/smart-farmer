@@ -5,7 +5,7 @@ day one; each will gain real endpoints in its own implementation phase.
 """
 from fastapi import APIRouter
 
-from app.api.v1 import ai, assistant, auth, cases, crop_assistant, crop_damage, crop_financials, crop_performance, crop_photos, crop_risk, crop_varieties, crops, experts, farm_infrastructure, farmers, farms, harvests, health, health_timeline, input_inventory, insurance, invoices, irrigation, ledger, location, market, marketplace, notifications, orders, personalization, plots, products, professionals, soil_testing, tasks, treatments, weather, weather_actions
+from app.api.v1 import ai, assistant, auth, cases, crop_assistant, crop_damage, crop_financials, crop_performance, crop_photos, crop_risk, crop_varieties, crops, experts, farm_infrastructure, farmers, farms, harvests, health, health_timeline, input_inventory, insurance, invoices, irrigation, ledger, location, market, marketplace, notifications, orders, personalization, plots, products, professionals, soil_testing, storage, tasks, treatments, weather, weather_actions
 
 api_router = APIRouter()
 
@@ -49,3 +49,4 @@ api_router.include_router(soil_testing.router)
 api_router.include_router(insurance.router)
 api_router.include_router(crop_damage.router)
 api_router.include_router(farm_infrastructure.router)
+api_router.include_router(storage.router)

@@ -1,3 +1,5 @@
+import pytest
+
 from tests.conftest import auth_headers, override_model_provider
 from tests.fake_model_provider import FakeModelProvider
 from tests.farm_factories import valid_crop_cycle_payload, valid_farm_payload, valid_plot_payload
@@ -38,11 +40,23 @@ def _create_second_verified_expert():
     return {"access_token": access_token, "refresh_token": "n/a"}
 
 
-def _create_verified_field_agent():
+@pytest.fixture()
+def verified_field_agent():
     """D37-01: 'field_visit_required' is a FIELD_AGENT_OUTCOMES value, not
     an EXPERT_OUTCOMES one (see app/models/case_review.py) - a case
     reviewed by an expert can never produce this outcome, so the
-    task-suggestion tests need a real field_agent professional."""
+    task-suggestion tests need a real field_agent professional.
+
+    Unlike conftest.py's verified_expert/verified_dealer fixtures (which
+    never delete what they create - harmless, since no test anywhere
+    relies on a global zero-count invariant for those roles), this one
+    tears down the User it creates. test_create_case_with_no_available_
+    field_agent_waits_for_assignment's own docstring explicitly relies on
+    field_agent being the one role "reliably" having zero verified
+    candidates across the whole shared test database - a real invariant
+    this fixture must not break for other tests. Deleting the User cascades
+    (ondelete=CASCADE) through ProfessionalProfile and any CaseAssignment/
+    CaseReview rows it accrued during the test."""
     from app.core.jwt import create_access_token
     from app.core.security_passwords import hash_password
     from app.db.session import SessionLocal
@@ -67,7 +81,13 @@ def _create_verified_field_agent():
     db.refresh(profile)
 
     access_token = create_access_token(subject=str(user.id), role="field_agent")
-    return {"access_token": access_token, "refresh_token": "n/a"}
+    user_id = user.id
+    try:
+        yield {"access_token": access_token, "refresh_token": "n/a"}
+    finally:
+        db.delete(db.get(User, user_id))
+        db.commit()
+        db.close()
 
 
 def _create_crop_cycle(client, tokens, sample_crop_id):
@@ -433,9 +453,9 @@ def test_supersedes_review_id_rejects_a_review_from_a_different_case(client, reg
 
 # --- D37-01/02/03: recommendation -> task suggestion ---
 
-def test_case_suggests_a_task_when_review_outcome_is_field_visit_required(client, registered_farmer, sample_crop_id):
+def test_case_suggests_a_task_when_review_outcome_is_field_visit_required(client, registered_farmer, sample_crop_id, verified_field_agent):
     _, farmer_tokens = registered_farmer
-    field_agent_tokens = _create_verified_field_agent()
+    field_agent_tokens = verified_field_agent
     # farmer_dispute -> CasePriority.HIGH, so suggested_priority should be TaskPriority.HIGH (D37-03 bonus).
     crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
     case = client.post(
@@ -483,9 +503,9 @@ def test_case_with_no_review_yet_never_suggests_a_task(client, registered_farmer
 
 # --- D37-01/05/06: farmer-confirmed task creation from a suggestion, completion, treatment follow-up ---
 
-def test_farmer_can_create_a_task_from_a_suggested_recommendation(client, registered_farmer, sample_crop_id):
+def test_farmer_can_create_a_task_from_a_suggested_recommendation(client, registered_farmer, sample_crop_id, verified_field_agent):
     _, farmer_tokens = registered_farmer
-    field_agent_tokens = _create_verified_field_agent()
+    field_agent_tokens = verified_field_agent
     crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
     case = client.post(
         "/api/v1/cases",
@@ -547,11 +567,11 @@ def test_task_creation_rejects_another_farmers_review(client, registered_farmer,
     assert response.status_code == 404
 
 
-def test_treatment_can_link_back_to_a_source_task(client, registered_farmer, sample_crop_id):
+def test_treatment_can_link_back_to_a_source_task(client, registered_farmer, sample_crop_id, verified_field_agent):
     """D37-06 (docs/audit/FINAL_CANONICAL_group_B.md): reuses the existing
     effectiveness-comparison logic unchanged - this is a pure informational link."""
     _, farmer_tokens = registered_farmer
-    field_agent_tokens = _create_verified_field_agent()
+    field_agent_tokens = verified_field_agent
     crop_cycle_id = _create_crop_cycle(client, farmer_tokens, sample_crop_id)
     case = client.post(
         "/api/v1/cases",

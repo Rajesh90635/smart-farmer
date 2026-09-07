@@ -67,6 +67,8 @@ from app.models.role import Role, UserRole  # noqa: F401
 from app.models.rule_version_snapshot import RuleVersionSnapshot  # noqa: F401
 from app.models.sale_dispute import DemandSignal, QualityDispute, SaleDispute, SaleFeedback  # noqa: F401
 from app.models.sale_order import SaleOrder  # noqa: F401
+from app.models.storage import Storage  # noqa: F401
+from app.models.storage_usage import StorageUsage  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.treatment_follow_up import TreatmentFollowUp  # noqa: F401
 from app.models.treatment_record import TreatmentRecord  # noqa: F401

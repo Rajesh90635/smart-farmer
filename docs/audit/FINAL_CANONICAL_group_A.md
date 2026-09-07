@@ -51,13 +51,13 @@ groups and are out of scope here).
 
 | Status | Count |
 |---|---:|
-| VERIFIED | 172 |
+| VERIFIED | 173 |
 | IMPLEMENTED | 25 |
 | PARTIAL | 6 |
-| MISSING | 25 |
+| MISSING | 22 |
 | BROKEN | 0 |
 | FUTURE | 15 |
-| OUT_OF_SCOPE | 3 |
+| OUT_OF_SCOPE | 5 |
 | ENVIRONMENT_DEPENDENT | 6 |
 | TOTAL | 252 |
 
@@ -72,6 +72,32 @@ built, per this row's own recommendation despite its blocker (D20) now being res
 VERIFIED, validated irrigation/soil enums on Plot); D18-06/D18-08 MISSING→VERIFIED (-2
 MISSING, +2 VERIFIED, new IrrigationRecord model); D24-04 PARTIAL→VERIFIED (-1 PARTIAL, +1
 VERIFIED, InputInventoryItem.acquired_at).)*
+
+*(Later continuation session — Missing Backlog Batch 7, per the "SMART
+FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
+the remaining backlog's own dependency graph - no persisted priority-plan
+doc names Batch 7's approved scenario count, same situation Batch 3/4/5/6
+disclosed. This group's contribution is 3 zero-code reclassification
+bonuses, not new implementation (the batch's real build work - the
+Storage domain - lives entirely in
+`docs/audit/FINAL_CANONICAL_group_C.md`, this group has no Domain 53
+rows): D9-13 MISSING→VERIFIED (-1 Missing, +1 Verified) - re-confirmed to
+be a duplicate scenario ID for the same already-VERIFIED feature as D8-08
+(`Task.repeat_interval_days`), per this row's own citation; folded into
+D8-08's VERIFIED status rather than treated as an independent gap. D2-10
+(active farm selection) and D22-01 (fertilizer requirement)
+MISSING→OUT_OF_SCOPE (-2 Missing, +2 Out of Scope) - both explicitly
+confirmed by their own row text to be deliberate design/safety decisions,
+not engineering gaps (D2-10: a deliberate stateless design, every call
+takes an explicit farm_id; D22-01: an auto-computed dosage recommendation
+is structurally out of bounds per `docs/PRODUCT_SAFETY.md`'s absolute
+no-independent-prescription rule, same class as D23-08's assistant-side
+pesticide-dosage block). Total unchanged at 252 - every change here is an
+internal status move, zero new/removed rows. See
+`docs/audit/FINAL_CANONICAL_group_C.md`'s own Batch 7 note for this
+batch's real build work (the Storage domain, D53-01..05/07, D52-04,
+D48-04). See docs/FINAL_GAP_REPORT.md for the cross-group reconciliation
+and exact full-suite counts.)*
 
 *(Later continuation session — Missing Backlog Batch 6, per the "SMART
 FARMER V3 MISSING BACKLOG PRIORITIZATION" plan. Assembled directly from
@@ -974,7 +1000,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Tests required: test_farm_detail_includes_soil_summary_from_plots
 - Verification method: automated test
 ### D2-10 - Domain 2 (Farm) - Active farm selection
-- Current implementation status: Missing
+- Current implementation status: **OUT_OF_SCOPE (reclassified, Missing Backlog Batch 7)** - confirmed by this row's own prior evidence text to be a deliberate stateless design choice (every call takes an explicit `farm_id`), not a defect. Reclassified per this row's own recommendation, no code change.
 - Existing relevant files/classes/functions: no current_farm_id/session concept anywhere; every call takes explicit farm_id
 - Missing component: nothing - this is confirmed by the c01 audit's own summary paragraph to be a deliberate stateless design choice, not a defect ("a deliberate stateless design rather than a bug")
 - Required implementation: none - recommend this row be reclassified OUT_OF_SCOPE or a documented deliberate design choice rather than Missing on the next audit pass, since it was explicitly called out as intentional in the cluster file's own summary; kept Missing here only because the per-row citation itself does not use the word deliberate the way the file's prose summary does
@@ -1174,7 +1200,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
   `::test_cannot_fail_an_already_completed_task`
 - Verification method: automated test, confirmed passing
 ### D9-13 - Domain 9 (Task Automation) - Recurring task (Task Automation's own instance)
-- Current implementation status: Missing
+- Current implementation status: **VERIFIED (folded into D8-08, Missing Backlog Batch 7)** - confirmed to be a duplicate scenario ID for the same already-VERIFIED feature (`Task.repeat_interval_days`) as D8-08, not an independent gap, per this row's own recommendation. No code change - same tests as D8-08 (`test_tasks.py::test_completing_a_re*`).
 - Existing relevant files/classes/functions: this is the same underlying gap as D8-08, which is now VERIFIED (Task.repeat_interval_days) - D9-13 (Domain 9's own ID for the same scenario name) was NOT itself named in any reconciliation-source delta table, so per this reconciliation's own discipline (apply only confirmed deltas) it is kept as originally classified
 - Missing component: nothing further - functionally resolved by D8-08's delta; the model/mechanism is identical (Task.repeat_interval_days, same file)
 - Required implementation: none - recommend this row be explicitly folded into D8-08's VERIFIED status on the next audit pass (it is a duplicate scenario ID for the same feature, not an independent gap)
@@ -1676,7 +1702,7 @@ VERIFIED 147→166, FUTURE 12→15, MISSING unchanged at 31 (no Missing row touc
 - Verification method: automated test + direct code read this session, confirmed passing in the 761-test full suite run
 
 ### D22-01 - Domain 22 (Fertilizer) - Fertilizer requirement
-- Current implementation status: Missing
+- Current implementation status: **OUT_OF_SCOPE (reclassified, Missing Backlog Batch 7)** - confirmed by this row's own evidence text: an auto-computed dosage recommendation is structurally out of bounds per `docs/PRODUCT_SAFETY.md`'s absolute no-independent-prescription rule, same class as D23-08's assistant-side pesticide-dosage block. Reclassified per this row's own recommendation, no code change - the absence is the correct, deliberate safety behavior.
 - Existing relevant files/classes/functions: no rule computes this; docs/PRODUCT_SAFETY.md:1-14's absolute no-independent-prescription rule makes an auto-computed dosage recommendation structurally out of bounds by design
 - Missing component: any requirement calculator
 - Required implementation: none - this is correctly and deliberately out of bounds per the project's own safety rule, same class as D23-08's assistant-side pesticide-dosage block; recommend reclassifying FUTURE or OUT_OF_SCOPE rather than Missing, since the cluster file's own evidence text already states the deliberate rule even though the status cell itself says Missing
